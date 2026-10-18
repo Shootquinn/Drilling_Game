@@ -1,0 +1,5 @@
+// fixture for UG57, known-bad: the start mode compared and assigned as string literals outside consts.js
+export function startOf(mode) {
+  return mode === 'surface' ? 1 : 0;
+}
+export const MODE = 'trunk';

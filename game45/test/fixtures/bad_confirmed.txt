@@ -1,0 +1,2 @@
+// fixture for UI20, known-bad: a user-visible label that says the forbidden word
+export const labels = { intersected: 'intersected', imaged: 'imaged', unseen: 'unseen', total: 'Confirmed' };

@@ -1,0 +1,4 @@
+// fixture for UI19, known-bad: the drill cap typed as a literal instead of read from the level object
+export function planCapHard(level) {
+  return 400;
+}

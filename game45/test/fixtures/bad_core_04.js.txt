@@ -1,0 +1,4 @@
+// fixture for UPUR1: forbidden token class 4, Date.now (the core owns no wall clock)
+export function stamp() {
+  return Date.now();
+}

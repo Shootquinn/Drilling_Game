@@ -1,0 +1,5 @@
+// fixture for UPUR1: forbidden token class 7, fetch (no network from the core)
+export async function loadLevel(url) {
+  const r = await fetch(url);
+  return r.json();
+}

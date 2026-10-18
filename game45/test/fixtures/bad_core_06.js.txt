@@ -1,0 +1,4 @@
+// fixture for UPUR1: forbidden token class 6, setTimeout (the core owns no timer)
+export function later(fn) {
+  setTimeout(fn, 0);
+}

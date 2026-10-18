@@ -1,0 +1,9 @@
+// adjacent to E-H1 and UG57: none of these is a hit
+// GV2 total 253.50 cells, 2535, 23.0
+// q = 0.5 (comment only)
+export const name = 'trunk_resurrect';
+function rayCell(p, d) {
+  let q = RAY_STEP;
+  while (q < d) q += RAY_STEP;
+  return q;
+}

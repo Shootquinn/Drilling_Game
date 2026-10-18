@@ -1,0 +1,5 @@
+// fixture for UG57, known-bad: the rig speed ratio typed as a literal outside consts.js and level data
+export function levelRatio(level) {
+  const rig_speed_ratio = 3.4;
+  return level.rig_speed_ratio ?? rig_speed_ratio;
+}

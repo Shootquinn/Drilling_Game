@@ -1,0 +1,6 @@
+// fixture for UPUR2, known-bad: a preview module that imports the round module, which holds the formation mask
+import { Round } from './round.js';
+import { replay } from './plan.js';
+export function previewPlan(level, S, portals, clicks) {
+  return { net: replay(S, portals, clicks), round: Round };
+}

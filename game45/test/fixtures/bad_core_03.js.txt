@@ -1,0 +1,4 @@
+// fixture for UPUR1: forbidden token class 3, Math.random (the core is seeded; it never draws from the platform generator)
+export function jitter() {
+  return Math.random() - 0.5;
+}

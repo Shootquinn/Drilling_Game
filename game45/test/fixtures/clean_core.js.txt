@@ -1,0 +1,12 @@
+// fixture for UPUR1, zero control: a clean core module.
+// Comments may talk about the document, the window, the canvas and fetch without a hit: document window navigator canvas.
+import { rh } from './arith.js';
+
+const NOTE = 'the word document in a string literal, and window, and Math.random, and Date.now';
+const TPL = `template text mentioning document and setTimeout ${rh(2.5)} then window`;
+const RE = /window|document|fetch/g;
+
+export function label(x) {
+  /* block comment: requestAnimationFrame localStorage globalThis performance.now */
+  return NOTE.length + TPL.length + rh(x) + (RE.test('x') ? 1 : 0);
+}

@@ -1,0 +1,3 @@
+// fixture for UPUR1: forbidden token class 8, an import path under ui (core never imports ui)
+import { cellCenterPx } from '../ui/geom.js';
+export const px = (i) => cellCenterPx(i, 4.5);

@@ -1,0 +1,4 @@
+// fixture for UPUR1: forbidden token class 5, performance.now (lives in ui/perf.js only)
+export function elapsed(t0) {
+  return performance.now() - t0;
+}

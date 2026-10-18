@@ -1,0 +1,6 @@
+// fixture for UG57, known-bad: the R4 ray step typed inline
+function rayCell(p, d) {
+  let q = 0.5;
+  while (q < d) q += 0.5;
+  return q;
+}

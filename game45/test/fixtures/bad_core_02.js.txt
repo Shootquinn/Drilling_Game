@@ -1,0 +1,4 @@
+// fixture for UPUR1: forbidden token class 2, the global `window`
+export function viewWidth() {
+  return window.innerWidth;
+}

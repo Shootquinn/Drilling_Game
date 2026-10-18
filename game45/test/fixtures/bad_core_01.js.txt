@@ -1,0 +1,5 @@
+// fixture for UPUR1: forbidden token class 1, the DOM global `document`
+import { rh } from './arith.js';
+export function cellLabel(x) {
+  return document.getElementById('cell-' + rh(x));
+}
