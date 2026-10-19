@@ -345,7 +345,8 @@ test('G1D-CAP (v3.8.1) the note under the meter reads "Next generation would exc
     }
     assert.equal(capFull, true, 'the cap was not reached');
     const NEXT_TEXT = 'Next generation would exceed the 2,000 m limit';
-    assert.equal((await D.text('cap-full')).trim(), NEXT_TEXT);
+    assert.equal((await D.text('cap-full')).trim(), '', 'v3.8.4 (E4): no copy under Start');
+    assert.equal((await D.text('plan-note')).replace(/\s+/g, ' ').trim(), NEXT_TEXT, 'the cap text reads once, under the left panel');
     assert.equal(await D.attr('meter', 'data-over'), '0', 'B12: the meter total is not red while the plan is legal');
     await D.press('next-gen');
     assert.equal((await D.state()).ui.message, NEXT_TEXT, 'the refusal text is the same string');

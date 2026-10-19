@@ -386,7 +386,7 @@ test('G1H-E12 dark mode: a planned rig hole is drawn in the planned-hole colour 
       const g = await holesAt(D, [120]);
       const px = await D.page.evaluate(({ x, y, dpr }) => { const c = document.getElementById('cv'); const d = c.getContext('2d').getImageData(Math.round(x * dpr), Math.round(y * dpr), 1, 1).data; return [d[0], d[1], d[2]]; }, { x: xs(g, 'right', 120), y: g.panels.right.y + 3 * g.cellPx, dpr: g.dpr });
       if (want) assert.deepEqual(px, want, 'dark planned hole fill');
-      else assert.ok(px[0] > px[1] + 20, `light wash is reddish: ${px}`);
+      else assert.deepEqual(px, [192, 96, 90], 'light planned hole fill (E1, v3.8.4: solid #c0605a, no wash)');
     } finally { await D.close(); }
   }
 });

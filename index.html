@@ -3476,7 +3476,7 @@ imaged:[240,196,120],
 speckle:[214,140,40],
 line:[31,78,154],
 hole:[179,38,30],
-holePlan:[179,38,30],
+holePlan:[192,96,90],
 formation:[194,122,18],
 formationUnseen:[226,205,170],
 sroi:[18,160,166],
@@ -3611,12 +3611,12 @@ return Object.prototype.hasOwnProperty.call(lyTable,key)?lyTable[key]:key;
 }
 const CONTROL_SPECS=Object.freeze([
 {id:'show-formation',label:'btn_show_formation',group:'start',g:[679,96,82,46],v:'plain',fs:12},
-{id:'level-1',label:'btn_level',group:'start',arg:'1',g:[677,322,26,26],v:'brush',fs:12},
-{id:'level-2',label:'btn_level',group:'start',arg:'2',g:[707,322,26,26],v:'brush',fs:12},
-{id:'level-3',label:'btn_level',group:'start',arg:'3',g:[737,322,26,26],v:'brush',fs:12},
-{id:'level-4',label:'btn_level',group:'start',arg:'4',g:[677,352,26,26],v:'brush',fs:12},
-{id:'level-5',label:'btn_level',group:'start',arg:'5',g:[707,352,26,26],v:'brush',fs:12},
-{id:'level-6',label:'btn_level',group:'start',arg:'6',g:[737,352,26,26],v:'brush',fs:12},
+{id:'level-1',label:'btn_level',group:'start',arg:'1',g:[677,322,40,38],v:'brush',fs:12},
+{id:'level-2',label:'btn_level',group:'start',arg:'2',g:[723,322,40,38],v:'brush',fs:12},
+{id:'level-3',label:'btn_level',group:'start',arg:'3',g:[677,364,40,38],v:'brush',fs:12},
+{id:'level-4',label:'btn_level',group:'start',arg:'4',g:[723,364,40,38],v:'brush',fs:12},
+{id:'level-5',label:'btn_level',group:'start',arg:'5',g:[677,406,40,38],v:'brush',fs:12},
+{id:'level-6',label:'btn_level',group:'start',arg:'6',g:[723,406,40,38],v:'brush',fs:12},
 {id:'brush-tool',label:'btn_brush',group:'paint',g:[677,210,86,26],v:'tool',fs:12},
 {id:'erase',label:'btn_erase',group:'paint',g:[677,239,86,26],v:'tool',fs:12},
 {id:'fill',label:'btn_fill',group:'paint',g:[677,268,86,26],v:'tool',fs:12},
@@ -3825,11 +3825,12 @@ const PAGE_CSS=[
 '.btn[data-v="pause"]{font-size:0}',
 '.btn[data-v="pause"]::before{content:"";display:block;width:calc(var(--s)*5px);height:calc(var(--s)*14px);background:currentColor;box-shadow:calc(var(--s)*9px) 0 currentColor;margin-right:calc(var(--s)*9px)}',
 '.btn[data-v="pause"][data-paused="1"]::before{width:0;height:0;background:none;box-shadow:none;margin-right:0;border-style:solid;border-color:transparent transparent transparent currentColor;border-width:calc(var(--s)*8px) 0 calc(var(--s)*8px) calc(var(--s)*14px)}',
-`.cend{position:absolute;box-sizing:border-box;display:none;flex-direction:column;justify-content:center;gap:calc(var(--s)*6px);padding:calc(var(--s)*10px) calc(var(--s)*40px);background:var(--c-surface);border:3px solid ${INK};color:${INK};pointer-events:none}`,
+`.cend{position:absolute;box-sizing:border-box;display:none;flex-direction:column;justify-content:flex-start;gap:calc(var(--s)*6px);padding:calc(var(--s)*10px) calc(var(--s)*40px);background:var(--c-surface);border:3px solid ${INK};color:${INK};pointer-events:none}`,
 `.cend .cg{display:grid;grid-template-columns:1fr 1.4fr 1.4fr 1.5fr;column-gap:calc(var(--s)*14px);align-items:baseline;font-size:${fz(15,11)};font-variant-numeric:tabular-nums;padding:calc(var(--s)*3px) 0;border-bottom:1px solid var(--c-dashLine)}`,
 `.cend .cg.ch{font-weight:800;font-size:${fz(13,10)};letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid ${INK}}`,
 '.cend .cg.cf{font-weight:800;border-top:2px solid var(--c-ink);border-bottom:none}',
 '.cend .cg>*:nth-child(n+2){text-align:right}.cend .cg>*:last-child{text-align:left}',
+`.cend .ct{font-size:${fz(26,16)};font-weight:800;letter-spacing:0.5px;padding:calc(var(--s)*6px) 0 calc(var(--s)*10px)}`,
 `.cend .cn{font-size:${fz(12,10)};color:${SUB}}`,
 'input[data-s45="dbranch"]{position:absolute;margin:0;padding:0;transform:rotate(-90deg);transform-origin:50% 50%;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}',
 `input[data-s45="dbranch"]::-webkit-slider-runnable-track{height:4px;background:${INK};border-radius:2px}`,
@@ -3955,6 +3956,7 @@ const canvas=mkEl(doc,'canvas',{id:'cv'});
 stage.appendChild(canvas);
 app.appendChild(stage);
 const card=mkEl(doc,'div',{class:'cend','data-s45':'campaign-end'});
+card.appendChild(mkEl(doc,'div',{class:'ct'}));
 card.appendChild(mkEl(doc,'div',{class:'cg ch'}));
 for(let n=1;n <=6;n++)card.appendChild(mkEl(doc,'div',{class:'cg','data-row':String(n)}));
 card.appendChild(mkEl(doc,'div',{class:'cg cf','data-row':'avg'}));
@@ -4007,7 +4009,7 @@ txt(dom,SP,'capb c',null,[677,640,86,14],['PAINT'],uiText('lbl_no_limit'));
 txt(dom,SP,'capb c',null,[677,98,86,14],['PLAN'],uiText('lbl_dbranch'));
 dom.sliderOut=txt(dom,SP,'val c','dbranch-value',[677,112,86,26],['PLAN'],'50 m');
 dom.sliderNote=txt(dom,SP,'small c','dbranch-note',[677,266,86,20],['PLAN'],'');
-dom.sliderNote.style.color=REDC;
+dom.sliderNote.style.color=SUB;
 const slider=mkEl(doc,'input',{type:'range',min:'20',max:'100',step:'5',value:'50','data-s45':'dbranch','data-red':'0'});
 addItem(dom,SP,slider,[685,140,30,122],['PLAN']);
 dom.slider=slider;
@@ -4233,6 +4235,7 @@ cells(row,[`${uiText('lbl_level')} ${id}`,pct(r.left),pct(r.right),who]);
 }
 cells(card.querySelector('[data-row="avg"]'),[uiText('lbl_average'),n?pct(sl / n):'-',n?pct(sr / n):'-',`${uiText('lbl_left')} ${a} : ${uiText('lbl_right')} ${b}`]);
 setTxt(card.querySelector('.cn'),uiText('lbl_prospected_note'));
+setTxt(card.querySelector('.ct'),uiText('lbl_campaign_title'));
 }
 function updateHud(dom,hud){
 const ph=hud.campaignEnd?'CAMPAIGN_END':hud.phase;
@@ -4248,7 +4251,7 @@ setTxt(dom.message,capDup?'':hud.message||'');
 setStyle(dom.message,'display',ph==='PLAN'||ph==='PAINT'?'none':'');
 const noteText=hud.message||hud.reason||(ph==='RUN'&&hud.paused?uiText('lbl_paused'):'');
 setTxt(dom.planNote,noteText);
-setAttr(dom.planNote,'data-msg',hud.message?'1':'0');
+setAttr(dom.planNote,'data-msg',hud.message||(noteText&&hud.capNote)?'1':'0');
 setAttr(dom.planNote,'data-on',noteText?'1':'0');
 setAttr(dom.buttons.pause,'data-paused',hud.paused?'1':'0');
 setAttr(dom.buttons.pause,'aria-label',hud.paused?uiText('lbl_paused'):uiText('btn_pause'));
@@ -4299,7 +4302,7 @@ setAttr(n,'data-amber',g >=13&&g <=24?'1':'0');
 }
 const capFull=!!hud.capFull;
 const noteOn=!!hud.capNote;
-setTxt(dom.capNote,hud.capNote||'');
+setTxt(dom.capNote,hud.capNote===uiText('lbl_cap_full')?hud.capNote:'');
 setStyle(dom.capNote,'color',hud.capNote&&hud.capNote !==uiText('lbl_cap_full')?SUB:'');
 setTxt(dom.startHint,!noteOn&&hud.needsGen?uiText('start_needs_gen'):'');
 if(hud.runInfo&&hud.unspent){
@@ -4307,8 +4310,8 @@ const u=hud.unspent;
 const m=(v)=> `${meterNumText(v)} m`;
 const rl=hud.runInfo.left;
 const rr=hud.runInfo.right;
-setTxt(dom.runL,`${uiText('lbl_drilled')} ${m(rl.drilledM)} | ${unspentText(u.left.unspentM,u.capM)}`);
-setTxt(dom.runR,`${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${unspentText(u.right.unspentM,u.capM)}`);
+setTxt(dom.runL,`${uiText('lbl_left')} ${uiText('lbl_drilled')} ${m(rl.drilledM)} | ${unspentText(u.left.unspentM,u.capM)}`);
+setTxt(dom.runR,`${uiText('lbl_right')} ${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${unspentText(u.right.unspentM,u.capM)}`);
 }
 const rg=hud.rig||null;
 const mm=(v)=> `${meterNumText(v)} m`;
@@ -4323,8 +4326,10 @@ setAttr(dom.statusR,'data-over',rg.over?'1':'0');
 setStyle(dom.helpL,'display',ph==='PLAN'&&hud.surface?'':'none');
 setStyle(dom.helpR,'display',ph==='PLAN'&&hud.surface?'':'none');
 const atMin=hud.dbranch !=null&&hud.dbranch <=20;
-setAttr(dom.slider,'data-red',capFull&&atMin?'1':'0');
+const illegal=!!(hud.meter&&hud.meter.over);
+setAttr(dom.slider,'data-red',capFull&&atMin&&illegal?'1':'0');
 setTxt(dom.sliderNote,capFull&&atMin?uiText('lbl_at_min'):'');
+setStyle(dom.sliderNote,'color',illegal?REDC:SUB);
 setAttr(dom.buttons['plan-undo'],'data-red',capFull?'1':'0');
 const ut=hud.undoTarget;
 const undoLabel=ut?uiText('lbl_undo_at').replace('{m}',meterNumText(ut.portal*cm)).replace('{g}',String(ut.gen)):uiText('btn_undo');
@@ -4636,6 +4641,27 @@ ctx.font=`700 ${fz}px "Segoe UI",Arial,sans-serif`;
 const w=ctx.measureText(txt).width;
 const h=fz + 4;
 const pos=rdSTopSpot(model,panel,cs,x,yb,w,h,lay);
+const xl=pos.left?pos.x - w:pos.x;
+if(pos.out){
+const xe=xl > x?xl - 4:xl + w + 4;
+ctx.lineCap='butt';
+ctx.strokeStyle=rgbCss(PALETTE.ground,0.8);
+ctx.lineWidth=5;
+ctx.beginPath();
+ctx.moveTo(x,yb);
+ctx.lineTo(xe,yb);
+ctx.stroke();
+ctx.strokeStyle=rgbCss(PALETTE.sroiLine,1);
+ctx.lineWidth=2;
+ctx.setLineDash([4,3]);
+ctx.beginPath();
+ctx.moveTo(x,yb);
+ctx.lineTo(xe,yb);
+ctx.stroke();
+ctx.setLineDash([]);
+}
+ctx.fillStyle=rgbCss(PALETTE.ground,1);
+ctx.fillRect(xl - 4,pos.y - fz - 1,w + 8,fz + 0.2*fz + 5);
 ctx.textAlign=pos.left?'right':'left';
 ctx.lineJoin='round';
 ctx.strokeStyle=rgbCss(PALETTE.ground,1);
@@ -4661,6 +4687,18 @@ for(const[ya,yz]of axisBands)if(by1 > ya&&by0 < yz)return false;
 }
 return true;
 };
+let a=Infinity;
+let b=-Infinity;
+for(const list of[model.segments,model.ghost&&model.ghost.segments])for(const sg of list||[])for(const k of sg.cells){const c=Math.floor(k / 100);if(c < a)a=c;if(c > b)b=c;}
+if(a <=b&&!RD_MUT.has('lay_off_stop_tree')){
+const t0=panel.x + a*cs;
+const t1=panel.x +(b + 1)*cs;
+for(const left of[false,true]){
+const ox=left?t0 - 6 - w:t1 + 6;
+const y=yb + 0.35*(h - 4);
+if(clear(ox,y))return{left:false,x:ox,y,out:true};
+}
+}
 const dys=RD_MUT.has('lay_off_stop_far')?[h + 2 + 250*lay.s]:[0.35*(h - 4),-4,h + 2];
 for(const dy of dys){
 for(const left of[false,true]){
@@ -4715,22 +4753,31 @@ ctx.font=`700 ${fz}px "Segoe UI",Arial,sans-serif`;
 const bw=boreWidthPx(cs);
 const shafts=model.holes.map((h)=>({x:panel.x +(h.col + 0.5)*cs - bw / 2 - 1,y:panel.y,w:bw + 2,h:h.depth*cs}));
 const out=[];
-model.holes.forEach((h,i)=>{
+const prio=model.phase==='RUN'?(model.run?model.run.rigCol:null):model.rig?model.rig.selected:null;
+const order=model.holes.map((h,i)=> i).sort((p,q)=>(model.holes[q].col===prio)-(model.holes[p].col===prio)||p - q);
+const GAP=3;
+for(const i of order){
+const h=model.holes[i];
 const cx=panel.x +(h.col + 0.5)*cs;
 const label=String(i + 1);
 const w=ctx.measureText(label).width;
 const mk=(side,row)=>{
 const y=panel.y + 12*s + row*(fz + 2);
 const x0=side==='r'?cx + bw / 2 + 3:cx - bw / 2 - 3 - w;
-return{label,x0,y,w,box:{x:x0,y:y - fz*0.8,w,h:fz}};
+return{label,x0,y,w,i,box:{x:x0,y:y - fz*0.8,w,h:fz,col:h.col}};
 };
-const free=(c)=> c.box.x >=panel.x + 2&&c.box.x + c.box.w <=panel.x + panel.w - 2
-&&!shafts.some((sh)=> boxHit(c.box,sh))&&!out.some((o)=> boxHit(c.box,o.box,1));
+const inPanel=(c)=> c.box.x >=panel.x + 2&&c.box.x + c.box.w <=panel.x + panel.w - 2&&c.box.y + c.box.h <=panel.y + panel.h - 2;
+const free=(c)=> inPanel(c)&&!shafts.some((sh)=> boxHit(c.box,sh))&&!out.some((o)=> boxHit(c.box,o.box,GAP));
 let pick=null;
-if(RD_MUT.has('lay_off_hnum'))pick={label,x0:cx - w / 2,y:panel.y + 12*s,w,box:{x:cx - w / 2,y:panel.y + 12*s - fz*0.8,w,h:fz}};
-else for(let row=0;row < 8&&!pick;row++)for(const side of['r','l']){const c=mk(side,row);if(free(c)){pick=c;break;}}
-out.push(pick||mk('r',0));
-});
+if(RD_MUT.has('lay_off_hnum'))pick={label,x0:cx - w / 2,y:panel.y + 12*s,w,i,box:{x:cx - w / 2,y:panel.y + 12*s - fz*0.8,w,h:fz,col:h.col}};
+else{
+for(let row=0;row < 40&&!pick;row++)for(const side of['r','l']){const c=mk(side,row);if(free(c)){pick=c;break;}}
+if(!pick&&h.col===prio)for(let row=0;row < 40&&!pick;row++)for(const side of['r','l']){const c=mk(side,row);if(inPanel(c)&&!out.some((o)=> boxHit(c.box,o.box,GAP))){pick=c;break;}}
+if(!pick&&h.col===prio)pick=mk('r',0);
+}
+if(pick)out.push(pick);
+}
+out.sort((p,q)=> p.i - q.i);
 return out;
 }
 function rdHoles(ctx,model,panel,cs,bw,lay){
@@ -4744,7 +4791,7 @@ const cx=panel.x +(h.col + 0.5)*cs;
 const x=cx - bw / 2;
 const hh=h.depth*cs;
 LAYOUT_BOXES.shafts.push({x:x,y:panel.y,w:bw,h:hh,col:h.col});
-ctx.fillStyle=rgbCss(PALETTE.holePlan,getTheme()==='dark'?1:0.26);
+ctx.fillStyle=rgbCss(PALETTE.holePlan,1);
 ctx.fillRect(x,panel.y,bw,hh);
 const frac=h.planned?0:h.drilledFrac==null?1:h.drilledFrac;
 if(frac > 0){
@@ -5549,6 +5596,7 @@ const bw=boreWidthPx(cs);
 ctx.setTransform(dpr,0,0,dpr,0,0);
 ctx.imageSmoothingEnabled=false;
 rdFrameBack(ctx,lay);
+if(model.campaignEnd)return;
 const sides=[['left',lay.panels.left],['right',lay.panels.right]];
 ctx.save();
 ctx.translate(v.shakeX||0,0);
@@ -6040,7 +6088,7 @@ fadeAlpha:v.fadeAlpha,
 countdown:v.countdown,
 portals:v.portals,
 selected:v.selected,
-meter:v.meter?{used:v.meter.used_m,cap:v.meter.cap_m}:null,
+meter:v.meter?{used:v.phase==='RUN'&&v.unspent?v.unspent.left.drilledM:v.meter.used_m,cap:v.meter.cap_m}:null,
 segments:v.segments,
 ghost:v.ghost,
 holes:v.holes,
@@ -6064,6 +6112,7 @@ ore:v.ore,
 run:v.run,
 capFull:v.capFull,
 rig:v.plan||null,
+campaignEnd:v.phase==='READOUT'&&!!(v.campaign&&v.campaign.ended),
 };
 }
 function planHoverOf(v){
@@ -6125,7 +6174,7 @@ if(v.phase==='LEVEL_START')active.push(`level-${v.level.level_id}`);
 return{
 phase:v.phase,
 message:v.ui.message,
-meter:v.meter?{used:v.meter.used_m,cap:v.meter.cap_m,over:v.meter.used_m > v.meter.cap_m}:null,
+meter:v.meter?{used:v.phase==='RUN'&&v.unspent?v.unspent.left.drilledM:v.meter.used_m,cap:v.meter.cap_m,over:v.meter.used_m > v.meter.cap_m}:null,
 ghostM:v.ghostM,
 cellM:v.cellM,
 countdown:v.countdown,

@@ -8,7 +8,7 @@ const LIGHT_DATA = {
   speckle: [214, 140, 40],
   line: [31, 78, 154],
   hole: [179, 38, 30],
-  holePlan: [179, 38, 30],
+  holePlan: [192, 96, 90],
   formation: [194, 122, 18],
   formationUnseen: [226, 205, 170],
   sroi: [18, 160, 166],

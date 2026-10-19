@@ -1,0 +1,1161 @@
+# Step 45 Game Design Spec v3.8.2: Prospect From Memory
+
+Version: v3.8.3 (2026-10-18; v3.8.2 plus the second half of the Cowork round 2 fix wave (`review/cowork_findings_2_r2.md` B1, B2, B3, B9, B10, B11, B13, B15, B16, B17, B18 and the Designer items D1, D2, D3, D4): one stop message per real stop reason, the legend stops promising a portal band, the level start card waits for the player, the end-of-campaign screen, the paused state, Fill keeps its tool, zero-portal text, the formation-top number under the portal, label and caption layout, header height, planned-hole colour in dark mode; sections 3a (V1, V8, V10, V12 amended; V15 to V17 new), 4 (Fill), 4a, 4b item 2, 13 (G1H rows); no sim change, no golden change; frozen predecessor `step45_toymaker_spec_v382_frozen.md`). Previous: v3.8.2 (2026-10-18; v3.8.1 plus Quinn's ruling of 2026-10-18 (independent 2 km budgets): the rig draws on its own limit, the level cap (2,000 m, 400 cells), no longer on the borebot network length; the 'budget B' wording and the Option B coupling (row 44) are gone; the surface auto Balrog plan draws on one pool of cap cells with at most 12 holes (B7 no rounding overdrill, B8 never 13 holes); the rig overage reads 'Rig: Max Length Exceeded' and the borebot note keeps its own state (B5); the meter total is red only above the cap (B12); the default depth of a new hole is checked on the page (B6); the branch angle (15 degrees) and the single elapsed time (B19) are unchanged; sections 3a (V11, V12), 4b item 10, 4d, 4e, 13 (G62, G63, G65 new, G1E rows, site variants), 16 (rows 42, 44); sim step45_reference_sim_v3.py (63 gates, G65 new, G53 re-worded), `goldens_v42.json` (only the rig side of the S_* records moves; v40 stays reserved), independent oracle `step45_swe_v42_independent.py`; frozen predecessors `step45_toymaker_spec_v381_frozen.md`, `step45_reference_sim_v41_frozen.py`, `step45_07_export_goldens_v41_frozen.py`, `goldens_v41.json`). Previous: v3.8.1 (2026-10-18; v3.8.0 plus the G1e feedback round from the Cowork Level 4 playtest (`cr_scratch/step45_cowork_findings_1.md`, B1 to B12 and the label list): growth feedback from the probe (the buttons grey with a reason), the note under the meter, one definition of unspent and the exact rig budget, playback speeds 1 2 4 8 16 with a pace that keeps a 16x run at 6.5 s or more, the page boots Level 1 with a level select, the 960 x 540 minimum window, the plain labels (formation top, your painting), Ctrl+Z and the Undo label, the drag-release rule; sections 2b, 2d, 3, 3a (V4, N1 amended; V7 to V14 new), 4 (Undo), 13 (G1E rows); no golden moves, no sim change; frozen predecessor `step45_toymaker_spec_v380_frozen.md`; the superseded wording in 4a, 4b and 4e is listed in the changelog for the owner of 4a to 4c to merge). Previous: v3.8.0 (2026-10-18; v3.7.7 plus D1, Quinn: the branch half-angle theta is the constant 15 degrees in surface mode (30 degrees included between sibling branches), replacing the bounding-box angle clamp(atan(w / 2h), 20, 70); sections 2, 4c G1, G3, G5, the legacy paragraph, gates G47 to G49 and G64 (new), the G9, G33, G34 surface variants re-valued; frozen predecessors `step45_toymaker_spec_v377_frozen.md`, `step45_reference_sim_v39_frozen.py`, `step45_07_export_goldens_v39_frozen.py`, `step45_swe_v39_independent.py`; `goldens_v41.json` (v40 is reserved for the Option B site variants); legacy trunk-mode keys unchanged byte for byte). Previous: v3.7.7 (2026-10-18; v3.7.6 plus the G1c feedback round: the rig budget never refuses placement and blocks only Start, four ways to remove a portal, the cap warning reads "Max Length Exceeded"; sections 3a, 4a, 4b items 7, 8, 10, 11, 4e, G62, G31 and G2 site variants, new G63; frozen predecessor `step45_toymaker_spec_v376_frozen.md`; no golden moves, no sim change). Previous: v3.7.6 (2026-10-18; v3.7.5 plus the default-portal gap rule: when the S bounding-box centre column has no S cell, the default portal is the nearest S column, ties lower (L4: 97 becomes 93); sections 3a and 4a, G1; frozen predecessor `step45_toymaker_spec_v375_frozen.md`; `goldens_v39.json` regenerated, only keys that read the default portal move). Previous: v3.7.5 (2026-10-18; v3.7.4 plus the straight-root rule: trunk depth is an ordinary branch, so the first click of a portal drills one straight segment of length D from the surface and the second click forks its tip; sections 4b and 4c amended, gate G47 rewritten and the dependent gates re-valued; `goldens_v39.json` carries the new surface keys; frozen predecessors `step45_toymaker_spec_v374_frozen.md`, `step45_reference_sim_v38_frozen.py`, `step45_07_export_goldens_v38_frozen.py`). Previous: v3.7.4 (2026-10-18; v3.7.3 plus section 17 naming storyboard rev 8 (`cr_scratch/step45_storyboard_v3/`, 102 checks, Designer fixes of `step45_10b_7_designer.md` applied) as the binding contract; no number moved; frozen predecessor `step45_toymaker_spec_v373_frozen.md`). Previous: v3.7.3 (2026-10-18; v3.7.2 plus the D29 target-set ruling (tied portals all serve the body), the theta source note and the free-portal-over-deep-body note, from `cr_scratch/step45_10b_4_report.md` section 5 items 1 to 3; no sim-bearing number changed; frozen predecessor `step45_toymaker_spec_v372_frozen.md`). Previous: v3.7.2 (2026-10-17; v3.7.1 plus the GV4m_late time change, the A-SIM3 note and section 4e; no sim-bearing number changed; diffs `cr_scratch/step45_10b_2b_spec_patch_diff.md` and `cr_scratch/step45_10b_2c_spec_patch_diff.md`; frozen predecessor `step45_toymaker_spec_v371_frozen.md`). Standalone port contract: every rule, constant and table is stated in this file. A value that only a sim run can produce is marked "regenerated by -3" (Step 45.10b-3, speed wave, `goldens_v37.json` time keys) or "regenerated by -4" (Step 45.10b-4, branching wave, `goldens_v38.json` surface keys); the named golden file carries it. Reference sim: cr_scratch/step45_reference_sim_v3.py is the v3.6.3 oracle (45 gates pass; 17 to 40 s depending on machine load) and becomes the v3.7 oracle in the two waves (target 61 gates, under 45 s). Independent check: cr_scratch/step45_swe_v36_independent.py (41 checks against v3.6); the v3.7 second implementation step45_swe_v37_independent.py is written in -4. Verdict source for v3.6: cr_scratch/step45_07_swe_v36_check.md. Frozen predecessors: cr_scratch/step45_toymaker_spec_v37_frozen.md, cr_scratch/step45_toymaker_spec_v363_frozen.md, step45_toymaker_spec_v36_frozen.md, step45_toymaker_spec_v35_frozen.md, step45_reference_sim_v35_frozen.py.
+
+Author: The Toymaker wrote v3.0 to v3.6.3; The Engineer wrote the v3.7 text (Step 45.10b-2). Tags: SRE-12.5 = the Space Resources Engineer scale note (source of the Earth physical figures stated in this spec: block-model range 5 to 25 m, weathered-zone cover 25 m; its rig 1 m/h and borebot 0.1 m/h figures are superseded by section 2d; no rule depends on the file); Quinn = ruling with its date; V1 to V11 = Quinn's veto table (cr_scratch/step45_g1_final_plan.md section 6), accepted 2026-10-16; game = design choice, playtest value; DEFAULT n = a value Quinn has not ruled, chosen by the Engineer or the Toymaker, numbered in the body and listed once in section 16 for veto.
+
+## Changelog v3.8.2 to v3.8.3 (Cowork round 2, second half; no golden moves)
+
+Source: `notes/reports/step45_10e_cowork_r2_triage.md`, `review/cowork_findings_2_r2.md`, `notes/reports/step45_10e_n1_designer.md`. The sim, `goldens_v42.json` and the oracle are unchanged: every change is in the state machine messages, the page and the tests. Sim note: the exporter field `s_top_m` of `export_sim.py` (storyboard numbers) still reports the v3.8.2 rule (shallowest row of the served body); the on-screen label follows V10 below, and no gate reads either.
+
+| Item | v3.8.3 rule | Sections |
+|---|---|---|
+| B1 stop text | the growth stop line has one text per real reason. Dead after a branch of the portal entered the S margin: "Growth stopped: the branches reached the painted formation and cannot extend inside it (its bottom, its edge or the grid floor)." Dead before any branch entered it (including the first click): the g1g text "No branch from this portal reaches the painted formation at this dBranch. Move the portal or change dBranch." Cap: "Next generation would exceed the 2,000 m limit", and when a shorter dBranch still fits: "dBranch 50 m is too long for the 2,000 m limit. 35 m or less still fits." Ceiling: "generation ceiling reached". The line is bold, ink coloured, 14 px on the grid (11 px floor 9) with a warning bar for a refusal | 3a V12 |
+| B3 legend | the shadow band is a hint (4b item 2 already says it refuses nothing); the legend reads "shadow band (under the surface line): columns with painted cells", not "where a portal may sit". A portal outside the band is accepted | 3a V12a, 4a, 4b item 2 |
+| B9 level start | in surface mode LEVEL_START does not auto-advance. Show formation, Space and Enter start the round; the level select stays usable until then. The spine caption reads "Space or Enter also starts". Legacy trunk mode keeps the 1.5 s advance | 3a V1, V15 |
+| B10 end of campaign | after Level 6, Next ends the campaign: READOUT stays the phase, `view.campaign.ended` is true and the page shows a card with the six levels, the share prospected by each side, the side ahead and an average; the button reads "Play again" and restarts at Level 1 (`restartCampaign`, READOUT after the campaign ended, otherwise illegal). `view.campaign.scores` holds the readout totals of the levels played since the campaign started | 3a V8, V16 |
+| B13 paused | while paused the Pause button shows a play triangle and the line under the left panel reads "Paused - Space to resume"; Space toggles pause in RUN | 3a V15 |
+| B15 Fill | Fill stays the selected tool after a fill, accepted or refused, until the player picks another tool. A refusal says why in the line under the left panel and does not shake the panels | 4 |
+| B16 no portal | with no portal placed the refusal and the growth line read "Place a portal first: click the surface or the left panel."; "select a portal first" is kept for a portal that does not exist | 3a V12 |
+| B17 rig labels | a depth label that cannot be placed without overprinting another is not drawn unless its hole is selected; the selected hole always has its label | 4e |
+| B2, B18 formation top | the number is the depth of the shallowest painted cell in the portal's own column, else in the nearest painted column of the cells it serves (ties to the lower column). The label sits on the dashed line at that depth, beside the drop (right, else left), inside the left panel | 3a V10, 4a |
+| B11, D3 meter caption | the caption "unspent N m of 2,000 m" has three short lines and ends above the gauge (gauge top at grid y 348, 90 high) | 3a V11 |
+| D1 header | the header is at least 48 px tall (960 x 540: 48 px instead of 39) so the 44 px toggle sits inside it above the rule | 3a V9 |
+| D2 dark planned hole | dark mode draws the planned (undrilled) part of a rig hole in the solid colour #b0605f (176, 96, 95), 3.6:1 on the ground and 1.9:1 on the teal painting, darker than a drilled hole; light mode keeps its 26 percent wash | 3 palette |
+| D4 MIRROR | the PAINT tag is 88 x 42 grid with the line "your painting" inside the box at 960 x 540 | 3a V10 |
+
+Superseded wording (3a governs): V1 "auto-advances ... at 1.5 s" and "auto at 1.5 s" (surface mode); V8 "after Level 6 the campaign ends" now ends in the card of V16; V10 "the shallowest row of the components"; V12 "dead", "cap" and "no portal selected" texts; 4 Fill "panel shakes"; 4a shadow band "hint" is unchanged but the legend wording changes; 4a "S-top ... of the components the selected portal serves" (V10).
+
+## Changelog v3.8.1 to v3.8.2 (independent 2 km budgets; goldens_v42)
+
+Source: Quinn 2026-10-18 after Cowork round 2 (`review/cowork_findings_2_r2.md`, B4, B5, B7, B8, B12 and the budget half of B14): both sides can each drill 2,000 m (the level's `drill_cap_m`), independent of the other. The rig limit is no longer the borebot network length. The branch angle (15 degrees) is unchanged; per-side finish time (B19) stays out.
+
+| Item | v3.8.2 rule | Sections |
+|---|---|---|
+| F1 rig limit | Surface mode: the rig limit is the level cap in whole cells, 400 cells = 2,000 m (`floor` of the cap, so a cap with a half cell never lets the rig pass it). It is the same number for the auto Balrog plan, a hand plan and the `Round` guard. Rig unspent = 2,000 m minus the rig total. The left budget of 4d (half-up of the network length) remains only the base of the reserves (4d, section 6). Legacy trunk mode keeps the per-component budgets and every legacy golden key | 3a V11, 4d, 4e, 4b item 10 |
+| F2 auto plan (B7, B8) | One pool for all components: pass 0 for every component (descending area), then the spacing passes 10, 5, 2, 1, each over the components in order, each over the candidate columns in order. The plan stops at the first hole that exhausts the pool (that hole takes the remainder) or that would be the 13th. At most 12 holes, one per column, total at most the cap, whole cells (no half-up on the pool). Zero left clicks still plans: the rig no longer reads the left length | 4d |
+| F3 Option B coupling removed | Row 44 (`total rig length at most the left drilled length`) is replaced: the rig total is at most the cap. The 'budget B' of the RUN right line and of the PLAN rig line is gone | 3a V11, 4e, 16 row 44 |
+| F4 wording (B4, B5) | RUN lines, both sides: `drilled D m | unspent U m of 2,000 m`. PLAN rig line with holes: `rig R m | N of 12 holes | unspent U m of 2,000 m`; over: `rig R m of 2,000 m | Rig: Max Length Exceeded | N of 12 holes`. Start refused over the cap with `Rig: Max Length Exceeded` (`strings.lbl_rig_cap_full`). The note under the borebot meter reads the borebot side only: `Max Length Exceeded` when the left total is above the cap, `Next generation would exceed the 2,000 m limit` when only the next generation does not fit, never the rig. The zero-hole rig line is `no rig holes placed: Balrog plans the rig` (no budget). The right placement help reads 'beyond the drill limit' | 3a V11, V12 |
+| F5 meter colour (B12) | The meter total is red only when the left total is above the cap. A growth stop on the cap (the ghost does not fit, `capFull`) is a legal plan: the total stays plain, the ghost stays red | 3a V12 |
+| F6 default depth (B6) | Unchanged rule, now pinned on the page: a new hole's default depth is its column's formation bottom + 1 cell (at most 100), else 10 cells, whichever row is clicked. A dike that reaches the grid floor gives 100 | 4e |
+| Goldens | `goldens_v42.json` replaces `goldens_v41.json` as the live file. Only `holes`, `spent`, `right`, `totals` of the S_* records and the right side of `S_MID` move; every legacy key, every left key, `budget`, `b`, `reserve` and `reaim_cap` are byte-equal to v41. Gate G65 (new) and G53 (re-worded) in the sim; independent checks W9, W10 and the full S_* comparison in the oracle | 13 |
+| Mutants | `rig_pool_left` (the v3.8.1 left-length budget), `rig_max_off` (no 12-hole limit), `rig_pool_half_up` (the pool rounded up: a half-cell cap overdrills); `budget_rounded` is removed (no exact left-length budget remains) | 13 |
+
+Superseded by F1 to F4: the E5 sentences on the exact rig budget (v3.8.1 changelog), V11 'right line with budget B' and 'a player plan is over when its integer cell total exceeds the exact length', V12 'the rig total above the left length', 4d 'Equal length' for the surface rig, 4e 'Budget' and 'the section 4d budget, half-up of the planned left length', C1 and G63 'the budget' (read: the rig limit, the cap), G11 and G53 equal-length site variants, the L3 and L6 rounding rows of Cowork round 2 (B7).
+
+## Changelog v3.8.0 to v3.8.1 (G1e: growth feedback, one unspent, playback pace, boot level and level select, minimum window; no golden moves; no sim change)
+
+Source: Cowork tester, one play-through of Level 4 at 1197 x 726 (B1 to B12 and the unclear-label list in `cr_scratch/step45_cowork_findings_1.md`) and Quinn's work order of 2026-10-18. Every item has a test row in section 13 (G1E rows); every row is red on `play_g1d.html`.
+
+| Item | v3.8.1 rule | Sections |
+|---|---|---|
+| E1 (B1) drag release | The red "portals must be 25 m apart" label over a dragged portal was the hover ghost: the hover record kept the drag after the release and the probe saw the portal itself 0 m away. After a release the hover is recomputed (no drag); over a portal marker the ghost draws nothing; a click within 25 m of the portal just placed, moved or selected, inside 0.6 s, adds nothing and shows no error | 3a V14 |
+| E2 (B2, B3, B9) growth feedback | Next generation and Grow to 12 are enabled only while the probe of the selected portal's next generation is ok (`flags.canClick`, `view.growth`). Otherwise both are grey and the line under the left panel gives the reason: dead "No branch from this portal reaches the painted formation at this dBranch. Move the portal or change dBranch."; cap "Next generation would exceed the 2,000 m limit"; ceiling; no portal "select a portal first". A pressed grey button asks the core and gets the same text as its message. The formation-top label no longer starts on a depth-axis label ("200S top 70 m") | 3a V12 |
+| E3 (B4) Back to paint | Hover state belongs to its phase and is cleared on a phase change (the ghost and "three portals at most" left at an old hover). The paint undo stack is empty after Done by design (section 4, Undo; unchanged): Back to paint says "The Undo history was cleared when you pressed Done painting." Clicks dropped by Done after a region change are reported with their portal: "4 clicks dropped (portal 825 m) because the painted region changed". The player never sees "S" or "SROI": "S top" is "formation top" (`lbl_s_top`), "MIRROR one SROI" is "MIRROR your painting", "your SROI, painted once" is "your painting" | 3a V10, V13, 4 |
+| E4 (B5) the note | "Max Length Exceeded" is shown only for a total over its limit (the rig total above the cap, named "Rig: Max Length Exceeded" from v3.8.2, or a left total above the cap). When only the next generation does not fit the note reads "Next generation would exceed the 2,000 m limit" (`refuse_cap`, a template with the cap in metres); Start stays enabled | 3a V12 |
+| E5 (B7, B8) unspent | unspent = cap minus drilled, per side, one wording "unspent N m of 2,000 m" in the PLAN meter caption, the PLAN rig status, the RUN lines and the result; the RUN line and the result read one field (`view.unspent`). The v3.8.0 RUN HUD showed the reserve (270 m) and the result the unspent budget (920 m, 960 m). [v3.8.2: the rig limit is the cap, not the left length; see F1 to F4.] The re-aims and adds counters are hidden | 3a V11, 4e |
+| E6 (B10) playback | Speeds 1x 2x 4x 8x 16x; pause always works and holds; pace = min(1, run ticks / (100 x 16 x 6.5)) scales the wall time the page hands the clock, so a run at 16x lasts 6.5 wall s or more whatever its length (the Cowork 1,080 m plan at 1x lasts about 104 wall s). The page presses 4x at Start; the core starts at 1x. Ticks, hashes, goldens and results do not depend on the pace | 2b, 2d, 3a V4, N1 |
+| E7 (B11) boot and levels | The page boots Level 1. The LEVEL_START card has six buttons (1 to 6) that pick any level in any order; Levels 1, 2 and 3 play through to READOUT and Next steps 1, 2, 3, 4, 5, 6 | 3, 3a V7, V8 |
+| E8 labels | Hover in metres only ("650 m", rig "650 m, 375 m deep"; no "col N"); the legend names the surface distance flags (the landmark stakes at 0, 250, 500 and 750 m) and the rig hole marker ("rig hole", was "first hole (at a portal)") | 3a V14 |
+| E9 keyboard | Ctrl+Z undoes (PAINT: the last stroke; PLAN: the last accepted click); Ctrl+Y and Ctrl+Shift+Z are redo and do nothing (no redo exists); the PLAN Undo button reads "Undo: portal 825 m, gen 2" | 3a V14 |
+| E10 (B12) window | 960 x 540 is the smallest supported window; below it an overlay reads "Window too small: enlarge to at least 960x540". At and above it no button text is clipped and no text overlaps or leaves the window (fonts scale to 9 px, a button label that does not fit shrinks to 6.5 px at the least) | 3a V9 |
+| Mutants | `probe_ignored`, `note_max_always`, `budget_rounded`, `run_pace_off` (core); `ui_no_settle`, `lay_off_stop`, `lay_off_fit` (page) | 13 |
+
+Superseded wording in 4a, 4b and 4e (the owner of 4a to 4c merges these; 3a V7 to V14 govern until then): 4a "S top N m" (now "formation top N m"); 4a "a ghost marker with its column" (now metres only); 4a "The drill meter shows "Max Length Exceeded" when the next generation would exceed the cap or the cap is reached" (now E4); 4a "Next generation ... Next is disabled when it would exceed the cap" (now E2 for every non-ok probe); 4b item 2 "no branch fits inside the region" (now the E2 dead text); 4e "budget = half-up" for a player plan (now the exact left length, E5); 4a "unspent" in the rig status (now E5 wording).
+
+## Changelog v3.7.7 to v3.8.0 (fixed branch half-angle; goldens_v41)
+
+Quinn D1: theta is 15 degrees, 30 degrees included between the two children of a fork. The bounding-box angle (v3.7.7 and earlier) read the whole target set T, so a portal that served two bodies forked at 58 degrees (L4) and its forks' rays missed a deep isolated body (R4, "dead").
+
+| Item | v3.8.0 rule | Sections |
+|---|---|---|
+| Half-angle | Surface mode: THETA = 15 deg for every portal and every target set; none (no candidates) when T is empty. Trunk mode (legacy anchor) keeps clamp(atan(w / 2h), 20, 70) on the portal's component. Mutant `theta_bbox` restores the bounding-box angle in surface mode (G64) | 2, 4c G1 |
+| Heading limit | A chain grown from heading 0 follows d = 0.5 d_parent +/- 15: the limit is 30 deg (+/- 15, +/- 22.5, +/- 26.25, ...). The 60 deg direction clamp stays in the rule: it cannot bind on an un-re-aimed chain; it binds below a re-aimed parent whose heading exceeds 90 deg in magnitude (0.5 x 102.11 + 15 = 66.05, clamped to 60; G64) | 2, 4c G3 |
+| Tip separation | tip_sep = max(1, 0.9 D sin 15) = max(1, 0.2329 D) cells: the floor 1.0 binds only at D = 4 cells (20 m, 0.93); D = 5 cells (25 m) gives 1.165; D = 20 cells gives 4.659. Sibling ends are 2 D sin 15 = 0.5176 D apart, always more than tip_sep, so siblings never prune each other; only cousins (children of different parents) can | 4c G5, G64 |
+| Unchanged | stay-mask, R4, root rule, attribution, cap, ceiling, speed, cover cap, trunk mode | 4c |
+| Mutant | `theta_bbox` (G64 known-bad) | 13 |
+
+Values that move (regenerated by `step45_07_export_goldens.py` into `goldens_v41.json`; every legacy key equals `goldens_v39.json` and `goldens_v37.json` byte for byte): S_GV1 to S_GV4, the nine S_P worlds, S_MID, the S_E hand vectors of G47 to G49 (SW-A click 2 ends (99, 8) and (101, 8); G49 uses an 8-wide body, SW-49, rect(96, 103, 20, 39)). The mid-run scenario (S_P.GV4, policy 50 m x 3 then 75 m) now has 19 segments and ends at 129.0 s; its re-aim and add times are re-placed: first clamped re-aim 70 s (seg 7, cost 19.207, cap 21), first refusal toward (175, 40) at 70 s (the v3.7.7 target (150, 60) is affordable), add at 75.0 s col 80 depth 20 (reserve 53), re-aim at 100.0 s, three re-aims at 95, 105, 115 s. The sim has 62 gates (45 in the v36 zero control); the independent check `step45_swe_v40_independent.py` has 61 checks.
+
+## Changelog v3.7.6 to v3.7.7 (G1c feedback: rig budget blocks Start, not placement; portal removal; "Max Length Exceeded")
+
+Source: Quinn 2026-10-18 after replaying play_g1c.html: blocking rig placement is arbitrary; a borebot portal cannot be removed and the player is stuck at three, wasting length; "drill string full" is the wrong warning, it should say Max Length Exceeded. No sim rule, golden or gate of the sim moves; all changes are plan-time handling in the build and the strings.
+
+| Item | v3.7.7 rule | Sections |
+|---|---|---|
+| C1 Placement | `addRigHole`, `moveRigHole` and `setRigHoleDepth` are never refused for budget. Only range (column on the grid, depth 1 to 100 cells), one hole per column and 12 holes refuse (`rig_range`, `rig_sep`, `rig_max`). `rig_budget` and `rig_nobudget` no longer exist | 4a, 4e |
+| C1 Default depth | A new hole's default depth is its column default (S bottom + 1, else 10 cells), not reduced by the room left | 4e |
+| C1 Over budget | Over = total rig depth above the budget. Cells beyond the cumulative budget, in placement order, are the over cells; they draw in the warning colour. The rig status line reads "rig 340 m of 120 m | Max Length Exceeded" | 4a, 4e |
+| C1 Start gate (core) | `start()` refuses with code `rig_over` and the text "Max Length Exceeded" when the rig total exceeds the budget; `flags.canStart` is false while over; `Round` throws on a hand plan above the budget. Boundary: total equal to the budget is allowed, one cell above is refused | 4b item 10, 4e |
+| C1 No clip | No left edit (Undo click, remove portal, move portal, Back to paint) changes the rig list. When the budget falls below the total the plan shows the over state. `rigClip` is removed and no notice is posted | 4e, G31 |
+| C2 Remove portal | Four ways: the "x" handle on the selected portal, the "Remove portal" button, Delete or Backspace (the selected object, by `selKind`), right-click on a marker. Removing every portal is allowed (Start blocked by the existing text). Removal is not undoable (M8). Removal drops that portal's clicks; clicks of other portals that the replay drops report "N clicks dropped" | 4a, 4b items 7, 8 |
+| C2 Input | Button 0 places, selects and drags; button 2 on a marker removes, on anything else does nothing; `contextmenu` is always prevented on the canvas; touch removes by the x handle or the button | 4a |
+| C2 Selection | Core tracks `selKind` ('portal', 'hole' or null) from the last portal or hole edit or select; `view.selKind`. After remove-all, Back to paint and Done the selection is null | 4a, 4b |
+| C3 Warning text | `lbl_cap_full` and `refuse_cap` both read "Max Length Exceeded". Trigger unchanged (the next generation would exceed the cap, or the cap is reached). The same text is the Start note while the rig is over | 4a |
+| Mutants | `budget_refuses_placement`, `start_allows_over`, `round_accepts_over`, `clip_returns`, `remove_blocked_last`, `remove_keeps_clicks`, `sel_undefined`, `rightclick_places`, `x_places_after_remove`, `delete_wrong_kind`, `label_wrong`, `over_bound_lt` | 13 |
+
+## Changelog v3.7.5 to v3.7.6 (default portal in a gap)
+
+The v3.7.5 straight root meets the S margin of T along the portal's vertical ray, so a centre column in a gap between bodies is dead on click 1 at every D (L4: column 97, S spans 10..93 and 112..183). v3.7.6: the surface default portal is the S bounding-box centre column, half up; when S has no cell in that column it is the nearest column that has one, ties to the lower column (the rule `cover_col` already used for the cover cap, section 8a, which is unchanged). L4 default: 93. Sections 3a V3, 4a and G1 amended; the surface default for S columns {2, 6} is 2 (was 4). Mutant `centre_gap_kept`. A player-placed portal stays free (no snap).
+
+## Changelog v3.7.4 to v3.7.5 (trunk depth is an ordinary branch; goldens_v39)
+
+Quinn 2026-10-16 ruled "no special trunk. The trunk is an ordinary branch. dBranch D set to 50: drill 50 down from the surface and branch, another 50 and branch again." The v3.7.2 build forked at -theta and +theta from the surface root on the first click, so the straight segment never existed. v3.7.5 builds the ruling.
+
+| Item | v3.7.5 rule | Sections |
+|---|---|---|
+| Straight root | The first click of a portal gives ONE segment from (p, 0): heading 0 (the root heading), length D, generation 1, parent none. It obeys the stay-mask and the R4 ray prune of its own heading. If R4 drops it the click is "dead" and changes nothing | 4b, 4c G3, G4 |
+| Fork from the tip | Every segment of generation 1 or more forks into two children at 0.5 x parent heading + s x theta (clamped to 60 deg), length D. Click 2 forks the tip of the click-1 segment; with D = 50 m the network is 50 m down before the first branch | 4c G3 |
+| Unchanged | 24-generation ceiling (the straight segment is generation 1), 2,000 m cap (the straight segment counts), tip separation, component attribution (G9), rig plan, radar pair-drop, re-aim regrowth, trunk mode (`START_MODE='trunk'`) | 4c |
+| Consequence | The vertical ray of the root must meet the S margin of the portal's target set T. A portal column over a gap between bodies is dead at every D. The old fork could reach either side of the gap | 4b item 2 |
+| Mutant | `root_forks` restores the v3.7.4 first-click pair (G47 known-bad) | 13 |
+
+Values that move (all regenerated by `step45_07_export_goldens.py` into `goldens_v39.json`; the trunk-mode keys equal `goldens_v38.json` and `goldens_v37.json` byte for byte): the S_GV1 to S_GV4 records, the nine S_P policy worlds, S_MID (the mid-run scenario is the S_P.GV4 world, policy 50 m x 3 then 75 m, add at 75.0 s col 80, re-aim at 140.0 s), and the S_E hand vectors of G47 to G55. The sim has 61 gates (45 in the v36 zero control).
+
+## Changelog v3.7.2 to v3.7.3 (D29 target sets, theta source; no golden moves)
+
+v3.7.3: G1a and DEFAULT 33: portals tied at the smallest column distance from a component's nearest S column all serve that component (ties share). The literal v3.7.2 rule (ties to the lower portal) is the legacy mutant `tie_lower` in G54. G1 theta source note: shipped `thetaOf` reads the bounding-box rows r0..r1; the prototype's `final.out` used rows 0..r1, so per-world numbers differ and "same reach" holds in aggregate only. G1a note: a free portal over a deep body can return every click dead (S-top label steers).
+
+## Changelog v3.7.1 to v3.7.2 (test-case time, sim-value note, player-placed rig rules; no golden moves; no sim change)
+
+v3.7.2: GV4m_late moves from an add at 200.0 s to 177.0 s (G32: 200.06 s to 177.06 s). At R 3.4 and travel 1,800 cells/s (TC 2.5) the right side finishes at 178.958 s (game clock) when the hole is not added, so the legal add window is 175.958 to 178.958 s (game clock) and 200.0 s is refused "side_finished". Key stays `E12.gv4m_late`. The G32 harness applies actions in time order (re-aim first, then add). Section 13 carries the A-SIM3 note (sim G38 inline `col 80` / `n_region 829` become 144 / 1,147 at R 3.4, regenerated by -3). Section 4e records the player-placed rig hole rules (Quinn 2026-10-17, Option B): the editable list and UI land in 45.11 with `goldens_v40.json`; 45.10b lands the seam only. New defaults 42 to 45 (section 16). Gate numbering for 45.10b is unchanged.
+
+## Changelog v3.7 to v3.7.1 (flow and test-world rulings; no golden moves; no sim change)
+
+v3.7.1: flow rulings N1, N2, N5, N6 (Quinn 2026-10-17) join section 3a; the tap-far-from-S refusal text joins section 4b item 2; the cover cap (G61) is measured at one default-portal column (Q2) in sections 8a, 13 and 16 (DEFAULT 35 extended, DEFAULT 39 new), which moves L3 into the 45.12 regeneration set; GV4m_late (add hole at 200.0 s in v3.7.1; 177.0 s from v3.7.2) joins section 13 beside the 75.0 s case and G23 and G32 name both; section 17 carries the level-clock beat and the TIME_COMP erratum note. New defaults 39 to 41 (section 16). TIME_COMP needed no patch (section 2d and D25 already state 2.5 real h per game s). Part B (user-placed Balrog sites) is not in this version.
+
+## Changelog v3.6.3 to v3.7 (rules change; no golden moves until -3 and -4 run; the v3.6.3 sim and `goldens_v36.json` stay the anchor)
+
+Sources: Quinn rulings 2026-10-16 and 2026-10-17 (`step45_g1_feedback.md`), Manager final plan (`step45_g1_final_plan.md`), SWE prototype (`step45_g1_uniform_branching.md`), Manager open (`step45_10b_manager_open.md`).
+
+| Item | Change | Section |
+|---|---|---|
+| Uniform branching | A portal is a generation-0 root at the surface. No special trunk. dBranch D sets every segment length from the surface; the first click drills one straight segment of length D, later clicks fork (v3.7.5). `START_MODE='surface'` is the shipped default; `'trunk'` is the legacy anchor | 2, 4b, 4c |
+| Prune R4, stay-mask | R4 ray prune (tolerance 0, RAY_STEP 0.5). The stay-mask is unconstrained until the first S-margin sample and truncates after | 4c |
+| Cap and ceiling | Overburden length counts against the 2,000 m cap; overburden generations count against the 24-generation ceiling | 4c, G50 |
+| Attribution, pass 0, free portals | Overburden segments carry the component their ray meets. Rig pass 0 at a free portal column uses the nearest column of the served component. Portal columns are free. The start gate drops "every component served". Re-aim regrowth uses the 4c rule | 4b, 4c, 4d, 6 |
+| Pair rule | Borebot pairs form only where a cored cell lies within RADAR_RANGE of the S margin; overburden-only pairs are dropped (restates G55 as DROP) | 5, G55 |
+| Speed model | R = Durin net ROP / 1 m/h, level field `rig_speed_ratio`, default 3.4. TIME_COMP 0.4 game s per real hour (1 game s = 2.5 real h). Borebot 2.5 m per game s (unchanged). Rig R x 2.5 m per game s. Real-hour clock "elapsed N.N h" | 2d, G58 to G60 |
+| Constants-table fixes (defect fix) | Rows "time compression", "rig drill / travel", "borebot" carried 1 game s = about 25 real h and borebot 0.1 m/h; replaced. Caption, section 11 and D13 reconciled | 2, 5, 11, 14 |
+| Cover cap | S top at most 150 m (30 rows) on every shipped level; GV worlds exempt; L4, L5, L6 regenerated in 45.12; S-top depth label | 4a, 8a, G61 |
+| Bore diameters | Borebot 185 mm; the ant-farm animation used 190.5 mm (7.5 in), not a game value; Durin prototype rig 63.5 mm | 2, 11 |
+| Flow rulings | V1 to V6 stated as flow rules | 3a |
+| Storyboard binding | Rev 8 is the contract for look and flow; the v3.7 beat table records what changed from rev 7.1 | 17 |
+| Gates | Changed: G1, G2, G9, G10, G20, G31, G33, G34, G35, G37. New: G46 to G61 | 13 |
+
+
+## Changelog v3.6.2 to v3.6.3 (no rule change; no golden moved; no sim change)
+
+v3.6.3: section 4b item 11 records the drop-rightmost-overall case (SD-1 of cr_scratch/step45_09_parity_report.md).
+
+## Changelog v3.6.1 to v3.6.2 (no golden moved; no sim change)
+
+v3.6.2: section 6 gains the mid-run speed-change rule (rebase with carried credit; pause and drag auto-pause contribute zero wall time; worked example 201 ticks). Section 16 row 32 [DEFAULT 32]. Test UC02 is the oracle.
+
+## Changelog v3.6 to v3.6.1 (no golden moved; sim edited, behavior unchanged)
+
+SWE v3.6 check (step45_07_swe_v36_check.md) defects and PARTIAL items, closed in this file:
+
+| Item | Fix | Section |
+|---|---|---|
+| D-1 pacing | ticks due = floor(round6(wall s x speed x 100)); 1x = 100 ticks per wall second; GV4 192 s = 1,920 ticks = 19.2 wall s | 6 Clock and pacing, 2b, G32 |
+| D-2 generator | bounding box per archetype, cluster box padding (sim rule kept: box 2 cells wider than the cells), Euclidean squared distance, lattice index, lens centre, dipping-layer bottom row, clearance as empty cells, option draw, lerp order, speck rule, accept rule, priors derivation, per-level vectors | 8b, 7 priors, 8a |
+| D-3 per-level F in goldens.json | SWE export task (not a spec rule); spec carries the generator vectors | 8b vectors |
+| D-4 source of 200-variant figures | command and variant list named | 8b Measured |
+| D-5 sim docstring | rewritten, cites v3.6.1; stale version comments removed | sim |
+| D-6 header | cites step45_swe_v36_independent.py (41 checks) and the v3.6 verdict file | header |
+| D-7 "829" | largest unseen region 829 cells; all unseen S cells 2,598; {n} counts all | 7 Spot rule, 13 G38, panels 13 and 14 |
+| D-8 defaults list | columns why a default and who may overturn; 31 rows; every row tagged once in the body | 16 and body tags |
+| D-9 storyboard notes | Rev 5 record marked SUPERSEDED, title cites the current sim, "L1 run" relabeled | step45_storyboard_v3_notes.md |
+| D-10 main-round painting | both masks given as column runs and the resampling rule | 9d |
+| D-11 refusal codes | "time" and "no_branch" with texts and order | 6 Re-aim, Add borehole, G37 |
+| D-12 equality cases | action at the finish tick refused; cooldown exactly 12.0 s allowed; equal tick time accepted | 6, 7, G35, G39 |
+| D-13 dragged depth | clamped to max(2, min(drag, reserve left, grid depth)) | 6 Add borehole |
+| D-14 Back to paint trim | largest column among portals that share a component with another portal, repeated | 4b item 11 |
+| D-15 gate quality | real code mutants: tick_nearest (G32), shared_pool (G33), p4_f with 5 F variants and three actions (G38), cooldown_le (G39), no_limit (G37), undo_portal (G19) | 13 |
+| D-16 rule-to-gate table, snap gate | rule-to-gate table; snap vectors and ticks-due vectors in G32; refusal order in G37; finish-tick equality in G35; Undo scope in G19 | 13 |
+| D-17 changed rule functions | table of the seven functions with covering gates | 13 |
+| D-18 dangling text | "D16" and "WORDING PENDING" removed | 14, changelog |
+| D-19 run time | 17 to 40 s stated | header, 13 |
+| M2, EB 1 | D-2 fixes plus per-level vectors in 8b; full F sets are goldens.json (SWE) | 8b |
+| M6, EB 6 | D-1 | 6 |
+| M15 | spec, sim print string and storyboard notes use "GV1 test world" | sim, storyboard notes |
+| M16 | sim docstring and comments carry no stale version | sim |
+| M18 | storyboard Rev 5 record marked SUPERSEDED | storyboard notes |
+| Deferral: SRE-12.5 | the physical figures it supplies are listed in the Tags line | header |
+| Deferral: advisor cooldown source | the cooldown is a game value | 2 table |
+| Deferral: planned pairs "dry run of the sim" | rule stated | 7 Inputs |
+| Deferral: "as in the sim" | wording removed; rules were already stated | 2b, 6 |
+| Deferral: sim_export.json | action parameters stated in 9d | 9d |
+| Deferral: panels "draw the sim's imaged cells" | now "the imaged cells of section 5" | 13 panels |
+| Deferral: version labels in the body | old-versus-new tables, sensitivity table labels and history moved under the changelog appendix | 13, 15, appendix |
+| Deferral: levels beyond 6 | rule stated (replay Level 6 at variant + 1) | 8a |
+
+The sim changed in these ways: main_world builds from the column runs of 9d; mutants and checks were added inside gates G19, G32, G33, G35, G37, G38 and G39 (45 gates before and after); the print string "portals: L1" reads "portals: GV1 test world"; docstring and comments. No rule function changed.
+
+## Changelog v3.5 to v3.6 (no golden moved)
+
+Quinn rulings 2026-10-15, applied:
+- Readout word is "intersected". The word "confirmed" is retired (history: it was the label through v3.5). Three cell states: intersected, imaged, unseen. Tooltip for intersected: "a hole passed through this cell". The tier-1 label becomes "imaged" to match the ruled state name (default 1).
+- `drill_cap_m` and `barren_rows` are per-level fields (defaults 2,000 m and 5 rows, 25 m). The GV1 test world keeps 375 m, the pipe and main-round worlds keep 2,000 m, all keep 5 rows. No golden moved.
+- SROI (Subsurface Region of Interest) is spelled out at first use (section 0). The Level 3 seed 23,757 is marked a placeholder (section 8).
+
+Software Engineer M1 to M19 and Engine Builder gaps 1 to 8, closed:
+
+| Item | Closed in |
+|---|---|
+| M1 per-level fields, level table inline | 2, 8 (level table), G24, G25 |
+| M2, EB 1 formation generator: placement, size draws, two-body levels, noise algorithm, re-seed rule | 8, G26 to G28 |
+| M3, EB 4 reserve accounting, re-aim cap vs remaining reserve, budget + reserve vs 2,000 m | 6, G33, G34 |
+| M4, EB 3 side owns each action | 6 |
+| M5 rig schedule rules | 5, 6 |
+| M6, EB 6 fixed tick, pacing, auto-pause | 3, 6, G32 |
+| M7 run end, actions after one side finishes | 6 |
+| M8 undo scope, paint undo | 4, G29 |
+| M9, EB 7 Back to paint | 4b item 11, G31 |
+| M10 paint rasterization | 4, G29, G30 |
+| M11 rounding snap, tolerances, JS form | 2b |
+| M12 readout rounding, drilled-meter format | 9, G41 |
+| M13, EB 2 advisor P1 to P5, thresholds, cooldown, blocking, spot rule | 7, G38 to G40 |
+| M14 re-aim input | 6, G37 |
+| M15 "GV1 L1" renamed "GV1 test world" | 9a, 13, 15 |
+| M16 stale text | header, 13, 14 |
+| M17 performance targets | 2c (default 30) |
+| M18 storyboard rev 5 index superseded | out of this document (Macaulay, step 45.7) |
+| M19 label from a string table | 9 |
+| EB 5 later re-aims and trunk re-aim | 6, G37 |
+| EB 8 pairs recomputed on every action | 5, 6, G36 |
+| Manager: sections 3 and 7 in full; Vex spot rule; 25 m cover and re-aim target (20, 20) in the sim | 3, 7, sim constants COVER_M, REAIM_TARGET |
+
+New sim gates (G24 to G41, 18 gates, each with a zero control and a known-bad case): G24 cap from level data; G25 barren rows from level data; G26 generator determinism, floor, body count, clearance; G27 generated noise inside the D20 cap; G28 re-seed rule and fallback; G29 paint; G30 Done painting; G31 Back to paint re-snap; G32 fixed tick; G33 GV4m through the round driver, per-side reserves; G34 re-aim spend never exceeds the reserve; G35 add-hole rules; G36 frozen pairs; G37 later re-aims, trunk re-aim, validity, tip pick; G38 advisor on the goldens and F-independence; G39 advisor cooldown and cap; G40 P2, P4, P5 isolated; G41 readout and drilled-meter strings.
+
+History (kept for the record): v3.5 closed SWE L1 to L11 (cross-hole lens, gap rule, four archetypes under the floor after the worst squeeze, cluster gap 20 cells, G22 outward case, G23 single-move mutants, GV4m drilled meters). v3.4 ruled r0 = 4 m (Quinn), adopted D20, added GV4m. v3.3 closed K1 to K8 (floor 500 cells, ceil reserve, half-up noise). v3.2 moved to 5 m cells and closed SWE defects A to J (coring phase along the path, half-up rounding, generation-1 clamp, portal edits).
+
+## 0. One-paragraph game
+
+A cross-section of ground, 1,000 m wide and 500 m deep, is shown in two panels at once. A hidden ore body is revealed for a few seconds and fades. The player paints, from memory, the region where it was: the SROI (Subsurface Region of Interest). Both panels show the same painting. The player then plans the Unleashed Robotics network on the left. They drop one to three surface portals and grow a fractal borebot network one generation at a time, choosing the branch length before each generation. The right panel (Balrog, straight-down boreholes) re-plans live from the same painting, the same portals and the same drilled length. The player presses Start. Cores, cross-hole radar and sparse single-hole radar reveal ground as drilling proceeds. An advisor comments when a mid-run action wastes a sample, judged from public information only. At the end the ore body is revealed and each side shows the percent of it prospected: intersected, imaged and total. No points, no ranking, no winner text.
+
+Cell states, one per cell and side: intersected (a hole passed through this cell), imaged (radar revealed it, full or sparse), unseen (neither).
+
+## 1. Loop
+
+Two phases per round. Phase A, Memory: reveal, fade, paint. Phase B, Campaign: plan, run, end reveal. Both panels are live in both phases.
+
+## 2. World and constants (meters first, then 5 m cells)
+
+| Field | Value |
+|---|---|
+| cell_m | 5 m [Quinn] |
+| grid | 200 x 100 cells = 1,000 m x 500 m; col 0..199, row 0..99, row 0 is 0 to 5 m deep |
+| F, S | bool masks on the grid |
+| seed | level_id x 7919 + variant; drives F (section 8) and the sparse-radar draws |
+| portals | 1 to 3 surface columns |
+| clicks | ordered stack of (portal, dBranch_m); the left network is a pure function of (S, portals, clicks, START_MODE) |
+| sense_L, sense_R | tier 0 unseen, 1 imaged, 2 intersected |
+
+| Constant | Meters | Cells (5 m) | Source / note |
+|---|---|---|---|
+| dBranch | 20 to 100 m, step 5 m | 4 to 20, step 1 (17 values) | Quinn |
+| numBranch | | stop point 12, hard cap 24 per portal | Quinn |
+| portals | | 1 to 3 free surface columns 0..199, no snap and no per-component minimum (surface mode); legacy mode: at least one per component, snapped to a column over S | game; Quinn 2026-10-16 |
+| portal_min_sep | 25 m | 5 | game |
+| S prune margin | 5 m | 1 (Chebyshev) | game |
+| prune sample step | 2.5 m | 0.5 | game; truncated lengths are multiples of 2.5 m |
+| coring step | one cell per 5 m of path, at cumulative arclength 2.5 m, 7.5 m, ... from the surface | k + 0.5 | SWE defect A |
+| tip_sep | max(5 m, 0.9 x dBranch x sin(theta)) | max(1, 0.9 x D x sin(theta)) | game |
+| theta | surface mode: 15 deg constant (v3.8.0), 30 deg between siblings. Legacy trunk mode: clamp(atan(w / 2h), 20, 70 deg) per component | | Quinn D1 |
+| direction clamp | +/-60 deg, every generation including 1 (surface mode at theta 15: binds only below a re-aimed parent heading beyond 90 deg) | | SWE defect C |
+| drill_cap_m (per level field) | default 2,000 m; a level may carry more | 400 | Quinn ruling: per level, default 2,000 m; overburden length counts; GV1 test world 375 m (75 cells) |
+| barren_rows (per level field) | default 25 m | 5 rows | Quinn ruling: per level; Earth weathered cover |
+| reserve | ceil(0.25 x budget), per side | | game; ceil |
+| re-aim cap | floor(0.4 x reserve) per re-aim, and never more than the reserve left | | game, section 6 |
+| re-aim regrow mask (legacy mode only) | S expanded by 40 m | 8 | game; surface mode regrows with the section 4c stay-mask and R4 |
+| re-aim demonstration target | (100 m, 100 m) | (20, 20) | sim constant REAIM_TARGET (storyboard and GV4m) |
+| re-aim limit, add-hole limit | 5, 6 per run | | game |
+| radar range, both sides | 50 m | 10 | Quinn |
+| radar_min_gap | 10 m | 2 | game: one cell between the lines |
+| cross-hole fidelity | full, every imaged cell revealed; corner exclusion slope 1.19 | | Quinn, SRE |
+| r0 (single-line full-fidelity radius) | 4 m | 0.8 | Quinn ruling 2026-10-15 |
+| p(r) single line | min(1, (4 m / r)^2), r <= 50 m | p(5 m) = 0.64, p(7.07 m) = 0.32, p(10 m) = 0.16, p(25 m) = 0.026, p(50 m) = 0.0064 | Quinn rule, both sides |
+| hole_spacing_R | 50 m, densify 25 m, 10 m, 5 m | 10, 5, 2, 1 | game |
+| last hole | takes the remainder | | game |
+| add_hole_min_sep | 5 m (a different column) | 1 | game |
+| add-hole default depth | 25 m below the deepest S cell in the column; 250 m if none; at most the reserve left, at most the grid depth | +5; 50 | game |
+| add-hole minimum reserve | 10 m | 2 | game |
+| P1 radius | 18.75 m | 3.75 | game |
+| P2 seen share, P5 new share | 80 percent, 20 percent | | game |
+| advisor cooldown, cap | 12 game s per side, 4 per run per side | | game |
+| stray_min_area | 1,250 m2 | 50 | game |
+| brush radii | 10, 25, 40, 60, 100 m | 2, 5, 8, 12, 20 | game |
+| paint undo | 20 strokes | | game |
+| edge_noise by level | 0, 0, 6.25, 12.5, 18.75, 25 m | 0, 0, 1, 3, 4, 5 (half up), then capped per archetype (section 8) | game; D20 cap |
+| body clearance | 75 m of empty ground between two bodies; 25 m from each grid edge | 15; 5 | game [DEFAULT 4] |
+| landmark ticks | every 50 m (L1, L2), 100 m (L3 to L5), 200 m (L6) | 10, 20, 40 | labels at every tick whose meters are a multiple of 100 |
+| cap_frac (paint) | 0.25, 0.25, 0.20, 0.20, 0.15, 0.12 of 20,000 cells | 5,000, 5,000, 4,000, 4,000, 3,000, 2,400 cells | game |
+| TIME_COMP | 1 real hour = 0.4 game s; 1 game s = 2.5 real h; 1 tick (0.1 game s) = 0.25 real h | | Quinn 2026-10-16 (V9); replaces "1 game s = about 25 real h" of v3.6.3 (SRE-12.5) |
+| rig drill / travel | drill R x 2.5 m per game s = 8.5 at R 3.4 (R 10 gives the v3.6.3 25); travel 1 m/s real = 9,000 m per game s | drill R x 0.5 cells/s = 1.7 at R 3.4; travel 1,800 cells/s | R from Durin net ROP, Quinn 2026-10-16; travel "small constant"; the v3.6.3 rows 25 / 50 m per game s are retired |
+| borebot | 1 m/h = 2.5 m per game s per branch, parallel | 0.5 cells/s (SPEED_L, unchanged) | Quinn 2026-10-16 (drill includes a trip per 0.5 m core; tram 1 m/s); the v3.6.3 "0.1 m/h" is retired |
+| radar pair time | 3 game s | | |
+| simulation tick | 0.1 game s | | game [DEFAULT 18] |
+| playback | 1x = 0.1 wall s per game s (10 game s per wall s, 100 ticks per wall s); 4x, 16x, pause, skip to end | | game [DEFAULT 17] |
+| borebot bore | 185 mm = 3.7 percent of a cell | | Quinn, confirmed 2026-10-17. The ant-farm animation used 190.5 mm (7.5 in); that is not a game value |
+| rig_bore_mm | 63.5 mm (2.5 in) = 1.3 percent of a cell | | SOURCED-prototype (Durin prototype); Quinn 2026-10-17; production rig not found |
+| bore drawing | both bores drawn at one shared exaggerated width on both sides | | Quinn; visual only |
+| START_MODE | 'surface' (shipped default); 'trunk' (legacy anchor) | | Quinn 2026-10-16; section 4c; typed only in consts |
+| RAY_STEP | 0.5 cell | | R4 ray sample step; typed only in consts |
+| R4 tolerance | 0 (no heading slack) | | SWE prototype: slack of 5, 10, 20 deg gave no gain |
+| rig_speed_ratio R | default 3.4 (level field); bot sweep R = 1, 3.4, 10 in 45.14 | | Quinn 2026-10-16; weakly sourced (section 2d); typed only in level data |
+| cover cap | S top at the portal column at most 150 m | 30 rows | Quinn 2026-10-16 (V10); section 8a |
+| elapsed clock | real hours = 2.5 x game s, shown as "elapsed N.N h" | | V9; section 2d |
+
+Rules stated once (SWE defect H): in surface mode there is no trunk; the first generation is one straight segment that leaves the surface node (p, 0) of each portal at heading 0, and the second generation forks its tip (section 4c). In legacy mode the trunk ends at (p, r0) and the first generation starts there. Components are 8-connected. Components are ordered by descending area, ties by the smallest (x, y) cell. The prune stops a segment at the last sample before the first sample whose cell fails the margin test (surface mode: after the first S-margin sample, section 4c).
+
+### 2b. Arithmetic rules for ports (M11)
+
+- Cell of a point: cell(v) = floor(round6(v) + 0.5), where round6 rounds to 6 decimals (Python `round(v, 6)`; JS `Number(v.toFixed(6))`). Half up, so a sample on x.5 goes to the larger column or row. The two forms differ only when v lies exactly on a binary tie at the seventh decimal (for example 0.0078125); the T1.3 audit lists any such value in a golden. No golden has one.
+- Budget and per-component split: half up of the length, `floor(round6(v) + 0.5)` (GV4 298.5 gives 299).
+- Tolerances (each is exercised by the goldens; the cell snap by G32): sample loop `s < L - 1e-9`, coring phase `q = ceil(round(a0 - 0.5, 9)) + 0.5 - a0`, `if q <= 1e-9: q += 1`, loop while `q <= kept + 1e-9`; tip spacing drops a candidate whose end is `< tip_sep - 1e-9` from a kept end; cap test `total + generation > cap + 1e-9`; cross-hole `u <= d/2 + 1e-9` and exclusion `y < thr - 1e-9` or `y > D - 1 - thr + 1e-9`; re-aim `cost <= cap + 1e-9`, kept cells `s <= f x length + 1e-9`; sparse range `hypot <= 10 + 1e-9`; pair ready `t <= ready + 1e-9`. P1 uses integer squared distance `dx^2 + dy^2 <= 14.0625`.
+- Hash: every product uses Math.imul followed by `>>> 0`. Section 5 gives the draw and test vectors. The generator draws are the same hash with x = 1000 + salt (section 8).
+- Readout percent: integer half up, tenths = floor((2000 n + d) / (2 d)), from integer counts n and d. Seconds: round half up to 1 decimal. Drilled meters: cells x 5, 1 decimal half up, thousands comma.
+- Fixed tick: n ticks = floor(round6(t x 10)); tick time = n / 10. Ticks due in the playback loop: floor(round6(wall elapsed s x speed x 100)) (round6 absorbs float error: 19.2 x 100 evaluates to 1920.0000000000002). Vectors: 19.2 wall s at 1x, 4.8 s at 4x and 1.2 s at 16x each give 1,920 ticks (192 game s). The core rule is exactly this; the page hands the clock wall time scaled by the run pace of section 2d (v3.8.1), so a test that drives the page at these vectors sets the `run_pace_off` switch.
+- Cell snap vectors: cell(0.0) = 0, cell(0.5) = 1, cell(3.4999999) = 4, cell(3.4999989) = 3, cell(2.5000001) = 3, cell(0.4999999) = 1, cell(-0.5) = 0, cell(-0.5000001) = 0.
+
+### 2c. Performance targets (M17) [DEFAULT 30]
+
+Reference: 4-core laptop CPU, integrated graphics, Chrome, 1920 x 1080 (proxy: 4x CPU throttle on the dev machine). Boot to interactive under 2 s. Slider ghost plus Balrog replan p95 under 16 ms. Back-to-paint replay of 3 portals x 24 clicks under 50 ms. RUN frame time p95 under 16.7 ms with 103 segments, two 20,000-cell grids and speckle. Heap under 200 MB after 10 rounds. play.html at most 5 MB, no network request at runtime.
+
+### 2d. Speed model and clock (45.10b-3)
+
+- Clock. Every duration in this spec is in game seconds unless it says wall seconds (playback, pop-up bubbles, drags) or real hours. Real hours = 2.5 x game seconds. TIME_COMP = 0.4 game seconds per real hour (the V9 figure 0.4 is game seconds per real hour). One tick (0.1 game s) = 0.25 real h. The advisor cooldown (12 game s) and the other game-second values keep their clock.
+- Borebot. 1 m/h of drilling, which includes a trip per 0.5 m core (Quinn). 1 m/h x 2.5 h per game s = 2.5 m per game s = SPEED_L (0.5 cells/s). Borebot times do not move from v3.6.3.
+- Rig. Durin net ROP = R x 1 m/h (pipe additions folded in), R = `rig_speed_ratio`, default 3.4 (level field). Drill speed = R x 2.5 m per game s = R x 0.5 cells/s: 8.5 m per game s (1.7 cells/s) at R 3.4; 25 m per game s (5 cells/s, the v3.6.3 value) at R 10. R is weakly sourced: 3.4 is a model output at 50 m depth built on the FHWA-RD-75-96 rule of thumb (`step45_g1_wave_rop_research.md`); the research bracket is 0.75 (low), 3.4 (typical), 10 (high); 45.14 sweeps R = 1, 3.4, 10. R is constant with depth [DEFAULT 36]: the research model gives 4.8 m/h at the surface falling to 2.6 m/h at 100 m; the game does not model the decline.
+- Rig travel. 1 m/s real = 3,600 m/h x 2.5 h = 9,000 m per game s = 1,800 cells/s. Travel time between holes = horizontal distance / 9,000 m per game s. Legacy travel (zero control only) = 50 m per game s (10 cells/s).
+- Zero control. R = 10 with legacy travel reproduces `goldens_v36.json` byte for byte (G58).
+- Display. The run header shows "elapsed N.N h", N.N = game seconds x 2.5, half up to 1 decimal, thousands comma. The header exists in RUN, END_REVEAL and READOUT only; no clock is shown in LEVEL_START, REVEAL, FADE, PAINT or PLAN (section 3a, N6). Vectors by tick: 1 gives "0.3 h" (0.25 half up), 2 gives "0.5 h", 3 gives "0.8 h", 1,920 gives "480.0 h", 16,000 gives "4,000.0 h".
+- Playback pace (v3.8.1). Speeds are 1, 2, 4, 8 and 16 (`setSpeed` refuses any other with `range`). The core clock is unchanged: ticks due = floor(round6(wall x speed x 100)). The page hands the clock wall seconds scaled by pace = min(1, T / (100 x 16 x 6.5)), T = the run length in ticks = max(left end, right end) / 0.1, fixed at Start: a run at 16x lasts 6.5 wall s or more whatever its length, and 1x, 2x, 4x, 8x last 16, 8, 4, 2 times that (the 1,080 m Level 4 plan of the Cowork run: T = 1,970 ticks, pace 0.19, 104 wall s at 1x, 6.5 s at 16x). Pause (speed 0) holds the tick; pressing a speed while paused resumes at that speed. The page presses 4x at Start (N1). Ticks, hashes, results and every golden are pace-free. Known-bad `run_pace_off` (pace 1: the v3.8.0 run, under 3 s at 16x).
+- Regeneration. Every time-bearing key moves at R 3.4: t, start, ready, drill_end, run_end, ticks_due, re-aim case times, advisor timing, the E4 gv4m_driven keys, sim_export times; right-side pair order and the keys downstream of it can move. Regenerated by -3 (`goldens_v37.json`). Geometry (`cmpSegs`: cells, len, dir, ends), lengths, budgets, holes and reserves do not move in -3.
+
+## 3. Reveal, fade and the round state machine
+
+States: LEVEL_START, REVEAL, FADE, PAINT, PLAN, RUN, END_REVEAL, READOUT.
+
+1. LEVEL_START. Input: level id. State: F built from the seed (section 8); the level declares its target type and host envelope (public). Output: empty ground, landmarks, button "Show formation". Auto-advances to REVEAL after 1.5 s if not pressed (V1, section 3a). The page boots here at Level 1 (V7); the card carries the level select (V8).
+2. REVEAL. State: both panels draw F at full opacity for reveal_s seconds. Output: filled formation on both panels, countdown ring on the panel border.
+3. FADE. Input: reveal_s elapsed. State: opacity(t) = 0.5 x (1 + cos(pi x t / fade_s)), t in [0, fade_s], fade_s = 2.0. Output: the formation dissolves to zero and is gone at t = fade_s.
+4. PAINT. Input: strokes (section 4). No time limit (a clock adds pressure without a decision). Output: the painted overlay mirrored on both panels. Up to peeks_left peeks: each is a REVEAL of 1.5 s then a FADE of 1.0 s, then back to PAINT; a peek changes no S cell. "Done painting" moves to PLAN.
+5. PLAN. Section 4a to 4d. "Back to paint" returns to PAINT with S as painted (section 4b item 11). "Start" (gate 4b item 10) moves to RUN.
+6. RUN. Fixed 0.1 game s tick (section 6). Ends when both sides have finished (section 6, run end).
+7. END_REVEAL [DEFAULT 29]. F fades in over 2.0 s (the fade curve reversed) with the sensed overlay: intersected cells solid, imaged cells lighter, unseen cells unmarked.
+8. READOUT. Section 9. One NEXT button in the spine (V5, section 3a); the v3.6.3 buttons "Play again" and "Next level" retire.
+
+| Knob | L1 | Direction | Reason |
+|---|---|---|---|
+| reveal_s | 8.0, 7.0, 6.0, 5.0, 4.0, 3.5 by level | down | working memory holds about 3 to 4 chunks; one smooth blob needs about 3 s, three bodies about 8 |
+| fade_s | 2.0 | constant | a 2 s fade gives a rehearsal window; an instant cut reads as a flash |
+| peeks | 2, 1, 1, 0, 0, 0 | down | mercy early; zero from L4 makes memory the whole task |
+| landmark step | 50, 50, 100, 100, 100, 200 m (10, 10, 20, 20, 20, 40 cells) | up | denser ticks anchor positions; fewer force estimation |
+| edge_noise | 0, 0, 6.25, 12.5, 18.75, 25 m | up | rough edges are harder to remember |
+| bodies | 1, 1, 1, 2, 3, 2 | up | chunk count drives load |
+
+Totals (L1): reveal 8.0 s + fade 2.0 s = 10.0 s of formation visibility; each peek = 1.5 s + 1.0 s = 2.5 s. Paper-playtest starting values; tune from recall error.
+
+### 3a. Flow rulings V1 to V6 (Quinn 2026-10-16, veto table accepted) and N1, N2, N5, N6 (Quinn 2026-10-17)
+
+- V1, SHOW timing (v3.8.3). Surface mode: LEVEL_START waits for the player (V15): it does not auto-advance, and the level select (V8) stays usable until Show formation, Space or Enter starts the round. Legacy trunk mode: LEVEL_START auto-advances to REVEAL at 1.5 s and the button advances at once. The state widget at the top of the spine reads "Space or Enter also starts" (surface mode).
+- V2, ghost on demand. PLAN draws the next-generation ghost only after a slider move or a portal tap; the ghost clears when a click lands. Start is disabled until one generation is accepted and carries the text "Start needs one generation".
+- V3, default portal. Entering PLAN places one portal at the S bounding-box centre column, c = floor(round6((c0 + c1) / 2) + 0.5) for the S columns c0..c1 (half up), and selects it. When S has no cell in column c (a gap between bodies; L4: c = 97) the default is the nearest column that has one, ties to the lower column (L4: 93) [v3.7.6]; the straight root of a gap column is dead at every D. Each portal the player adds is selected on placement (the latest placed portal is selected). The v3.6.3 default (one portal per component at round(mean column), ties lower) applies in legacy mode only.
+- V4, playback (v3.8.1; was pause, 1x, 4x, 16x and no 2x). The spine holds pause (full width), 1x 2x 4x, then 8x 16x, and Skip to end as a small link. Speeds, pace and pause: section 2d.
+- V5, NEXT. READOUT shows one NEXT button in the spine. It restarts the current level at the same variant [DEFAULT 38] until 45.12 adds level advance (section 10, free advance).
+- V6, Level 4. Reveal 5.0 s and 0 peeks (knob table above); every other level takes its row of the knob table.
+- V7, boot level (v3.8.1). The page boots Level 1 of the campaign (variant 0, generated in the page), not Level 4. A test row that pins the fixed GV4 formation loads it after boot (`__s45.loadLevel`).
+- V8, level select (v3.8.1). The LEVEL_START card carries a label "level select" and six buttons 1 to 6 in a 3 x 2 grid. Any level can be picked in any order; the pick loads that level and restarts the campaign from it (Next from Level n goes to n + 1; after Level 6 the campaign ends with the card of V16). The buttons act in LEVEL_START only (`selectLevel(id)` refuses other ids with `range` and other phases as illegal). The current level shows pressed. Levels 1, 2 and 3 play through to READOUT like 4 to 6.
+- V9, minimum window (v3.8.1). 960 x 540 CSS px is the smallest supported window. Below it (width under 960 or height under 540) an in-page overlay reads "Window too small: enlarge to at least 960x540" and covers the game. At and above it no button text is clipped and no text overlaps another text or a button or leaves the window: the layout scales from the 1440 x 790 grid, text sizes follow it down to 9 px (canvas labels 9 px), and a button whose label does not fit reduces its text size to 6.5 px at the least. The check is by bounding boxes at 960 x 540, 1197 x 726, 1366 x 768 and 1920 x 1080 (G1E-E10).
+- V10, plain labels (v3.8.1). The player never sees "S" or "SROI". The depth label of 4a reads "formation top N m" (`lbl_s_top`): the PLAN status line and the drop label on the panel. N is the depth of the shallowest painted cell in the selected portal's own column, else in the nearest painted column of the cells the portal serves (ties to the lower column) (v3.8.3, B2, B18; v3.8.2 and earlier: the shallowest row of the whole served body). The drop label sits on the dashed line at that depth, beside the drop (right of it, else left), inside the left panel, and never starts on a depth-axis label or on "m deep". The PAINT spine tag reads "MIRROR" over "your painting" (the tag is 88 x 42 grid so the second line stays inside it at 960 x 540); the RUN spine caption over the thumbnail reads "your painting".
+- V11, unspent and the independent limits (v3.8.1, v3.8.2). One definition: unspent = cap minus drilled, per side (cap = the level's `drill_cap_m`, 2,000 m on every level). Both sides can each drill 2,000 m, independent of the other (Quinn 2026-10-18): the rig limit is the cap, not the borebot network length, so the left and right totals are unrelated. One wording, "unspent N m of 2,000 m": the PLAN meter caption (left, cap minus the network length), the PLAN rig status (right, with at least one hole: cap minus the rig total), the RUN status lines, the result. The RUN line and the result read one field (`view.unspent`; drilled is the drilled length at the tick in RUN and the final length in the result). RUN lines: left "drilled D m | unspent U m of 2,000 m", right "drilled D m | unspent U m of 2,000 m" (no budget B on either). The PLAN rig line with holes reads "rig R m | N of 12 holes | unspent U m of 2,000 m"; over the cap it reads "rig R m of 2,000 m | Rig: Max Length Exceeded | N of 12 holes" in the warning colour. The re-aims left and adds left counters are not shown (the moves are not wired). The 4d left budget (half-up of the network length) remains only the base of the reserves.
+- V12, growth feedback and the note (v3.8.1, v3.8.2). Next generation and Grow to 12 are enabled only while the probe of the selected portal's next generation is ok. Otherwise both are grey and the line under the left panel (below the panel, left of Remove portal) gives the reason (v3.8.3, one text per real stop reason, set in bold ink at 14 px on the grid with a warning bar when it is a refusal): dead after a branch of the portal entered the S margin "Growth stopped: the branches reached the painted formation and cannot extend inside it (its bottom, its edge or the grid floor)."; dead before any branch entered it, the first click included, "No branch from this portal reaches the painted formation at this dBranch. Move the portal or change dBranch."; cap "Next generation would exceed the 2,000 m limit", and when a shorter dBranch (down to 20 m) still fits "dBranch 50 m is too long for the 2,000 m limit. 35 m or less still fits." (the largest dBranch below the current one that fits); ceiling "generation ceiling reached"; no portal placed "Place a portal first: click the surface or the left panel."; a portal id that does not exist "select a portal first". The same text is the message of a refused Next generation and of a Grow to 12 that stops; selecting a portal or moving the slider clears the message. The note slot under the meter reads the borebot side only: "Next generation would exceed the 2,000 m limit" when only the next generation does not fit, and "Max Length Exceeded" only when the left total is above the cap; the Start hint "Start needs one generation" shows when neither note does. A rig over its own 2,000 m is named "Rig: Max Length Exceeded" in the rig status line and in the Start refusal, never in this slot (v3.8.2, B5). The meter total (the number under the gauge) is red only when the left total is above the cap; a stop on the cap, with the ghost red, is a legal plan and the total stays plain (v3.8.2, B12). Start stays enabled while the plan is valid.
+- V12a, shadow band legend (v3.8.3, B3). The band under the surface line marks the columns that have painted cells. It is a hint and refuses nothing (4b item 2): a portal outside it is placed. The legend line reads "shadow band (under the surface line): columns with painted cells".
+- V13, Back to paint (v3.8.1). Back to paint says "The Undo history was cleared when you pressed Done painting." (the paint undo stack empties at Done, section 4; unchanged), in the line under the left panel. Done painting after the region changed reports the clicks it dropped with their portal: "4 clicks dropped (portal 825 m) because the painted region changed"; with several portals "5 clicks dropped (portal 165 m: 4, portal 475 m: 1) because ...". A hover ghost or error from before a phase change is cleared with the phase.
+- V14, input and labels (v3.8.1). (a) A pointer release that ends a portal drag adds nothing; a click within 25 m of the portal just placed, moved or selected, inside 0.6 s, adds nothing and shows no error; later it is refused as in 4b item 6. The hover ghost draws nothing over a portal marker and is recomputed after every release. (b) Ctrl+Z (Cmd+Z) undoes: PAINT the last stroke, PLAN the last accepted click (the Undo button's action); Ctrl+Y and Ctrl+Shift+Z are redo, which the game does not have (section 4): they are swallowed and do nothing. The PLAN Undo button reads "Undo: portal 825 m, gen 2" (the portal and the generation the click removes), "Undo" with no click. (c) The PLAN hover reads metres only: "650 m" over the left panel, "650 m, 375 m deep" over the right. (d) The legend names the surface distance flags ("distance flag: every 250 m", the landmark stakes of the drawing rule below) in the right row and the rig hole marker ("rig hole"; v3.8.0 "first hole (at a portal)").
+- V15, level start and pause keys (v3.8.3, B9, B13). Surface mode: Space or Enter on the LEVEL_START card is the Show formation intent. In RUN Space toggles pause (the same intent as the Pause button); the key never also activates a focused button. While paused the Pause button shows a play triangle (the two bars when running), its label names the state ("Paused - Space to resume") and the line under the left panel reads "Paused - Space to resume".
+- V16, end of the campaign (v3.8.3, B10). Next after the last level (Level 6) ends the campaign: the phase stays READOUT, `view.campaign.ended` is true and the page replaces the panels with a card: a row per level 1 to 6 with the share prospected (intersected plus imaged) by the borebots and by the rig, the side ahead ("borebots", "rig" or "tie"; "not played" with "-" for a level the campaign did not reach), and an average over the levels played with the tally of levels won. The header reads "Campaign complete". The button reads "Play again" and starts the campaign again at Level 1 (`restartCampaign`: legal in READOUT after the campaign ended; scores are cleared; the level select restarts the campaign from its pick and clears them too).
+- V17, fixed-width labels (v3.8.3, B11, D3, D4, B17). (a) The PLAN meter caption has three short lines at most and ends above the gauge. (b) Rig depth labels are placed selected hole first; a label with no spot free of other labels is left out for an unselected hole. (c) The header is at least 48 px tall.
+- N1, START autoplays (Quinn 2026-10-17). Start (gate 4b item 10) enters RUN not paused; the player does not press play. The core starts at 1x; the page presses 4x for the player (v3.8.1, the pace of section 2d makes 1x slow). The playback controls (V4) stay live from tick 0.
+- N2, speck message (Quinn 2026-10-17). Done painting reports the dissolved components with the count n from the dissolve step (section 4): n = 1 reads "Removed 1 small speck."; n >= 2 reads "Removed n small specks." (n written in digits). n = 0 shows no line [DEFAULT 40].
+- N5, remove the selected portal (Quinn 2026-10-17). When the removed portal is the selected one, the leftmost remaining portal (smallest column) becomes selected. "Latest placed is selected" (V3) governs add and move only.
+- N6, level clock (Quinn 2026-10-17). No clock is shown before RUN. The header "elapsed N.N h" (section 2d, real hours) appears in RUN, END_REVEAL and READOUT only. LEVEL_START, REVEAL, FADE, PAINT and PLAN carry no clock of any kind (PAINT has no time limit, section 3 state 4). From RUN end the header holds the run-end value, game seconds x 2.5 with game seconds = the larger of the two finish times (section 6, run end), and shows it unchanged through END_REVEAL and READOUT [DEFAULT 41].
+
+Landmark drawing rule. With step = landmark_step cells (10, 20 or 40): a tick on the top edge at every column c with c mod step = 0 and on the left edge at every row r with r mod step = 0; a meter label at every tick whose meter value (5 c or 5 r) is a multiple of 100; a faint dot at every (c, r) with both multiples of step; surface stakes at columns 0, 50, 100, 150 (0, 250, 500, 750 m) regardless of step. Counts: step 10 gives 20 column ticks, 10 row ticks, 200 dots; step 20 gives 10, 5, 50; step 40 gives 5, 3, 15. Landmarks are drawn identically on both panels from the grid, never from F or S. Visible after the fade: landmarks only; no outline, centroid or shadow. (The shadow band over S columns in PLAN is drawn from S, section 4a.)
+
+## 4. SROI painting, PLAN, and the mirror
+
+Painting rules (M10). S is a bool mask on the grid, in cell coordinates. Both panels render the one S array. Strokes on either panel write to S; there is no per-side SROI.
+- Tools: Brush (default radius 5 cells, 25 m [DEFAULT 21]), Erase (a toggle, or hold Alt), Fill, Undo, Clear all. Radii 2, 5, 8, 12, 20 cells (10, 25, 40, 60, 100 m).
+- Brush disc: with the pointer in cell (cx, cy), cell (x, y) is painted when (x - cx)^2 + (y - cy)^2 <= r^2, inclusive, clipped to the grid. Disc sizes: r 2 gives 13 cells, 5 gives 81, 8 gives 197, 12 gives 441, 20 gives 1,257.
+- Stroke: the pointer path is sampled every 0.5 cell; each sample stamps the disc at cell (floor x, floor y); consecutive repeats are dropped. Erase uses the same disc and clears.
+- Cap: |S| <= cap_frac x 20,000 cells. The new cells of a stamp are added in order of distance from its center (ties by row, then column) until the cap is reached; at the cap the brush turns red and adds nothing, and the rest of the stroke is ignored. [DEFAULT 22]
+- Fill: 4-connected fill of the unpainted region that holds the clicked cell. Refused (nothing changes; the line under the left panel says "the outline is open" or the cap text; v3.8.3: no panel shake) when the region touches the grid edge or would take |S| over the cap; a click on a painted cell does nothing. The Fill tool stays selected after a fill, accepted or refused, until the player picks Brush, Erase or a radius (v3.8.3, B15).
+- Undo: the last 20 strokes (pointer down to up); Fill and Clear all each count as one stroke; no redo. The undo stack is empty on entering PAINT and is cleared on Done painting; Back to paint says so (section 3a V13). Ctrl+Z is Undo; there is no redo (V14).
+- Done painting: components under 50 cells (1,250 m2) dissolve with the line of section 3a (N2: "Removed n small speck(s)."); then the button is blocked when S is empty or has more than 3 components. The button's enabled state is computed after the dissolve (a stray under 50 cells never blocks it).
+
+### 4a. Start-screen interaction (PLAN)
+
+The player sees:
+- the painted SROI on both panels;
+- a shadow band on the surface line over every S column (legend: "columns with painted cells", V12a);
+- one portal at the S bounding-box centre column, selected (V3); a centre with no S snaps to the nearest S column, ties lower (v3.7.6); legacy mode: one default portal per component;
+- the depth label "formation top N m" (was "S top N m"): 5 m x the shallowest S row in the selected portal's own column, else in the nearest painted column of the cells it serves (v3.8.3; before: the shallowest row of the components it serves, T of section 4c); it follows portal moves and is the player's steer on cover depth (V10, V11);
+- a dBranch slider (20 to 100 m, step 5 m, default 50 m);
+- a counter per portal ("gen 0 / 12, max 24");
+- a drill meter that starts at 0 in surface mode ("0 of 2,000 m"); legacy mode starts at the sum of the trunks ("40 of 375 m" in the GV1 test world; "385 of 2,000 m" in GV4). The right-hand number is the level's drill_cap_m;
+- the buttons Next generation, Grow to 12, Undo, Remove portal (enabled while a portal is selected), Back to paint and Start;
+- placement help under each panel and a ghost marker with its column that follows the pointer (45.10b-10): a portal tripod over the left panel, a rig-hole flag and dashed hole over the right; red, with the refusal text, when a click would be refused. Placement targets: a click anywhere in the left panel or in the sky band above it (56 grid units, the tripod and its tag) places a portal at that column; a click in the right panel or its sky band places a rig hole (section 4e). A click on a marker selects it; a drag moves it; a drop outside both panels removes it. The selected portal shows an "x" handle (up and right of its tag); a tap on it removes the portal and places nothing. The Remove portal button, Delete and Backspace (the selected object by `selKind`, section 4b) and a right-click on a marker also remove it (v3.7.7); the placement help names all four ways. Only the primary button (0) places, selects or drags; a right-click on empty ground does nothing and the browser menu is always suppressed. The rig budget never refuses a placement (section 4e). Defect found in play_g1b: the only portal target was the first two rows of the left panel (about 6 px) with no feedback, so portals could not be placed in practice, and no rig placement existed.
+
+The next generation is drawn whole as a ghost at the current slider value (V2: after a slider move or a portal tap), and its meters are added to the meter. Candidates dropped by the R4 prune or the tip-spacing prune are marked with an X on the ghost. The ghost turns red and Next is disabled when it would exceed the cap. The right panel redraws Balrog's plan after every change. Start is enabled when the start gate of 4b item 10 holds. The drill meter shows "Max Length Exceeded" when the next generation would exceed the cap or the cap is reached (v3.7.7; was "drill string full"); the refusal text for the same condition is the same string. While the rig total exceeds the budget the Start note and the right-hand status line read "Max Length Exceeded" too.
+
+Live preview is justified: the preview reads only public inputs and costs under a millisecond. A per-click length is a decision only if its effect is visible before the click.
+
+### 4b. Portals
+
+1. Count 1 to 3, pairwise at least 25 m (5 cells) apart. Surface mode: no per-component minimum. Legacy mode: at least one per component.
+2. Column. Surface mode: free; a tap or drop at surface column c gives portal column c (0..199), no snap, and c need not lie over S. The shadow band of section 4a is a hint and refuses nothing. A portal whose straight first segment does not survive the R4 prune (section 4c G4: the segment ends in the S margin of T or the vertical ray from its end meets that margin; a tap in a gap between bodies or far from S) is refused on click 1: the refusal code is "dead" (section 4c G2, refusal order unchanged) and the player sees "no branch fits inside the region"; the portal stays placed, the stack gains nothing, and Start stays disabled until a click is accepted (item 10). The text is the `dead` outcome of `Network.next_gen` (sim) and `refuse_dead` in `game45/core/strings.js` (build). Legacy mode: snap to the nearest S column, ties to the lower column.
+3. Serves. Surface mode: the portal's target set T (section 4c). Legacy mode: the component holding the shallowest S cell of its column.
+4. Default. Surface mode: V3 (section 3a). Legacy mode: one portal per component at round(mean column), ties lower.
+5. Root. Surface mode: no trunk; the root is the surface node (p, 0) and the meter starts at 0; the first click drills one straight segment of length D from it (v3.7.5), so the meter reads D after click 1. Legacy mode: trunk rows 0 .. r0 - 1, length r0 cells, counts toward the cap and the budget.
+6. Add (tap the surface): refused with "max" at 3 portals and with "sep" if within 25 m of another portal. Legacy mode is also refused with "trunk does not fit the drill string" when the current network length plus the new trunk exceeds the cap. On a refusal the marker shakes and nothing changes. An accepted add places the portal with no clicks.
+7. Move (drag): refused with "sep". A move or remove reports "N clicks dropped" (digits) when the replay drops clicks of portals other than the moved or removed one. Legacy mode snaps and is also refused with "trunk does not fit" when the trunks alone would exceed the cap. Otherwise the portal's clicks move with it, keeping their stack positions, and the whole stack replays from the new column.
+8. Remove (v3.7.7: four ways): drag off the panels, the x handle on the selected portal, the Remove portal button, Delete or Backspace with the portal selected (`selKind` 'portal'), right-click on the marker. That portal's clicks leave the stack and the rest replays; clicks of other portals the replay drops are reported as "N clicks dropped". Removing the last portal is allowed (Start is blocked, "place a portal and click Next generation at least once"). Removal is not undoable (M8). The selection moves to the leftmost remaining portal (N5), or null when none remain. `selKind`: the core records 'portal' after select, add or move of a portal and 'hole' after select, add, move or set depth of a rig hole; Delete and Backspace remove the object of `selKind` only and are ignored while a text field has focus.
+9. Replay rule (also used by Back to paint and Undo): rebuild from the stack in order. A click refused during replay is dropped together with every later click of the same portal.
+10. Start gate. Surface mode: 1 to 3 portals, separation >= 5 cells, at least one accepted click (V2 text "Start needs one generation" when none), and the rig total at most the cap, 2,000 m (v3.7.7, v3.8.2: `start()` refuses `rig_over` with "Rig: Max Length Exceeded", section 4e). Components left unserved do not disable Start. Legacy mode: 1 to 3 portals, separation >= 5 cells, every component served, at least one accepted click.
+11. Back to paint (M9). The stack and portals are kept and S becomes editable. Surface mode: portal columns do not change (they are free), so separation still holds and no default portal is added for a new component; on the next Done painting each portal's target set T is recomputed from the new S (section 4c) and the stack replays (item 9). Legacy mode (v3.6.3 rule): on the next Done painting each portal is re-snapped to the nearest S column of the new S (ties lower) and carries its clicks. Then, left to right, a portal under 5 cells from a kept portal is dropped with its clicks (so the right one goes). Then every component with no portal gets a default portal (round(mean column); if that is under 5 cells from a kept portal, the nearest column of the component that is 5 or more away; if none exists the default stays and Start stays disabled with "sep" until the player moves a portal). If more than 3 portals remain, drop the portal with the largest column among all portals that share a component with another portal, and repeat until 3 remain [DEFAULT 20]. When four components each hold exactly one portal and a fifth is needed, no component qualifies and repaintPortals drops the rightmost portal overall; play cannot reach this case (Done painting blocks more than 3 bodies) and only the fuzz does. Finally the stack replays (item 9). Rig holes are untouched (section 4e). A merged component keeps all its portals when they are 5 or more cells apart. Gate G31.
+
+Undo scope (M8, unchanged in v3.7.7: no undo of a removal). Undo pops the last accepted click only (global last-in-first-out, unlimited depth, PLAN only). Portal add, move and remove are not on the stack: each is reversed by the inverse edit. Undo with zero clicks is disabled. Mid-run actions are not undoable.
+
+### 4c. Left growth rules
+
+Rules below are START_MODE='surface' (shipped). START_MODE='trunk' (legacy anchor) keeps the v3.6.3 rules and is listed under "Legacy mode" at the end of this section. The sim runs both; trunk mode reproduces `goldens_v37.json` byte for byte (G46).
+
+- **G1. Half-angle.** Surface mode (v3.8.0): theta = 15 deg for every portal, constant (THETA in consts), so the two children of a fork are 30 deg apart; there is no bounding-box term and no bound 20 or 70. A portal with an empty target set has no theta and every click is dead. Consequences: (a) an un-re-aimed chain's headings follow d = 0.5 d_parent +/- 15 and stay under 30 deg; (b) the 60 deg clamp of G3 is kept and cannot bind on such a chain; it binds in regrowth and in later clicks below a re-aimed parent heading beyond +/-90 deg (heading -102.11 gives children -66.05, clamped to -60; G64); (c) tip separation (G5): the floor 1.0 cell binds at D = 20 m only. Legacy trunk mode: theta = clamp(atan(width / (2 x height)), 20, 70 deg) of the bounding box of the portal's component (unchanged; `thetaOf`). The v3.7.7 surface rule (the same function applied to the bounding box of T) is the mutant `theta_bbox`.
+- **G1a. Surface node and target set.** Each portal p has a root node (x = p, y = 0, heading 0, generation 0, arclength A = 0, t = 0). There is no generation-0 segment, no trunk and no r0 in the growth; the root is a tip that drills one straight segment on click 1 (G3). T = the union of the components assigned to p [DEFAULT 33]: each component is assigned to the portal with the smallest column distance from p to the component's nearest S column, ties share: portals tied at the smallest column distance all serve the component (two portals over one body both serve it; with the v3.7.2 literal tie-to-lower rule the upper portal's target set is empty and every click is dead; that rule is the legacy mutant `tie_lower`, G54). A component's cells are the S cells of that 8-connected component. Note: a free portal over a deep body can return clicks dead (a fork fails R4 at large D; GV4 portal 146, 185 m cover: v3.7.4 four clicks dead, b = [140, 0]; v3.7.5 three of eight clicks dead, b = [98, 15]); a portal column in a gap between bodies is dead on click 1 at every D (the vertical ray of the straight root meets no margin; the centre column 97 of L4 is such a column; since v3.7.6 the default portal there is the nearest S column, 93); the S-top depth label and the D >= 75 m note steer.
+- **G2. Click.** A click (p, dBranch_m) asks for the next generation. D = dBranch_m / 5 cells, an integer from 4 to 20. Refusals come in this order: "range" (outside 20..100 m or off the 5 m grid), "ceiling" (24 generations of the portal, overburden generations included), "dead" (no candidate), "cap" (total length including overburden, plus the generation, exceeds the level's drill_cap_m in cells). A refused click changes nothing and never enters the stack.
+- **G3. Directions.** Each live tip spawns two children, sign -1 then +1, by one rule at every generation. The root (heading 0, generation 0) is the exception and spawns ONE child on click 1: straight down at the root heading (0), length D, generation 1 (v3.7.5; the trunk is an ordinary branch). Every segment of generation 1 or more forks: the children of the click-1 segment leave its tip at -theta and +theta (0.5 x 0 +/- theta), and later generations are 0.5 x parent heading + s x theta. Every direction is clamped to +/-60 deg (theta is 15, G1; the clamp binds only below a re-aimed parent). Length D. Heading is measured from straight down; a point at arclength s from (x, y) is (x + s sin(heading), y + s cos(heading)).
+- **G4. Stay-mask, prune and coring.**
+  - Samples are taken at s = 0, 0.5, 1.0, ... and at the end. Cells are (floor(x + 0.5), floor(y + 0.5)).
+  - Stay-mask. Per candidate segment the state "entered" starts false. While not entered, a sample is accepted when its cell is inside the grid (overburden is unconstrained). The first sample whose cell is within 1 cell (Chebyshev) of S (the S margin, all components) sets entered. Once entered, the first sample whose cell is more than 1 cell from S, or outside the grid, ends the segment at the last sample before it (legacy truncation). A segment that leaves the grid before entering ends at the last in-grid sample.
+  - Order per candidate: sample with the stay-mask; skip a candidate of length <= 1e-9; R4; tip spacing (G5). The root has one candidate, so tip spacing never drops it; if R4 drops it the click is "dead".
+  - **R4 ray prune.** A candidate is kept when its end cell is within the S margin of T, or when the straight ray from its end along its heading, sampled at q = 0.5, 1.0, 1.5, ... (RAY_STEP 0.5) to the grid edge (not limited to D), meets a cell of the S margin of T. Tolerance 0: no heading slack. A pruned candidate is not drilled, costs nothing, is not a tip, and is listed as dropped for display.
+  - Coring: A0 is the path's cumulative arclength at the segment start (every ancestor's kept length; no trunk term). The segment cores the cell at every point with A0 + s = k + 0.5, 0 < s <= kept length. A coring point between two kept samples is cored even if its cell lies outside the margin.
+  - Grown segments have integer D and integer-length parents, so A0 is an integer and coring falls at s = 0.5, 1.5, ... Only a re-aim segment (any length) shifts the phase, and its children carry the shift.
+- **G5. Tip-spacing prune.** tip_sep = max(1, 0.9 x D x sin(theta)) cells with theta = 15 deg (v3.8.0): 1.0 at D = 20 m (0.93 floored), 1.165 at 25 m, 4.659 at 100 m; the two children of one parent end 2 D sin(theta) apart, more than tip_sep, so only cousins prune each other. Applied after R4: in order, drop a candidate whose end is closer than tip_sep to an already-kept end of the same generation and portal. There is no sibling cap K.
+- **G6. Accept.** Times: t = parent t + length / 0.5 cells/s; root t = 0. Time scale per section 2d.
+- **G7. Undo.** Global last-in-first-out stack; it rebuilds from the stack minus the last click.
+- **G8. Grow to 12.** Repeats Next on the selected portal until generation 12 or the first refusal. The counter turns amber from 13 to 24.
+- **G9. Component attribution (the DEFAULT 33 rule).** Each kept segment carries comp: the component of the S cell nearest to its end cell when the end cell is within the S margin of T (ties to the lower component order); otherwise the component of the first margin cell its R4 ray meets. Per-component lengths l_k (section 4d) sum these lengths; sum of l_k = total length including overburden (G54).
+- **Legacy mode (START_MODE='trunk').** Each portal has a gen-0 trunk segment: cells (p, 0 .. r0 - 1), length r0, end (p, r0), t = r0 / 0.5, A = r0, comp from the portal's component and theta = the bounding-box angle of that component (G1, legacy); the mask is margin-only for the whole segment (a segment truncates at its first sample outside the margin); there is no R4; trunk lengths count toward the cap and the meter; the portal's first click leaves the trunk end. Everything else in G1 to G8 is shared.
+
+Measurement note. The measurements in the next list are trunk-mode values (goldens_v36 and v37). Surface-mode counterparts: regenerated by -4 (`goldens_v38.json`). Design basis for surface mode (SWE prototype on nine worlds, `step45_g1_uniform_branching.md`; prototype figures, not goldens): small D (20 m) on deep cover can spend the cap in overburden without reaching S; D of 75 m or more reaches S on all nine prototype worlds; hence the cover cap (section 8a) and the S-top label (section 4a).
+
+What stops maxing (constraints, no score), measured by the sim:
+- The drill cap (400 cells on the default levels), whole generations only. It is the binding bound. Across 6 SROI shapes with 1 to 3 portals and 24 clicks at 20 m, the capped networks hold 74 to 103 segments. A hard bound is 400 / 0.5 = 800 segment records.
+- Without the cap the same runs reach 291 to 5,321 segments and up to 21,041 cells. GV5: a 250 x 500 m SROI, 24 clicks at 20 m, no cap, gives 2,085 segments, and click 25 is refused "ceiling".
+- The S margin cuts long branches: in GV2 the 100 m first branches survive, and the 75 m second generation loses two of four branches at the margin (25 m and 35 m kept).
+- The grid edge, and directions within 60 deg of vertical, mean every generation descends at least 0.5 x D cells. Pipe, 24 clicks with the cap at 800: growth dies after generation 11 (GV3b).
+- Legibility: the capped network has at most about 100 segments. At about 4.5 px per cell in Frame A, a 20 m segment is about 18 px.
+
+### 4d. Right: Balrog plan
+
+- Budget (left side, reserves; legacy trunk mode also the rig): budget = half-up(total left length), overburden included. b_k = half-up(l_k), l_k = the length attributed to component k (G9), and the last component (descending area) takes the remainder. v3.8.2: in surface mode the rig does not draw on this budget; it draws on the cap pool below. The budget remains the base of the reserves (section 6).
+- Equal length (legacy trunk mode only): right spent equals budget unless every column of a component holds a hole. Left and right totals differ by at most 0.5 cell (2.5 m). The readout prints both in meters.
+- Rig pool (surface mode, v3.8.2): pool = floor(cap in cells) = 400 cells (2,000 m) on every level, shared by all components, whatever the left length. At most 12 holes, one per column. The plan runs pass 0 for every component in descending area, then the spacing passes below (each pass visits the components in descending area, each component its candidates in order) and stops at the first hole that exhausts the pool (that hole takes the remainder, so the rig total never exceeds the cap) or that would be the 13th. With few or shallow candidate columns the plan ends with the pool unspent; rig unspent = 2,000 m minus the rig total. With no left clicks the plan still places holes.
+- Pass 0: surface mode [DEFAULT 37]: for every portal p and every component k served by p (k in T), a hole at the S column of k nearest to p (ties lower); when p is itself a column of k the hole is at p. Two portal and component pairs that resolve to one column and one component place one hole. Portals left to right, components in descending area. Legacy mode: a hole at every portal column.
+- Candidates: columns of C ordered by distance to the nearest portal of C, ties lower. Depth = deepest C row + 1.
+- Spacing 10 cells (50 m), then densify 5, 2, 1 cells (25, 10, 5 m). The last hole takes the remainder (the pool or, in legacy mode, the component budget).
+- Plan order (the rig queue, section 5): components in descending area, and within a component the holes in the order placed (pass 0 left to right, then the spacing passes).
+
+### 4e. Player-placed rig holes (landed in 45.10b-10)
+
+Quinn 2026-10-17 (Option B): the player places the rig holes. Quinn 2026-10-18 pulled the list, its intents and its UI forward into 45.10b-10 (the gates and `goldens_v40.json` variants stay as listed in 45.11) (own file, separate regeneration, written after `goldens_v38.json` is frozen; every v38 key stays byte-identical after the merge). The rules are recorded here now.
+
+- List: `plan.rig` is an ordered list of holes `{col, depth}`, depth in cells. A hole's column is any surface column 0..W-1 (S need not lie below it) [DEFAULT 42].
+- Count: at most 12 holes in the plan [DEFAULT 43]. The mid-run add hole keeps its own limit of 6 from the reserve (section 6).
+- One hole per column. A second hole in a held column is refused "sep" (the add hole obeys the same rule).
+- Depth: 1 to 100 cells (grid height, 500 m); `setHoleDepth` clamps to 1 .. 100 only. The budget does not bound a depth (v3.7.7) [DEFAULT 42]. A new hole's default depth is its column default (the formation bottom + 1 cell through the painted formation in that column, at most 100, else 10 cells) whichever row is clicked, and is not reduced by the room left (v3.8.2, B6: a dike that reaches the grid floor gives 100).
+- Rig limit (v3.8.2): the total rig length (sum of depths) is at most the level cap, 2,000 m = 400 cells, independent of the borebot network (Quinn 2026-10-18; this replaces the v3.7 rule that tied the rig total to the left drilled length, row 44). Unspent length is lost; there is no carry-over and no refund into the reserve [DEFAULT 44]. v3.7.7: a plan may exceed the limit while editing; no edit is refused and no hole is changed for it, including every left edit and Back to paint. The over state: `over` = total depth > 400 cells; over cells = the cells beyond the cumulative limit in placement order, `holes[i].overCells` = max(0, min(depth_i, cumulative_i - 400)). The over cells draw in the warning colour, the rig line reads "Rig: Max Length Exceeded" (`view.plan.overNote`), and Start is refused (`rig_over`, section 4b item 10). `Round` throws on a hand plan above the limit. Total equal to the limit is allowed. Because no left edit moves the limit, no left edit changes `over`.
+- Order: drill order = placement order; no reorder control in 45.11 [DEFAULT 45].
+- Zero holes: the rig runs the auto `rig_plan` of 4d unchanged. Every existing golden and GV world runs the auto path.
+- Auto-plan button: "Auto-plan rig" copies the auto plan into the editable list; the holes become player holes with their order kept.
+- Seam: `newPlan` and `Round` accept `rig: null` (null = the auto plan, today's behavior); with no player holes `view.plan.rig` is empty and `auto: true`.
+- Landed in 45.10b-10: intents `addRigHole(col, depth?)`, `moveRigHole(old, new)`, `removeRigHole(col)`, `setRigHoleDepth(col, depth)`, `selectRigHole(col)` (PLAN only) and the probes `probePortal(col, moving?)`, `probeRigHole(col, moving?)`. Refusals in order: `rig_range`, `rig_sep`, `rig_max` (v3.7.7: `rig_budget` and the budget-0 text are removed); `setRigHoleDepth` clamps to 1 .. 100. A hole's default depth is its column's S bottom + 1, else 10 cells. The player's list runs as one group in placement order (`Round` `rig = [list]`). `view.plan` carries `holes[{col, depth, depthM, order, noS, aboveS, belowS}]`, `count`, `cap`, `budget`, `spent`, `unspentM`, `selected`, `over`, `overCells`, `overM` (`clipped` is removed), `holes[i].overCells`, and `view.selKind`. UI: click the right panel adds; drag the flag moves; drag off the panels removes; drag the square handle, roll the wheel or press + and - sets the depth; Delete and Backspace remove the selected object of `selKind` (a hole when `selKind` is 'hole'). The Auto-plan and Clear buttons are not built; removing every hole returns to the auto plan.
+- Gates: G62 and the site variants of G2, G10, G11, G31, G33, G35, G51 and G53 are listed after G61 in section 13; all are 45.11, goldens_v40.
+
+## 5. Sensing (both sides, same rules)
+
+- **Core.** Each cored cell (G4; a rig hole of depth n cores its n cells) becomes tier 2, intersected. A cell is a 5 m block graded from the intercept. 5 m sits inside the 5 to 25 m block-model range [SRE-12.5].
+- **Cross-hole tomography, full fidelity.** Two lines with gap 2 to 10 cells (10 to 50 m) form a pair.
+  - Rig: a completing hole pairs with its nearest completed neighbor on each side, and a formed pair stays formed.
+  - Borebot: pairs are x-adjacent cored cells of different segments in a row of the layout, scheduled when the later segment completes. The layout is the plan plus every accepted mid-run action. Pairs are recomputed from the layout after every accepted action [DEFAULT 19]. A pair whose ready time is at or before the action time is frozen: it stays as scheduled, with its imaged cells, even when the new layout no longer pairs those rows (revealed cells never un-reveal). Pairs not yet ready follow the new layout. Gate G36.
+  - Window. For a rig pair: rows 0 .. D - 1, with D = min(depth_a, depth_b). For a borebot pair: the common rows of the two segments; top r_top = the first common row, D = last common row - r_top + 1 (the span).
+  - Pair rows. Rig: every row of the window, columns strictly between the holes. Borebot: only the rows where the two segments are x-adjacent at a gap of 2 to 10 cells, columns strictly between them.
+  - Corner exclusion: d = gap in cells, h = max(0, D - 1.19 d). A cell in column c at window row y = row - r_top, with u = distance in columns to the nearer line, is excluded when u <= d/2 and (y < h(1 - 2u/d) or y > D - 1 - h(1 - 2u/d)).
+  - Skip test: a pair is skipped when it images no cell, or when new / imaged < 0.20. Here new counts the imaged cells not cored at the pair's ready time and not already revealed by an earlier pair; sparse reveal is not counted.
+  - Every imaged non-cored cell becomes tier 1. 3 game s per scheduled pair, one pair at a time per side in ready-time order; a pair starts at max(ready time, end of the previous pair), and its cells appear when it ends.
+- **Pair rule, overburden (G55) [DEFAULT 34].** Borebot pairs form only where radar can reach S. A borebot pair is dropped (not scheduled, no radar time, no cells, outside the new / imaged statistics) when none of the cored cells in its pair rows lies within RADAR_RANGE (10 cells, Euclidean, cell centres, `<= 10 + 1e-9`) of a cell of the S margin (S dilated 1 cell, all components). A pair with at least one such cell keeps all its rows. The rule is applied each time pairs are recomputed (frozen pairs are not re-tested). Rig pairs are unchanged (rig holes sit in S columns). Legacy mode keeps every pair.
+- **Rig schedule (M5).** Holes drill in plan order (section 4d). The rig starts at the first hole's column at t = 0 with no travel. Between holes it travels at the rig travel speed and drills at R x 0.5 cells/s (section 2d). An added hole joins the end of the queue and starts at max(click time, rig free time). The click time matters: GV4m finishes at 97.6 s, not 96.0 s (trunk mode, R 10, legacy travel; the R 3.4 and surface values: regenerated by -3 and -4).
+- **Single-line radar, sparse.** A non-cored cell within 10 cells (50 m) of the side's nearest cored cell (Euclidean, cell centers, distance r) is revealed if u(seed, x, y) < min(1, (0.8 / r)^2). It is applied when each line completes and takes no game time. The result equals one application at the end, because p is monotone in the nearest distance and u is fixed per cell. With r0 = 4 m every cell other than the cored line itself is at r >= 5 m, so no revealed cell is certain: an adjacent cell is revealed with p = 0.64, a diagonal neighbor 0.32, a cell 10 m out 0.16.
+- **What each mechanism reveals** (key for panels 11b, 12 and 15):
+  - Cored line (tier 2, drawn solid): the cells the hole or branch passes through, one per 5 m of path. With r0 = 4 m this is the only certain ground a single line gives.
+  - Cross-hole pair (tier 1, drawn solid): the imaged region between two lines 10 to 50 m apart, revealed with certainty. For a pair with gap d (cells) and window depth D (rows, top row r_top), let h = max(0, D - 1.19 d). A cell strictly between the two lines, at distance u (columns) from the nearer line, is imaged when its window row y = row - r_top satisfies h (1 - 2u/d) <= y <= D - 1 - h (1 - 2u/d). The imaged set is a vertical lens centred on the midline between the lines. The midline column (u = d/2) is imaged over the whole window. Each column toward a line loses h x 2/d more rows at the top and at the bottom. The cells next to the lines are imaged only in the middle rows, or not at all when h (1 - 2/d) > (D - 1)/2. When D <= 1.19 d (h = 0) the whole rectangle between the lines is imaged. Every imaged cell is revealed with certainty. The rest of the rectangle is left to single-line radar (speckle) like any other ground. Shares of the rectangle imaged in the goldens: full-depth 50 m pair (D = 100), 284 of 900 cells (32 percent); GV2 98-103, 124 of 400 (31 percent); GV4 50-60, 138 of 378 (37 percent); GV4 60-70 and the GV4m add 70-80, 137 of 351 (39 percent); GV1 9-14, 28 of 56 (50 percent); a 10 m pair (d = 2) is imaged in full, 100 of 100. The geometry carries open item D10 (SRE).
+  - Single line alone (tier 1, drawn as speckle): scattered cells out to 50 m, densest beside the line (about 2 in 3 adjacent cells) and thinning as 1/r^2. In the sim, one isolated vertical hole reveals per side column, at column distance 1 to 10 (5 to 50 m), fractions 0.645, 0.16, 0.08, 0.035, 0.02, 0.035, 0.01, 0.015, 0.0, 0.01 (seed 15838, 100 rows x 2 sides = 200 cells per distance).
+- **The draw.** h = (seed x 0x9E3779B1 + x x 0xC2B2AE3D + y x 0x27D4EB2F) mod 2^32, then fmix32 (h ^= h >> 16; h = h x 0x85EBCA6B mod 2^32; h ^= h >> 13; h = h x 0xC2B2AE35 mod 2^32; h ^= h >> 16); u = h / 2^32. No side term. JS: every product uses Math.imul, followed by >>> 0, because a float multiply loses the low bits on every draw. Test vectors (seed, x, y -> u): (7919, 5, 4) 0.062413; (7919, 4, 6) 0.136708; (7919, 6, 4) 0.081696; (15838, 40, 20) 0.837140.
+- **Display and caption.** A revealed cell shows the true F state as high or low contrast; flips are OFF. Caption: "500 m section. Game time is compressed: 1 game second is about 2.5 hours of drilling."
+- **Tooltips.** Intersected: "a hole passed through this cell". Imaged: "radar revealed this cell". Unseen: "no hole or radar reached this cell" [DEFAULT 2].
+
+## 6. Mid-run actions
+
+Only two exist, plus pause and speed. Each belongs to one side: re-aim is left, add borehole is right. A re-aim drag on the right panel, or a tap on the left panel, is ignored in RUN.
+
+**Clock and pacing (M6, EB 6).** The run advances in whole 0.1 game s ticks. State at tick n is a pure function of the inputs and n, so replays are exact and frame rate does not matter. At 1x one game second takes 0.1 wall seconds (GV4's 192 s is 19.2 wall s); buttons 4x, 16x, pause, skip to end. Ticks due per frame = floor(round6(wall elapsed s x speed x 100)) minus the ticks already run: 1x is 100 ticks per wall second (10 game s per wall s), 4x is 400, 16x is 1,600, so GV4's 192 s is 1,920 ticks and 19.2 wall s at 1x (trunk mode, R 10). Skip to end runs ticks until both sides have finished. The run header shows the elapsed real hours (section 2d, tick n = 0.25 n h).
+
+**Speed change, pause and drag mid-run [DEFAULT 32].** Total ticks due at any moment = floor(round6(S)), where S = the sum over speed intervals of (wall seconds in the interval x speed x 100). A speed switch (1x, 4x, 16x) starts a new interval; the fractional part of S carries across the switch and across pauses, never reset or rounded at the switch. Pause and auto-pause (a drag held on the board) are intervals of speed 0: they add 0 to S whatever their wall length. Ticks due per frame = that total minus the ticks already run, so no tick is dropped or duplicated. Worked example: 0.37 wall s at 1x (37), 4x for 0.21 wall s (84), pause 1.0 s (0), 16x for 0.05 wall s (80): S = 201, 201 ticks (20.1 game s). Computing the last interval as the whole 0.63 active wall s at the final speed gives 1,008 ticks and is wrong. An action is stamped with the tick time n/10 (floor to the tick, G32). While a drag is held on the board the clock is paused (auto-pause); the action commits at the paused tick on release; releasing outside the grid or pressing Escape cancels with no change. Actions are accepted while paused.
+
+**Reserve accounting (M3, EB 4) [DEFAULT 11].** Each side has its own reserve = ceil(0.25 x budget) cells; the left reserve pays for re-aims and the right reserve pays for added holes (GV4m: left 75, right 75). The drill cap bounds the plan only; the reserve is on top of it, so a side can drill up to cap + reserve (GV3: 400 + 100 cells = 2,500 m). The run meter shows the reserve left ("reserve 228.1 of 375 m"). v3.8.2: the reserves stay ceil(0.25 x the 4d left budget) per side; the rig limit (the cap) does not enter them.
+
+**Re-aim** (left).
+- Input (M14): pointer down within max(2 cells, 12 px) [DEFAULT 14] of the drilled end of a partly drilled branch (nearest wins, ties to the lower id); drag to a target cell; a live readout shows cost, cap and reserve left; release commits. Valid source: a branch with 0 < f < 1 at the action time, any generation, including (legacy mode) a trunk, (surface mode) an overburden branch, a re-aimed segment and a regrown branch. Valid target: inside the grid and not on a cell the side's layout already cores.
+- Mechanics:
+  1. f = drilled fraction of the branch at t. The cut point is the branch start + f x length along its direction.
+  2. Kill set: the branch, plus every descendant not yet started at t (a branch that is partly drilled has no started descendant).
+  3. Refund = (1 - f) x branch length + the full lengths of the other killed segments.
+  4. New straight segment from the cut point to the target. It is checked against the grid only, and its coring phase continues from the path arclength at the cut point.
+  5. Regrowth: the portal's remaining generations, each with the length its own click used, the portal's theta, the direction rule and the tip-spacing prune. For a re-aimed branch of generation g, regrowth covers generations g + 1 up to the portal's last click; for a trunk, every generation. Legacy mode: every sample must lie inside S expanded by 8 cells (40 m) and inside the grid. Surface mode: each regrown generation uses the section 4c rule from its tip (stay-mask and R4), not the 8-cell mask (G52).
+  6. Cost = new segment + regrown subtree - refund. It can be negative (a refund).
+  7. Cap [DEFAULT 12]: cost <= min(floor(0.4 x initial reserve), reserve left). If cost exceeds it, the target slides back toward the cut point in 2 percent steps (51 tries). The first try that fits is used. If none fits the re-aim is refused ("reserve" when the reserve left is under the cap, else "cap") and nothing changes.
+  8. On acceptance: reserve left = min(initial reserve, reserve left - cost). The re-aimed branch is cut at f and finishes at t; the layout keeps full fields on every segment, so any of the new segments can be re-aimed later.
+  9. Limit 5 per run. Time order: an action whose tick time is earlier than the last accepted action of either side is refused ("time"); an equal tick time is accepted.
+  GV4 (trunk mode, R 10, legacy travel): refused at 60 s (segment 2), succeeds at 90 s (segment 6, cost 29.389 cells against cap 30, wanted 56.352). Surface mode and R 3.4: regenerated by -3 and -4.
+- Refusals, in order, with the shown text [DEFAULT 13]: "time" "Earlier than your last action." ; "side_finished" "This side has finished." ; "limit" "Five re-aims used." ; "no_branch" "No such branch." ; "not_started" "This branch has not started drilling." ; "finished" "This branch is already drilled." ; "outside" "Target is outside the section." ; "cored" "That ground is already cored." ; "reserve" "Reserve is short." ; "cap" "Over the re-aim cap." "no_branch" is for a branch id that is not in the layout; a pick never produces it. A side that has finished and sits at the limit gets "side_finished".
+
+**Add borehole** (right).
+- Input: tap a surface column; a vertical drag before release sets the depth in whole cells, otherwise the default depth applies. Default depth: 25 m below the deepest S cell in the column (250 m if none), at most the reserve left (rounded down) and at most the grid depth. A dragged depth d is clamped the same way: depth = max(2, min(d, floor(reserve left), 100)). Depth is at least 2 cells [DEFAULT 15].
+- Rules, in order: refused "time" (tick time earlier than the last accepted action of either side; equal is accepted), "side_finished" (tick time at or after the right side's finish time), "limit" (6 holes added), "outside", "sep" (same column as a hole; 5 m minimum), "reserve" (under 2 cells, 10 m, left). Accepted: the hole joins the end of the queue (section 5) and the reserve left falls by its depth.
+- Texts (default 15): "Earlier than your last action." ; "This side has finished." ; "Six holes added." ; "Outside the section." ; "Too close to a hole." ; "Reserve is short."
+- GV1b: column 18 at 5.0 s, default depth 250 m clamped to the reserve (9 cells, 45 m).
+
+**Run end (M7).** A side's finish time is max(its last drill end, its last pair end). A side accepts an action only when the action's tick time is strictly before its own finish time [DEFAULT 16]; at the finish tick and after, its controls are disabled with the "finished" text and a forced action is refused "side_finished". The RUN state ends at max(finish left, finish right), then END_REVEAL. Unspent reserve is shown at the end as a plain number; it carries no value.
+
+**Borebot pairs** are recomputed on every accepted action (section 5, frozen rule). The end state equals the sim run from the final layout.
+
+## 7. Advisor
+
+Character: a hyper-logical android science officer, "Lt. Cmdr. Vex" (original; no name, quote or likeness from any existing franchise). A small portrait bubble at the edge of the panel where the event happened.
+
+Trigger test. Computed from public priors, observed geometry and S only. The hidden formation F is never read by any trigger, line, spot or count, so the presence or absence of a pop-up carries no information about F. Gate G38 runs the round with two different F under one S, portals and clicks and requires identical triggers, text and spot.
+
+Only the player's own actions are tested: an added hole or a re-aim, evaluated on the state before the action is queued. The generated campaign never fires the advisor. A pop-up does not block: the action has already been applied, the clock does not pause, and the bubble stays for 8 wall seconds or until the next action [DEFAULT 27].
+
+Inputs, exactly: level priors (max_depth_rows, w_min_cells, barren_rows), S, the side's planned and observed cored cells, planned pairs, and the action's geometry. Planned pairs are the pairs of the layout that includes the action (section 5, frozen rule), limited to the pairs that contain the new hole (add) or a new segment (re-aim); each pair carries its (new, imaged) counts, new counted at the pair's ready time after the earlier pairs of that layout.
+
+| ID | Poor if | Values |
+|---|---|---|
+| P1 | add hole: any new cored cell is within 3.75 cells (18.75 m) of an existing cored cell of that side. Re-aim: at least half of the new straight segment's cells are within 3.75 cells of cells cored by other branches (the branch's own path and its killed subtree excluded) | radius 3.75 cells [DEFAULT 25] |
+| P2 | at least one of the action's radar pairs has more than 80 percent of its imaged footprint already cored or imaged in that side's plan before the action (new / imaged under 0.20; sparse speckle excluded) | 80 percent [DEFAULT 23] |
+| P3 | the action's terminal cell lies in the barren surface zone (row < barren_rows) or at or below the level's max-depth prior (row >= max_depth_rows). Transit rows of a deeper hole never fire P3 | per level |
+| P4 | the action's terminal cell is farther than W_min / 2 from every S cell (Euclidean, cells), where W_min is the narrowest declared lateral width of any body of the level | per level [DEFAULT 24] |
+| P5 | none of the action's radar pairs images a cell that passes the skip test (no pair, or all pairs under 20 percent new) | 20 percent |
+
+There is no shadowed-body trigger: tier 1 is certain and carries no confidence.
+
+Per-level priors [DEFAULT 26] (public, derived from the generator ranges, section 8). max_depth_rows = min(100, 5 x ceil((B + 1) / 5)), where B is the largest bottom row over every body option of the level at the top of each range (lens, thin lens, cluster: cy_max + b_max; flat layer: y0_max + t_max - 1; dipping layer: y0_max + ceil((w_max - 1) x tan 25 deg) + t_max; pipe: 99). W_min = the smallest lateral width over every body option (lens, thin lens and one cluster lens: 2 a_min; flat layer, dipping layer, pipe: w_min).
+
+| Level | max_depth_rows (m) | W_min cells (m); W_min / 2 | barren_rows |
+|---|---|---|---|
+| 1 | 70 (350) | 70 (350); 35 | 5 |
+| 2 | 100 (500) | 12 (60); 6 | 5 |
+| 3 | 100 (500) | 120 (600); 60 | 5 |
+| 4 | 85 (425) | 70 (350); 35 | 5 |
+| 5 | 60 (300) | 30 (150); 15 | 5 |
+| 6 | 100 (500) | 12 (60); 6 | 5 |
+| GV1 test world | 25 (125) | 10 (50); 5 | 5 |
+| pipe world | 100 | 12; 6 | 5 |
+| main round | 85 | 70; 35 | 5 |
+
+Note (v3.7). The L4, L5 and L6 rows follow the v3.6.3 generator ranges. They are regenerated in 45.12 with the cover cap (section 8a); the priors then follow the new ranges by the formula above.
+
+When more than one trigger holds, the first in the order P1, P2, P3, P4, P5 selects the line group.
+
+Gates: one pop-up per 12 game s per side (cooldown: an action exactly 12.0 s after the previous pop-up of that side may pop; a gap under 12.0 s may not), at most 4 per run per side, no line repeats within a run. A suppressed trigger consumes no line.
+
+Spot rule ({spot}, M13) [DEFAULT 28]. Observed state at the action time t: cored cells so far (a partly drilled hole or branch counts its drilled part), cells of pairs finished by t, speckle of lines finished by t. Unseen = S cells not in that state. The region is the largest 4-connected part of unseen S on that side (ties to the smallest (x, y) cell); its centroid is (cx, cy).
+- Right: the S column nearest to cx (ties lower) that is at least 2 columns from every existing or queued hole and where a default-depth hole would schedule at least one radar pair. Text: "surface column c (x = 5c m)". None when no column qualifies (the spot lines 13 to 15 are then skipped).
+- Left: the cell of the region nearest to the centroid (ties lower (x, y)). Text: "x = 5x m, 5y m deep". An arrow points to it.
+- GV4m at 74.0 s (trunk mode, R 10, legacy travel; surface and R 3.4 values regenerated by -3 and -4): the largest unseen region holds 829 cells (all unseen S cells on the right: 2,598; line 10's {n} counts all 2,598), centroid (86.16, 45.55), spot "surface column 80 (x = 400 m)". The attempt at column 61 (5 m from hole 60) fires P1 (and P2 and P5) with line 3; the column 80 hole at 75.0 s fires nothing.
+
+Never reveals (forbidden outputs): any F cell, coordinate or count of F cells; whether the suggested spot holds formation; formation size or extent; direction words tied to F ("deeper", "left of the body"); percent prospected; any comparison between the sides. Counts of unseen cells inside S ({n}) are public and allowed.
+
+Line bank (15 lines; {n} is the count of unseen cells inside S on that side, {spot} is the spot text above):
+1. "Captain, it would be better to take a core sample over there."
+2. "Fascinating. You have measured the same rock twice, with great precision."
+3. "Captain, this location has been sampled. Sampling it again is not science, it is a hobby."
+4. "The probability that this hole is in a useful place is, by my calculation, indistinguishable from the probability that it contains cheese."
+5. "Captain, may I suggest a core in the unexplored area? It is where the unexplored things are."
+6. "I have observed that rock does not become more interesting the second time it is drilled."
+7. "Logically, a hole this close to its neighbor is a very expensive way to confirm that rock is rock."
+8. "Captain, the radar is pointing at ground that the radar has already seen. It has no new opinions."
+9. "Your hole is a bold artistic statement. The geology of this region has declined to participate."
+10. "Captain, there are {n} cells in your region that nobody has looked at. They feel neglected."
+11. "May I recommend that the next hole go where the last one did not?"
+12. "Captain, I have run the numbers twice. They said the same thing, which is the only reliable behavior numbers have."
+13. "Captain, a core sample at {spot} would tell us more."
+14. "Captain, {spot} is unexplored. I find that statistically attractive."
+15. "Captain, may I direct your attention to the marked spot, {spot}? It has been waiting patiently."
+
+Mapping by trigger: P1: 3, 6, 7. P2: 2, 3, 8. P3: 4, 9. P4: 9, 11. P5: 5, 8, 12. Any trigger: 1, 10, 13, 14, 15 (13 to 15 only when a spot exists). Selection is deterministic: the lowest-numbered unused line of the trigger's list, then of the any list.
+
+## 8. Archetypes, level table and the formation generator
+
+Archetypes (Earth analogs; meters, then 5 m cells):
+
+| Archetype | Meters | Cells |
+|---|---|---|
+| Lens (massive ore lens) | semi-axes 175 x 62.5 m, center 175 m deep | a 35, b 12 to 13, center row 35 |
+| Dipping layer | 62.5 m thick, measured vertically, dip 25 deg | t 12 to 13 rows, vertical (perpendicular thickness is t x cos 25 deg) |
+| Kimberlite pipe | 60 m wide, 75 to 500 m deep | w 12, rows 15 to 99 |
+| Cluster | lenses 75 x 37.5 m, edge gaps 100 to 175 m | a 15, b 7 to 8, edge gaps 20 to 35 (the minimum sim builder uses 20: centres 50 cells apart) |
+| Buried thin lens | 225 x 25 m, 350 m deep | a 45, b 5, center row 70 |
+| Flat layer (stacked flows / layered intrusion) | 62.5 to 150 m thick | 12 to 30 |
+
+Zero-area rejection: under 500 cells (12,500 m2), re-seed (below). Gate G21: every archetype at its minimum size passes (smallest: buried thin lens 693 cells; areas: lens 1,307; dipping layer 1,452; pipe 1,020; cluster 975; thin lens 693; flat layer 1,440). A floor of 2,000 cells rejects the pipe, lens, thin lens and cluster (the gate's mutant).
+
+Edge-noise cap (D20). The noise applied to an archetype is min(level edge_noise, half-up(half-thickness / 2)) cells. Half-thickness: lens b = 12, dipping layer 6, pipe 6 (half of 12 wide), cluster lens b = 7, buried thin lens b = 5, flat layer 6. Caps: lens 6, dipping layer 3, pipe 3, cluster 4, buried thin lens 3, flat layer 3 (30, 15, 15, 20, 15, 15 m). Gate G22 runs two worst cases on the minimum builders:
+- Inward: every boundary displaced inward by the full cap. Every archetype stays one connected body (the cluster stays 3 lenses), more than 2 cells thick. Mutant: uncapped L6 noise of 5 cells leaves 1 cell of the thin lens.
+- Outward: every boundary displaced outward by the full cap. The cluster stays 3 bodies at its 20-cell (100 m) minimum gap. Mutant: an 11-cell displacement merges the lenses into 1.
+
+After the worst inward squeeze four archetypes fall under the 500-cell floor: buried thin lens 185, cluster 291, pipe 474, lens 497. The dipping layer (690) and flat layer (684) stay above it. Real noise is not the worst case: see the measured re-seed rate below.
+
+### 8a. Level table (M1)
+
+| Level | Name | Bodies | reveal_s | peeks | landmark step | edge_noise | cap_frac (cells) | drill_cap_m | barren_rows | seed |
+|---|---|---|---|---|---|---|---|---|---|---|
+| 1 | Layer or shallow lens | one of: flat layer (t 20 to 30, w 120 to 160, top row 20 to 40) or lens (a 35, b 12 to 13, center row 20 to 24) | 8.0 | 2 | 50 m | 0 | 0.25 (5,000) | 2,000 | 5 | 7,919 x 1 + variant |
+| 2 | Kimberlite pipe | pipe (w 12, top row 15 to 25, to row 99) | 7.0 | 1 | 50 m | 0 | 0.25 (5,000) | 2,000 | 5 | 15,838 + variant |
+| 3 | Thick dipping layer | dipping layer (t 20 to 26, width 120, dip 25 deg, top row 5 to 15) | 6.0 | 1 | 100 m | 6.25 m (1) | 0.20 (4,000) | 2,000 | 5 | 23,757 + variant [PLACEHOLDER: panel 26 shows 23,757 = 3 x 7,919 + 0; playtest picks the variants] |
+| 4 | Thin dipping layer + lens | dipping layer (t 12 to 13, width 80, top row 10 to 30) and lens (a 35, b 12 to 13, center row 30 to 45) | 5.0 | 0 | 100 m | 12.5 m (3) | 0.20 (4,000) | 2,000 | 5 | 31,676 + variant (the storyboard main round is variant 2 = 31,678) |
+| 5 | Cluster of three | three lenses (a 15, b 7 to 8, edge gaps 20 to 35 each, center rows 30 to 50 each) | 4.0 | 0 | 100 m | 18.75 m (4) | 0.15 (3,000) | 2,000 | 5 | 39,595 + variant |
+| 6 | Buried thin lens + offset pipe | thin lens (a 45, b 5, center row 65 to 75) and pipe (w 12, top row 15 to 30) | 3.5 | 0 | 200 m | 25 m (5) | 0.12 (2,400) | 2,000 | 5 | 47,514 + variant |
+
+Defaults in this table: the Level 1 bodies [DEFAULT 6], the Level 3 body [DEFAULT 7], the Level 4 dipping-layer width [DEFAULT 8], the seeds beyond Level 3 [DEFAULT 9], and the drill_cap_m and barren_rows columns [DEFAULT 10].
+
+New level field (v3.7): `rig_speed_ratio`, default 3.4 on all six levels and the test worlds (section 2d). The GV worlds carry 3.4 in the v3.7 goldens; the zero control passes 10.
+
+Cover cap (V10, G61) [DEFAULT 35, column rule DEFAULT 39]. Cover of a level instance = 5 m x the shallowest row of S_ref in the default-portal column c_d, on the reference painting S_ref = F dilated by 2 cells (10 m paint slop, the SWE prototype assumption). c_d is the V3 column for S_ref (section 3a): c_d = floor(round6((c0 + c1) / 2) + 0.5) for the S_ref columns c0..c1 (half up); when S_ref has no cell in that column, c_d is the nearest column that has one, ties to the lower column [DEFAULT 39]. One column per level instance; the per-component default portal of legacy mode is not used. Every shipped level instance gives at most 150 m (30 rows) at c_d. The generator enforces it on its output; whether it bounds placement or re-seeds on failure is a 45.12 item and its rule is added to 8b then. Prototype measurement on variant 0 of the v3.6.3 levels (not goldens; Q2 ruling of the 45.10b-2 close): L1 110 m and L2 80 m comply; L3 155 m (c_d = 121; column 120 gives 150 m, the adjacent case), L4 285 m (centre column 97 has no S_ref, snaps to 93), L5 170 m and L6 330 m exceed the cap and are regenerated in 45.12 (ranges, section 7 priors, section 8b vectors, goldens E8 and E11 move then). This spec does not change their ranges. GV test worlds are exempt (GV4 keeps 185 m as a stress world; GV2 and GV3 sit at 50 m). A level that needs more than 2,000 m carries its own drill_cap_m. The S-top depth label of section 4a steers the player.
+
+Levels beyond 6: none are generated. "Next level" after Level 6 replays Level 6 at variant + 1 [DEFAULT 31]. Test worlds load through the same schema as debug levels: GV1 test world (25 x 25 cells, drill_cap_m 375, barren_rows 5, seed 7,919), the pipe world (drill_cap_m 2,000, seed 15,838) and the main round (drill_cap_m 2,000, seed 31,678). The core reads drill_cap_m / 5 and barren_rows from the level; no literal 400 or 5 appears outside the table (gates G24, G25; mutants hard-code the value).
+
+### 8b. Generator (M2, EB 1)
+
+Conventions. Cells are (x, y) with x the column 0..199 and y the row 0..99. A box is (x0, x1, top, bottom), all inclusive. Arithmetic is IEEE double. Python and JS differ only in the hash (section 5) and the rounding forms (2b).
+
+Seed rule: seed = level_id x 7,919 + variant. Draws: gu(seed, a, b) = u(seed, 1000 + a, b) with the section 5 hash (x >= 1000 never collides with a cell draw). Integer draw: lo + floor(gu x (hi - lo + 1)), hi inclusive. A fixed range (lo = hi) still takes its draw index and returns lo.
+
+1. Choose bodies. Only Level 1 has options: option = floor(gu(seed, 15, 0) x 2), 0 = flat layer, 1 = lens. Every other level has a fixed body list in table order (bodies k = 0, 1, or the cluster).
+2. Shape draws, body k (j = 16 k), ranges from the level table (8a): lens and thin lens a (a = j + 1), b (j + 2), center row cy (j + 3); flat layer t (j + 1), width w (j + 2), top row y0 (j + 3); dipping layer t (j + 1), w (j + 2), top row y0 (j + 3), dip 25 deg fixed; pipe w (j + 1), top row (j + 2); cluster a (j + 1), b (j + 2), gap 1 (j + 3), gap 2 (j + 4), three center rows cy1, cy2, cy3 (j + 5, j + 6, j + 7), each from the level's center-row range.
+3. Bounding box of body k: width xs and rows (top, bottom).
+
+| Archetype | xs | top | bottom |
+|---|---|---|---|
+| lens, thin lens | 2a + 1 | cy - b | cy + b |
+| flat layer | w | y0 | y0 + t - 1 |
+| dipping layer | w | y0 | min(99, y0 + ceil((w - 1) x tan 25 deg) + t) |
+| pipe | w | top | 99 |
+| cluster | 3 (2a + 1) + gap 1 + gap 2 | min(cy1, cy2, cy3) - b | max(cy1, cy2, cy3) + b |
+
+The cluster's three lenses span 6a + gap 1 + gap 2 + 1 cells (c1 - a to c3 + a, with c1, c3 below). The box is 2 cells wider than that. The padding is part of the contract: it narrows the x0 range by 2, changes the count of allowed positions and so the index of every Level 5 x0 draw. tan 25 deg = tan(25 x pi / 180) in doubles.
+
+4. Placement. Bodies are placed in table order. Candidate x0 for body k: 5 .. 195 - xs (the box then ends at column 194 at most, 5 cells from each edge). A candidate is allowed when (i) for every earlier placed box E, max(gx, gy) >= 15, where gx = max(x0 - E.x1, E.x0 - x1) - 1 and gy = max(top - E.bottom, E.top - bottom) - 1 are the empty cells between the two boxes in x and in y (75 m clearance in x or in y); and (ii) k is the last body, or some candidate of body k + 1 is allowed with this box added (recursive look-ahead). x0 = allowed[floor(gu(seed, j + 8, 0) x count)], the allowed list in ascending x0. An empty list fails the attempt.
+5. Build the cells of body k at x0, before noise. Lens and thin lens: center (x0 + a, cy); a cell (x, y) with x in [cx - a, cx + a], y in [cy - b, cy + b], inside the grid, is in when ((x - cx) / a)^2 + ((y - cy) / b)^2 <= 1.0. Flat layer: columns x0 .. x0 + w - 1, rows y0 .. y0 + t - 1. Pipe: columns x0 .. x0 + w - 1, rows top .. 99. Dipping layer: columns x0 .. x0 + w - 1, rows 0 .. 99, in when 0 <= y - (y0 + (x - x0) x tan 25 deg) < t. Cluster: three lenses with the same a and b, centers (c1, cy1), (c2, cy2), (c3, cy3), c1 = x0 + a, c2 = c1 + 2a + gap 1, c3 = c2 + 2a + gap 2.
+6. Edge noise per body with N = min(level noise cells, archetype cap); N = 0 leaves the body cells as built. The noise field uses absolute grid coordinates (not body-relative). Lattice of 8 cells (40 m): i = floor(x / 8), j = floor(y / 8), fx = (x mod 8) / 8, fy = (y mod 8) / 8. Lattice value v(i, j) = N x (2.0 x gu(seed, 200 + k, 512 i + j) - 1.0). Weights sx = fx x fx x (3.0 - 2.0 x fx), sy likewise. n = (v(i, j) (1 - sx) + v(i + 1, j) sx) (1 - sy) + (v(i, j + 1) (1 - sx) + v(i + 1, j + 1) sx) sy (interpolate along x first, then y), then n = floor(64 n + 0.5) / 64; |n| <= N. Distances are Euclidean on cell indices, compared as integer squares d2 = dx^2 + dy^2. A cell outside the grid counts as outside the body. Displacement, with n evaluated at the cell's own (x, y) [DEFAULT 5]: an inside cell is removed when n < 0 and the nearest non-body cell has d2 <= n^2 (so it stays when n >= 0, when no non-body cell lies within N, or when the nearest is farther than |n|); an outside cell inside the grid joins when n > 0 and the nearest body cell has d2 <= n^2. Because |n| <= N, eroded(F0, N) <= F' <= dilated(F0, N), so the G22 worst cases bound every draw (gate G27). The bodies' results are unioned.
+7. Drop specks: 8-connected components of the union under 50 cells are removed.
+8. Accept when |F| >= 500 and the 8-connected component count equals the level's body count (1 on Levels 1 to 3, 2 on Levels 4 and 6, 3 on Level 5), counting the cluster as 3. Otherwise re-seed: variant + 1 (seed + 1), a fresh set of draws, option and shape included. After 16 failed re-seeds (17 failed attempts) the level builds from the first seed with edge noise 0 (placement draws of the first seed, specks dropped); G21 proves every noiseless archetype passes. A build error is reserved for a noiseless F that fails, which G21 and G26 exclude (gate G28) [DEFAULT 3].
+
+Measured: the sim prints 40 variants per level (variants 0, 17, ..., 663): re-seeds 0, fallbacks 0, smallest F 1,307; 900; 2,400; 2,172; 891; 1,506 cells. The independent check step45_swe_v36_independent.py --full runs 200 variants (0, 17, ..., 3,383) on its own generator: re-seeds 0 and fallbacks 0 at every level, smallest F 1,307; 900; 2,400; 2,127; 841; 1,459. Uncapped noise (the mutant) re-seeds 5 of 100 variants on Level 6 and 0 elsewhere. The re-seed path is exercised by a forced test (G28).
+
+Generator vectors (variants 0 and 1; fingerprint = the sum of 100 x + y over the cells of F; x0 per body in table order; N the noise cells used):
+
+| Level | Variant | Seed | \|F\| | Fingerprint | Draws (x0, N; shape) |
+|---|---|---|---|---|---|
+| 1 | 0 | 7,919 | 3,339 | 35,173,026 | flat x0 26, N 0; t 21, w 159, y0 24 |
+| 1 | 1 | 7,920 | 3,630 | 44,091,795 | flat x0 61, N 0; t 30, w 121, y0 32 |
+| 2 | 0 | 15,838 | 984 | 13,685,964 | pipe x0 133, N 0; w 12, top 18 |
+| 2 | 1 | 15,839 | 936 | 14,517,828 | pipe x0 149, N 0; w 12, top 22 |
+| 3 | 0 | 23,757 | 3,000 | 36,285,700 | dip x0 61, N 1; t 25, w 120, y0 5 |
+| 3 | 1 | 23,758 | 2,520 | 23,421,468 | dip x0 33, N 1; t 21, w 120, y0 6 |
+| 4 | 0 | 31,676 | 2,430 | 26,102,407 | dip x0 12, N 3; t 12, w 80, y0 22. lens x0 111, N 3; a 35, b 13, cy 42 |
+| 4 | 1 | 31,677 | 2,126 | 17,040,807 | dip x0 95, N 3; t 12, w 80, y0 11. lens x0 5, N 3; a 35, b 12, cy 30 |
+| 5 | 0 | 39,595 | 957 | 10,246,367 | cluster x0 27, N 4; a 15, b 7, gaps 35 and 35, cy 47, 42, 49 |
+| 5 | 1 | 39,596 | 1,105 | 11,470,627 | cluster x0 28, N 4; a 15, b 7, gaps 35 and 26, cy 49, 36, 34 |
+| 6 | 0 | 47,514 | 1,635 | 21,009,540 | thin lens x0 13, N 3; a 45, b 5, cy 70. pipe x0 179, N 3; w 12, top 29 |
+| 6 | 1 | 47,515 | 1,550 | 22,922,974 | thin lens x0 55, N 3; a 45, b 5, cy 74. pipe x0 177, N 3; w 12, top 23 |
+
+All twelve builds use re-seed 0.
+
+## 9. Readout and worked examples
+
+Definition. F is the formation mask; sense is the side's final state.
+- Intersected: P_int = |F and tier 2| / |F|.
+- Imaged: P_img = |F and tier 1| / |F| (tier 2 overrides tier 1; no double count).
+- Total = |F and (tier 1 or tier 2)| / |F|.
+Labels (M19: one string table, keys intersected, imaged, total, unseen) [DEFAULT 1]: "intersected", "imaged", "total". The readout also prints left and right drilled meters. Percentages are computed from integer counts, never from rounded parts, so the printed parts may differ from the printed total by 0.1 (GV4m: 6.8 + 17.3 = 24.1, total 24.2). Rounding: half up to 1 decimal for percent and seconds. Drilled meters: cells x 5, 1 decimal, thousands comma ("1,639.4 m", "1,795.0 m"). If |F| = 0 the readout shows "no formation"; the generator never produces it. The display never shows a ratio between sides or a leader. The percent of the formation inside the painted SROI is not displayed (Quinn, 2026-10-09).
+
+Zero control: no holes gives 0.0. Full control: every F column cored gives intersected 100.0.
+
+Status in v3.7. Worked examples 9a to 9d are START_MODE='trunk' at R 10 with legacy travel (the `goldens_v36.json` anchor, G46 and G58). Their lengths, cell counts, readouts and clocks are v3.6.3 values. Time keys at R 3.4: regenerated by -3 (`goldens_v37.json`). Surface-mode keys: regenerated by -4 (`goldens_v38.json`). No example is rewritten here until those files exist. The run also prints its elapsed hours (section 2d).
+
+### 9a. Level 1 worked round (the GV1 test world, 125 x 125 m, 25 x 25 cells)
+
+Source: GV1, GV1b. Seed 7919. F = x 40 to 90 m, 50 to 90 m deep (cols 8..17, rows 10..17, 80 cells). S = x 25 to 75 m, 40 to 100 m deep (cols 5..14, rows 8..19, 120 cells). Test-world drill cap 375 m (75 cells). Clicks 25 m, then 20 m.
+- **Portal and meter.** Default portal column 9 (x 45 m; mean 9.5, tie lower). Trunk rows 0..7: 40 m (8 cells). The meter starts at 40 m ("40 of 375 m").
+- **Click 1.** theta = atan(10 / 24) = 22.62 deg. 25 m (5 cells): directions -22.62 and +22.62, ends (7.077, 12.615) and (10.923, 12.615).
+- **Click 2.** 20 m (4 cells): 4 segments, directions -33.93, +11.31, -11.31, +33.93, ends (4.844, 15.934), (7.861, 16.538), (10.139, 16.538), (13.156, 15.934). None dropped.
+- **Network.** 7 segments, 4 tips, 34 cells (170 m). Budget 34 (170 m), reserve 9 (45 m), re-aim cap 3 (15 m).
+- **Right.** Hole at column 9, depth 20 (100 m). Spacing 10 and 5: column 14 at distance 5 needs 20, remainder 14, drilled to 14 (70 m). Spent 34.
+- **Sensing.**
+  - Left: 31 distinct cells cored, 14 of them F; 24 F imaged; 5 pairs; 43 cells sparse-revealed in all. Readout 17.5 / 30.0 / 47.5.
+  - Right: 34 cored, 12 F; 23 F imaged; 1 pair (9-14, gap 5); 59 sparse. Readout 15.0 / 28.8 / 43.8.
+- **Clocks.** Left 46.0 s: trunk 16, generation 1 10, generation 2 8 = 34, then pairs to 46. Right 10.3 s: 4 + 0.5 + 2.8 + 3.
+- **GV1b.** At 5.0 s the player adds column 18 (x 90 m): no S there, so the default is 250 m, clamped to the reserve, 9 cells (45 m). It drills 7.3 to 9.5 s and pairs with column 14 (gap 4, 20 m). Right sparse grows to 66 cells; the right readout stays 43.8; right finish 13.3 s. Advisor: P1 no (20 m from column 14, outside 18.75 m), P2 no (new cells in the pair), P3 no (terminal row 8, barren_rows 5, max depth 25), P4 no (4 cells from S, W_min / 2 = 5), P5 no. No pop-up (gate G38).
+
+### 9b. Pipe (Level 2)
+
+Source: GV2. Seed 15838. F = kimberlite pipe x 475 to 535 m, 75 to 500 m deep (cols 95..106, rows 15..99), |F| = 1,020. S = x 475 to 565 m, 50 to 500 m deep (cols 95..112, rows 10..99). Cap 400. Portal column 103 (x 515 m). Trunk 50 m (10 cells). theta 20 deg. Clicks 100, 75, 50, 50, 35, 25 m.
+
+| Gen | Directions (deg) | Lengths (cells, m) |
+|---|---|---|
+| trunk | 0 | 10 (50 m) |
+| 1 | -20, +20 | 20, 20 (100 m) |
+| 2 | -30, +10, -10, +30 | 5 cut, 15, 15, 7 cut (25, 75, 75, 35 m) |
+| 3 | -15, +25, +15 | 10 each (50 m); one candidate dropped by tip spacing |
+| 4 | -27.5, +12.5, -7.5, +32.5, +27.5 | 5.5 cut, 10, 10, 10, 7.5 cut |
+| 5 | six at -13.75 to +36.25 | 7 each (35 m) |
+| 6 | ten at -31.88 to +38.12 | 5 each (25 m); one cut at 1.5 |
+
+31 segments, 14 tips, 253.5 cells (1,267.5 m). Budget 254 (1,270 m, half up), reserve 64 (320 m), re-aim cap 25 (125 m). Deepest cored row 74 (370 to 375 m).
+- **Left.** 234 cells cored, 137 F; 370 F imaged; 34 pairs scheduled, 1 skipped; 250 sparse. Readout 13.4 / 36.3 / 49.7. Finish 211.0 s.
+- **Right.** Holes 103 (100 cells, 500 m), 98 (100) and 108 (54, the remainder). Spent 254. 170 F cored; 441 F imaged, by column: 95: 6, 96: 18, 97: 56, 99: 57, 100: 66, 101: 65, 102: 54, 104: 46, 105: 38, 106: 35. Pairs 98-103 and 103-108 (gap 5); 403 sparse. Readout 16.7 / 43.2 / 59.9. Finish 55.3 s.
+- **Result.** Same painting, same 1,270 m: left 49.7, right 59.9. The pipe favors Balrog by 10.2 points.
+
+### 9c. 24-click golden (pipe)
+
+Clicks: 100, 75, 50, 50, 40, 40, 30, 30, 25, 25, then 20 m x 14.
+- **GV3, cap 400.** 10 accepted, 14 refused "cap". 400.0 cells, budget 400 (2,000 m). Right holes 103, 98, 108, 101 (100 cells each), spent 400.
+  - Left 204 + 568 = 20.0 / 55.7 / 75.7.
+  - Right 255 + 489 = 25.0 / 47.9 / 72.9.
+  - Finish left 310.0 s, right 88.2 s.
+- **GV3b, cap 800 (test).** 11 accepted, 13 "dead". 408.5 cells, budget 409 (half up). Right holes add 105 (9).
+  - Left 206 + 569 = 20.2 / 55.8 / 76.0. Right 255 + 489 = 25.0 / 47.9 / 72.9.
+
+### 9d. Main round (storyboard L4 painting, resampled to 5 m)
+
+Source: GV4. Seed 31678. The painting is two masks on an 80 x 40 grid of 12.5 m cells (F 324 cells, S 482 cells), one vertical run per column, column:first row-last row, inclusive. F: 5:5-8 6:6-9 7:6-10 8:7-10 9:8-11 10:8-10 11:8-11 12:8-11 13:9-12 14:9-12 15:10-13 16:11-13 17:11-14 18:12-14 19:12-15 20:12-15 21:13-16 22:13-17 23:14-17 24:14-17 25:14-17 26:15-18 27:15-18 28:15-19 29:16-20 30:17-21 31:17-21 32:18-21 33:19-22 34:19-22 35:19-23 36:20-23 37:20-23 38:21-24 39:21-24 40:21-25 41:21-25 42:22-26 43:22-26 44:23-26 45:24-27 50:26-27 51:25-28 52:24-28 53:24-29 54:23-30 55:23-30 56:23-30 57:23-30 58:23-31 59:22-30 60:23-31 61:22-30 62:23-30 63:22-30 64:23-30 65:23-30 66:23-30 67:23-30 68:24-29 69:24-29 70:25-28 71:26-27. S: 4:5-8 5:4-9 6:3-10 7:3-10 8:3-10 9:4-10 10:4-10 11:5-11 12:6-11 13:6-12 14:7-13 15:7-13 16:7-14 17:7-15 18:7-15 19:8-16 20:8-16 21:8-16 22:9-16 23:9-17 24:10-17 25:11-17 26:11-17 27:12-18 28:13-18 29:13-19 30:13-20 31:14-20 32:14-21 33:14-21 34:14-22 35:14-22 36:15-23 37:15-23 38:16-23 39:16-23 40:17-23 41:18-23 42:18-23 43:19-22 48:24-25 49:22-27 50:21-28 51:21-28 52:21-29 53:21-30 54:21-30 55:21-30 56:21-31 57:21-31 58:21-31 59:21-31 60:21-31 61:21-30 62:21-30 63:21-30 64:21-29 65:21-29 66:21-28 67:22-27 68:24-25. Resampling to 5 m cells: new cell (i, j) belongs to a mask when the old cell (floor((5i + 2.5) / 12.5), floor((5j + 2.5) / 12.5)) does; a center exactly on an old cell boundary (5i + 2.5 = 12.5 m, odd m) goes to the higher old cell. Result: |F| = 2,036; S components 1,877 and 1,147 cells. Default portals 60 and 146 (x 300 and 730 m). Clicks alternate portals: 75, 50, 35, 25 m. theta 43.33 and 42.88 deg.
+- **Network and budget.** 31 segments, 15 tips, 298.5 cells. Budget 299 (1,495 m, half up; half-even would give 298), split [126, 173], reserve 75 (375 m) per side, re-aim cap 30 (150 m).
+- **Right holes.** Component 1: 60 (45), 50 (42), 70 (39). Component 2: 146 (80), 136 (77), 156 (16, the remainder). Spent [126, 173].
+- **Readout, no mid-run moves (GV4).** Left 137 + 347 = 6.7 / 17.0 / 23.8 (21 pairs). Right 65 + 170 = 3.2 / 8.3 / 11.5 (4 pairs). Finish left 192.0 s, right 76.4 s.
+- **GV4m, both mid-run moves.** Drilled after the moves: left 327.889 cells (1,639.4 m), right 359 cells (1,795 m). The 155.6 m difference follows from the rules (the 300 m added hole against the 146.9 m net re-aim). Parameters:
+  - Add hole: column 80 (x 400 m), depth 60 cells (300 m), clicked at 75.0 s. It pairs with column 70. The right reserve falls 75 to 15 cells.
+  - Re-aim: at 90.0 s, the westmost partly drilled tip of component 1 (segment 6), toward (20, 20); cost 29.389 cells (146.9 m). The left reserve falls 75 to 45.611 cells (228.1 m).
+  - Readout: left 139 + 353 = 6.8 / 17.3 / 24.2 (28 pairs); right 75 + 194 = 3.7 / 9.5 / 13.2 (5 pairs). Finish left 192.0 s, right 97.6 s. This is the value panel 21 carries.
+- **Re-aim.** Toward (20, 20) = (100 m, 100 m): the first clamped success is at 90 s on segment 6: wanted 56.352 cells (281.8 m), clamped to 29.389 cells (146.9 m) against cap 30 (150 m). Refused at 60 s on segment 2.
+- **Later re-aims (sim demonstration, not a golden).** Re-aims at 90.0 s (segment 6 toward (20, 30), cost 29.847), 95.0 s (segment 8 toward (40, 30), cost 29.755) leave 15.4 of 75 cells. A third at 100.0 s on regrown segment 31 toward (10, 10) costs 14.814 and fits under min(cap 30, reserve left 15.4), leaving 0.585. The mutant that checks only the initial cap spends 29.475 and drives the reserve to -14.076 (G34). The trunk of the second component re-aimed at 20.0 s toward (100, 60) is accepted with cost -72.059 (the refund of its unstarted subtree; the reserve stays at its initial 75) (G37).
+
+## 10. Quinn items
+
+Defaults stand unless Quinn rules otherwise:
+1. Fairness posture. Default: fair comparison; levels include cases where straight holes do well (pipe, flat layer), so the game does not always favor the Unleashed network. Alternative: a tuned demonstration where the fractal side leads on most levels.
+2. Advisor character. Default: the original android officer "Lt. Cmdr. Vex". Alternative: direct homage.
+3. Level gating. Default: free advance (nothing is graded, so no threshold). Alternative: unlock the next level when the left total exceeds a threshold, which reintroduces a pass or fail.
+
+Open flags: section 14. Defaults: section 16.
+
+## 11. Numbers for Carlos
+
+| Number | Value | Tag |
+|---|---|---|
+| cell | 5 m block (block-model range 5 to 25 m) | Quinn, SRE-12.5 |
+| section | 1,000 x 500 m | Quinn |
+| bores | borebot 185 mm; rig 63.5 mm (Durin prototype, 2.5 in); the 190.5 mm (7.5 in) of the ant-farm animation is not a game value; both drawn at one shared exaggerated width | Quinn 2026-10-17, SOURCED-prototype |
+| radar | 50 m range both sides; cross-hole full fidelity 10 to 50 m; single-hole min(1, (4 m / r)^2) | Quinn (r0 ruled 4 m) |
+| time | 1 game s = 2.5 real h (TIME_COMP 0.4 game s per real hour); borebot 1 m/h; rig R x 1 m/h with R 3.4; clock shown in hours | Quinn 2026-10-16 rulings, R weakly sourced |
+| drill cap | 2,000 m per side per level default; per-level field | Quinn ruling, game placeholder |
+| hole spacing | 50 m, densify 25, 10, 5 m | game |
+| barren cover | 25 m default; per-level field | Quinn ruling, Earth weathered zone |
+| archetypes | section 8 | game, Earth analogs |
+| reserve | 25 percent of budget per side; re-aim cap 40 percent of it | game |
+
+## 12. Closing note
+
+The bet stands: per-click growth must read as a decision. At 5 m cells the intersected percentages are small (3 to 25 percent), because a cored line is one 5 m cell wide and ore bodies span thousands of cells. Imaged carries most of each readout. The playtest item (vii), "what does the speckle mean", carries the weight.
+
+## 13. Goldens, gates, rule-to-gate table, panels
+
+Run record (A4), v3.6.3 sim; the v3.7 record is written by 45.10b-3 and 45.10b-4 (target: gates passed 61, under 45 s). Command `python -I cr_scratch/step45_reference_sim_v3.py > run.txt`, 2026-10-15, exit 0, prints "gates passed: 45", two runs byte-identical, 17 to 40 s depending on machine load (limit 45 s on any machine; 30 s is the target on a quiet reference machine, warm). Every golden assert passes. `--print` prints without asserting. Goldens live in the GOLD dict in the sim. Seeds: GV1 test world 7919, pipe 15838, main 31678. L and R are (intersected F, imaged F, |F|). Printed source of each number class: the "== GVn" report blocks (segments, lengths, budgets, holes, counts, readouts, finish times), the "re-aim GV4" lines (90 s, 56.352, 29.389, refused 60 s), the "GV4m" and "GV4m drilled" lines, the "GV5 ceiling" and "worst case" lines, the "single-hole reveal fraction" line (G13), the "G16" line, the "archetype areas", "edge-noise caps" and "G22 outward" lines, the "generator, 40 variants per level" line, and the final "gates passed" line.
+
+| ID | Case | Values (r0 = 4 m) |
+|---|---|---|
+| GV1 | GV1 test world, portal 9, 25 m, 20 m, cap 75 | 7 segments, 34.0 cells, budget 34, reserve 9, re-aim cap 3; holes (9, 20), (14, 14); L (14, 24, 80); R (12, 23, 80); pairs 5 / 1; sparse 43 / 59; finish 46.0 / 10.3 s |
+| GV1b | + hole (18, 9) at 5.0 s | R (12, 23, 80); pairs R 2; sparse R 66; finish R 13.3 s |
+| GV2 | pipe, portal 103, 100, 75, 50, 50, 35, 25 m, cap 400 | 31 segments, 253.5 cells, budget 254, reserve 64, re-aim cap 25; holes (103, 100), (98, 100), (108, 54); L (137, 370, 1020); R (170, 441, 1020); pairs 34+1 skipped / 2; sparse 250 / 403; finish 211.0 / 55.3 s |
+| GV3 | pipe, 24 clicks, cap 400 | ok x 10, cap x 14; 57 segments; 400.0 cells; budget 400; holes 103, 98, 108, 101 (100 each); L (204, 568, 1020); R (255, 489, 1020); finish L 310.0 s |
+| GV3b | GV3 clicks, cap 800 | ok x 11, dead x 13; 63 segments; 408.5 cells; budget 409; reserve 103 (ceil of 102.25); re-aim cap 41; L (206, 569, 1020); R (255, 489, 1020) |
+| GV4 | main round, portals 60, 146, 8 clicks, cap 400 | 31 segments, 298.5 cells, budget 299, split [126, 173], reserve 75, re-aim cap 30; L (137, 347, 2036); R (65, 170, 2036); pairs 21 / 4; finish L 192.0 s |
+| GV4m | GV4 + add hole (80, 60) at 75.0 s + re-aim at 90.0 s (seg 6) toward (20, 20) | L (139, 353, 2036); R (75, 194, 2036); pairs 28 / 5; finish 192.0 / 97.6 s; re-aim cost 29.389; drilled 327.889 / 359 cells |
+| GV4m_late (v3.7.1) | GV4m with the add-hole time moved from 75.0 s to 177.0 s (game clock); hole and re-aim as GV4m; exists at R 3.4 only (at R 10 with legacy travel the right side finishes at 97.6 s and the add is refused "side_finished"; at R 3.4 and travel 1,800 cells/s the right side finishes at 178.958 s without the add, the legal add window is 175.958 to 178.958 s, and an add at or after 178.958 s is refused "side_finished") | no trunk-mode value. Golden key `E12.gv4m_late` in `goldens_v37.json`; values regenerated by -3. Why: at R 3.4 the rig is busy past 75.0 s, so an add at 75.0 s starts at the rig-free time and the click time no longer moves the finish; below 175.958 s (the rig-free time) the click time still does not move the finish, so 177.0 s is the discriminating case inside the window (G23, G32); all times are game seconds on the run clock |
+| re-aim | GV4 toward (20, 20) | success at 90 s, seg 6, cost 29.389, wanted 56.352; refused at 60 s |
+| GV5 | 250 x 500 m SROI, 25 clicks at 20 m, no cap | ok x 24, ceiling; 2,085 segments |
+| worst | 6 shapes x 1 to 3 portals, 24 clicks at 20 m | cap 400: max 103 segments; no cap: max 5,321 |
+| hash | test vectors | section 5 |
+
+Golden status in v3.7. Rows GV1 to GV5 and worst, and sections 9a to 9d, are trunk-mode values. Files: `goldens_v36.json` (R 10, legacy travel; the anchor), `goldens_v37.json` (time keys at R 3.4 and the new section E12 with `gv4m_late`; trunk geometry unchanged; written by -3), `goldens_v38.json` (surface keys, v3.7.4 first-click pair; written by -4), `goldens_v39.json` (surface keys with the straight root, v3.7.5; written by 45.10b-9; regenerated by 45.10b-11 for the v3.7.6 default portal), `goldens_v41.json` (surface keys with the fixed 15 degree half-angle, v3.8.0; `goldens_v40.json` is reserved for the Option B site variants). Surface-mode counterparts of every row above: regenerated by -4 and again by 45.10b-9. Speed and branching never share a golden regeneration. The sim is the reference; goldens regenerate through the exporter.
+
+Gates whose asserted values read a GV world (G3 to G8, G11, G12, G16, G18 to G20, G23, G33 to G41) run in both modes. Trunk-mode values are the v3.6.3 values above (time values at R 10 with legacy travel, G58). Which surface-mode values move is decided by the -4 run and recorded in its diff.
+
+Gates. Each runs the real code as its zero control and a mutant through the same check as its known-bad case.
+
+| Gate | Zero control | Mutant caught |
+|---|---|---|
+| G1 snap | legacy: drops 9, 20, 0 give 9, 14, 5; tie {2, 6} drop 4 gives 2. Surface: a drop at column c gives c (9, 20, 0 stay); the default column of S columns 5..14 is 10 (9.5 half up) and of {2, 6} is 2 (centre 4 has no S: nearest S column, ties lower, v3.7.6) | legacy: identity snap; ties-upper snap. Surface: snap_kept (drop snaps to an S column), centre_floor (9 for 5..14), centre_gap_kept (4 for {2, 6}) |
+| G2 start gate | legacy: one component, 1 click: enabled; 0 clicks, or an unserved component: disabled. Surface: 1 to 3 portals, separation >= 5 cells, 1 click: enabled, and an unserved component does not disable; 0 clicks disabled; separation 4 disabled | legacy: gate without the served check; gate without the click check. Surface: served_check_kept, click_check_removed, sep_check_removed |
+| G3 range | 20 m ok; 15, 22.5, 105 m refused | range check removed |
+| G4 per-click dBranch | GV2 untruncated lengths equal their click | rho 0.7 shrink |
+| G5 cap | cap 12: 100 m click refused, length stays at the trunk | cap check removed |
+| G6 tip spacing | 500 x 200 m SROI, 8 clicks: 0 violations | prune off |
+| G7 ceiling | 24 ok, click 25 "ceiling" | ceiling removed |
+| G8 undo | undo equals the 5-click build | pop without rebuild |
+| G9 re-aim refusal | legacy (trunk, R 10, legacy travel): 60 s refused, 90 s succeeds. Surface: first refusal and first success times regenerated by -4 (`goldens_v38.json` reaim_case; times at R 3.4 by -3); v3.8.0: cap 21, first clamped success at 70 s on seg 7 toward (20, 20) (cost 19.207), seg 7 at 70 s toward (175, 40) refused (`goldens_v41.json` S_MID.reaim_case) | infinite cap accepts at 60 s (both modes) |
+| G10 Balrog pass 0 | legacy: portal 13 on the GV1 test world: first hole 13. Surface (GV1 test world, S columns 5..14): portal at column 2 gives first hole 5; portal at 20 gives 14; portal at 9 gives 9 | legacy: mean-column first hole. Surface: pass0_no_snap (hole at column 2 or 20), mean_column |
+| G11 equal length (GV1, GV2, GV3, GV3b, GV4) | sum b_k = budget = half-up(length); left minus right <= 0.5 cell | budget = distinct left cored cells (31, 234, 372, 382, 283 against 34, 254, 400, 409, 299) |
+| G12 determinism | two GV2 runs identical | last click 30 m differs |
+| G13 1/r^2 | no hole: 0 revealed; column-distance fractions 1: 0.645 (p 0.64, not certain), 2: 0.16, 5: 0.02, 10: 0.01, 11: 0 | inverted p (1.0 at 5, 25 and 50 m) |
+| G14 cross-hole | gap 10 pair: all 284 imaged cells revealed; gap 11: no pair | 1/r^2 applied to the pair |
+| G15 shared draw | same seed identical | side term |
+| G16 coring | vertical rate exactly 1.000 at every dBranch 4..20 cells; every coring point of a chain after a 2.5-cell re-aim segment at arclength k + 0.5 | per-segment phase restart; half-step coring (1.021) |
+| G17 half up | GV4 298.5 gives 299 | half-even gives 298 |
+| G18 generation-1 clamp | flat 750 x 100 m SROI (theta 70): generation 1 at -60, +60 | clamp removed (-70, +70) |
+| G19 portal move / remove, Undo scope | move 103 to 99 replays to the fresh build; remove drops the portal's clicks; two portals keep both through two Undos and a third Undo is disabled | stale network kept after a move; an Undo that also removes a portal |
+| G20 add portal, meter | legacy: 300 m trunk with cap 50 cells: "trunk_cap", nothing changes; meter starts at 5 cells. Surface: no trunk_cap refusal; a portal at any column is accepted up to 3 and with separation; meter starts at 0 | legacy: unguarded constructor raises. Surface: trunk_cap_kept, meter_r0 |
+| G21 archetype floor | six archetypes at minimum size all >= 500 cells | floor 2,000 rejects pipe, lens, thin lens, cluster |
+| G22 edge-noise cap | inward displacement by each cap: every archetype one body (cluster 3), thicker than 2 cells; outward displacement by each cap: cluster stays 3 bodies | uncapped 5 cells inward: thin lens reduced to 1 cell; 11 cells outward: cluster merges to 1 body |
+| G23 GV4m, GV4m_late | trunk mode, R 10, legacy travel: the with-moves round (add at 75.0 s) equals its golden; drilled 327.889 / 359 cells. R 3.4: the 75.0 s case and `E12.gv4m_late` (add at 177.0 s) each equal their goldens | trunk mode, each mutant fails the golden: no moves (right finish 76.4 s), add only (left 137 / 347), re-aim only (right 65 / 170), click time ignored (right finish 96.0 s against 97.6). R 3.4: click time ignored must fail `E12.gv4m_late` (the 75.0 s case is blind to it, G23 does not rely on it) |
+| G24 cap from level data | GV1 level 75 cells, pipe 400; a level with drill_cap_m 1,000 refuses a click that 2,000 accepts; all six levels carry 2,000 / 5 | cap hard-coded at 400 accepts every click |
+| G25 barren rows from level data | row 3 fires P3 at barren_rows 5; row 6 fires at barren_rows 8; row 20 and 5 do not | barren rows hard-coded at 5 misses row 6 at barren_rows 8 |
+| G26 generator | 4 variants per level: identical on a second run, >= 500 cells, in grid, body count right; noiseless levels F = F0 | clearance removed: bodies overlap or merge within 16 variants on levels 4 and 6 |
+| G27 generated noise cap | 12 variants on levels 3 to 6: eroded(F0, cap) <= F <= dilated(F0, cap) | uncapped noise (5 cells) leaves that band |
+| G28 re-seed | forced failures 0..2 give variant + 3, seed 7,919 x 4 + 3; 17 failures give noise 0, F = F0, variant 0 | re-seed budget of 2 falls back early |
+| G29 paint | disc sizes 13, 81, 197, 441, 1,257; cap 100 clips a long stroke at 100; closed ring fills 529 cells; leaky ring refused; over-cap fill refused; 25 strokes undo 20 | exclusive disc (r^2 strict) gives 69 cells at r 5 |
+| G30 Done painting | 49-cell stray dissolves beside a body; 50-cell blob kept; empty and 4 bodies blocked | stray threshold 0 keeps the stray |
+| G31 Back to paint | legacy: column 22 leaves S and snaps to 24 with its clicks; collision drops the right portal and its clicks; a new component gets a default portal; a merged component keeps both portals. Surface: portals at columns 20 and 26 stay at 20 and 26 after S changes; no default portal for a new component; the stack replays and a click refused on replay is dropped with the later clicks of its portal | legacy: portals left where they were. Surface: resnap_kept (snaps to an S column), default_per_comp_kept |
+| G32 tick, ticks due, cell snap | 75.06 floors to tick 750 (75.0); 90.03 to 90.0; GV4m through the tick reproduces the golden; ticks due: 19.2 wall s at 1x, 4.8 s at 4x, 1.2 s at 16x each give 1,920; snap vectors of 2b; R 3.4: `E12.gv4m_late` with the add at 177.06 s floors to tick 1,770 (177.0 s), actions applied in time order (re-aim at 90.03 s, then the add), and equals its golden | round-to-nearest tick (75.06 to 751) moves the right finish to 97.7 (trunk mode, R 10); at R 3.4 round-to-nearest (177.06 s to tick 1,771) must differ from `E12.gv4m_late` by 0.1 s (the 75.06 s case is blind to it while the rig is busy); ticks due at x10 gives 192; unsnapped floor(v + 0.5) |
+| G33 round driver | legacy: Round reproduces GV4m; left reserve 45.611, right reserve 15 cells; drilled 327.889 / 359 cells. Surface: regenerated by -4 (`goldens_v38.json` GV4m keys); v3.8.0: add at 75.0 s col 80 depth 20, re-aim at 100.0 s: left reserve 33.724, right 33, drilled 228.276 / 229 (`goldens_v41.json` S_MID) | Round with one shared reserve pool (the shared_pool mutant) changes the left result |
+| G34 reserve cap | legacy: three re-aims (90, 95, 100 s) end with reserve left >= 0. Surface: the same assertion on the surface network; costs and times regenerated by -4; v3.8.0: re-aims at 95, 105, 115 s leave 32.021, 11.334, 1.926 | cap from the initial reserve only: reserve driven below zero |
+| G35 add hole | legacy: GV1b depth 9 (clamped); second add refused "reserve"; six adds ok, seventh "limit"; add after the side finished refused; add at the exact finish time refused, 0.1 s earlier accepted. Surface: the same rules; the GV1b depth and finish times regenerated by -4 (the budget includes overburden) | unclamped depth (25 cells, the grid depth) on the GV1 test world |
+| G36 frozen pairs | a pair finished before an action keeps its imaged cells when a new segment crosses between its lines | recompute without freezing loses them |
+| G37 re-aims | legacy: second re-aim of a re-aimed segment accepted with full fields; trunk re-aim accepted; codes finished, not_started, outside, cored; tip pick 6 at (45.4, 38.4), none at (5, 5); refusal order: limit, side_finished before limit, time, no_branch, add after a later re-aim time. Surface: no trunk pick; an overburden branch re-aim is accepted with full fields (see G52); tip pick values regenerated by -4; refusal order unchanged | stale network (no layout) cannot find the new segment; the no_limit mutant accepts a sixth re-aim |
+| G38 advisor | GV1b silent; column 61 at 74.0 s fires P1 with line 3; column 80 silent; spot column 80 with a largest unseen region of 829 cells; add at column 61, add at column 199 depth 2 (fires P3, P4, P5) and re-aim at 90 s give identical status, triggers, text and spot under five different F (generated, empty, S, half of S, shifted) | radius 6.25 cells (31 m) fires on GV1b; the p4_f mutant (P4 reads F) differs between the F variants |
+| G39 advisor gates | one pop-up in 6 adds 1 s apart; at least three with spacing 21 s; two pop-ups with a gap of exactly 12.0 s | cooldown removed gives 4; cap removed gives more than 4; the cooldown_le mutant (gap <= 12.0 refused) gives 1 |
+| G40 P2, P4, P5 | pair 1 new of 10 gives P2 (and P5); column 150 outside S gives P4; no pair gives P5; quiet case gives none | P2 removed |
+| G41 readout | integer half up equals pct1 for every n at d = 80, 1,020, 2,036; GV4m 6.8 / 17.3 / 24.2; 327.889 cells prints 1,639.4 | truncation differs from half up |
+| G46 anchor | `START_MODE='trunk'` reproduces `goldens_v37.json` GV1 to GV4m segs (cells, len, dir, ends); geometry equals `goldens_v36.json` | `anchor_off_by_one` |
+| G47 surface root | no gen-0 segment; click 1 is ONE segment from (p, 0) at heading 0, generation 1, length D when untruncated, t = D / 0.5, meter D (starts at 0); click 2 forks its tip into two generation-2 segments at -15 and +15 deg from (p, D) (SW-A, D 20 m: ends (99, 8) and (101, 8)) | `trunk_resurrect` (adds a vertical segment), `root_dir_nonzero`, `root_forks` (the v3.7.4 first-click pair) |
+| G48 stay-mask | an overburden segment keeps its full length D; a segment that enters the S margin truncates at its first exit (SW-D, 4 wide, click 2 +15 child: 17.0 long, end cell (104, 20), t 42.0; SW-D5, 5 wide: 20.0 whole); the legacy margin-only mask on the same input returns "dead" on click 1 | `mask_always` (legacy mask), `mask_never` (segment runs on after exit) |
+| G49 R4 ray prune | synthetic S rectangle SW-49 (8 wide, rect(96, 103, 20, 39)), click 3: the generation-3 children -7.5 and +7.5 kept, the outward +/-22.5 pruned; from end (102.566, 11.559) a ray at 14.5 deg is kept and 15.0 deg pruned (tolerance 0, no heading slack); end-in-margin child always kept | `ray_off`, `ray_back` (heading + 180), `ray_short` (ray limited to D), `ray_vs_S` (tests S, not the margin) |
+| G50 cap and ceiling | overburden generations count toward 24; overburden length counts toward the cap; the cap check is atomic per click: accepted at the cap, refused one cell below | `ob_gen_free`, `cap_skip_ob` |
+| G51 plan edits | add, move and remove replay equals a fresh build; Undo pops clicks only; a free portal column is accepted and moved without snap | `meter_r0`, `trunk_cap_kept` |
+| G52 re-aim | re-aim of an overburden tip regrows its descendants with the 4c stay-mask and R4; none is truncated by the 8-cell mask | `reaim_mask_old` |
+| G53 equal length | the left minus the right total is at most 0.5 cell with overburden length included; pass 0 at a free portal column uses the nearest column of the served component | `budget_excl_ob`, `pass0_no_snap` |
+| G54 component attribution | sum of per-component lengths = total length; overburden length goes to the component its ray meets (the straight root included) | `comp_first` (all to component 0), `tie_lower` (legacy literal rule: upper tied portal gets an empty target set) |
+| G55 overburden pairs dropped | a borebot pair with no cored cell within 10 cells of the S margin is absent from the layout and adds no radar time to run_end; a cored cell at Euclidean distance 10 keeps the pair, sqrt(101) drops it; legacy mode keeps every pair (zero control) | `pair_ob_kept`, `pair_range_11` |
+| G56 determinism | two builds from one stack are equal | `unordered_prune` |
+| G57 hygiene | START_MODE, RAY_STEP, rig_speed_ratio and the cover cap are typed only in consts or level data (H-LIT scan) | fixture literal |
+| G58 speed ratio on the rig only | R 10 with legacy travel reproduces `goldens_v36.json` byte for byte (the 45 old gates); at R 3.4 a 100-cell hole drills in 100 / 1.7 = 58.823529 game s and a 10-cell borebot segment takes 20.0 game s | `ratio_on_bot` (borebot segment at R 3.4 takes 5.882353 s) |
+| G59 TIME_COMP | 2.5 m per game s equals 1 m/h for the borebot and 8.5 m per game s equals 3.4 m/h for the rig at TIME_COMP 0.4 game s per real hour | `time_comp_wrong` (0.4 real h per game s: borebot 0.4 m per game s) |
+| G60 real-hour clock | the header string at ticks 1, 2, 3, 1,920 and 16,000 is "0.3 h", "0.5 h", "0.8 h", "480.0 h", "4,000.0 h" | `clock_in_seconds`, `clock_truncate` ("0.2 h" at tick 1) |
+| G61 cover cap | cover = 5 m x the shallowest S_ref row in the default-portal column c_d (section 8a, DEFAULT 39): a shipped-level instance with that row at 30 (150 m) passes and row 31 (155 m) fails; L3 column 120 (150 m) passes and column 121 (155 m) fails; a centre column with no S_ref snaps to the nearest S_ref column, ties lower (L4: centre 97, snap 93); GV worlds (GV4 at 185 m) are exempt; checked in -4, enforced by the 45.12 generator | `cover_exempt_all`, `cap_off_by_row`, `cover_min_col` (global shallowest row instead of the c_d column), `cover_per_comp` (per-component column, the v3.7 reading) |
+| G64 fixed half-angle (v3.8.0) | surface theta = 15 deg for every target set (SW-A, a 150-wide flat body, a 4-wide tall body, two portals over two bodies), none for an empty one; sibling headings differ by 30 deg; un-re-aimed headings under 30 deg; the 60 deg clamp still binds below a re-aimed parent (S_MID re-aim at 70 s toward (20, 20): regrown headings -102.11, -60.0, -45.0, -36.05, -33.03); trunk-mode theta is still the bounding-box angle (SW-A 26.565, flat 70); tip_sep is 1.0 at 20 m (0.9317 floored), 0.9 D sin 15 above it, and below 2 D sin 15 | `theta_bbox`, floor removed |
+| G62 rig edits (45.11, goldens_v40) | free column; one hole per column ("sep"); count 12 ("max"); depth 1 to 100; over the 2,000 m limit allowed (no edit refused for length, `rig_over` only at Start); no replay clip (the limit is the cap and never drops); order = placement order; zero holes = the auto `rig_plan`; auto-plan button output equals `rig_plan`. Zero control: a plan inside every limit | `order_sorted`, `budget_refuses_placement` (the v3.7.6 refusal returns), `start_allows_over`, `clip_returns`, `dup_column`, `depth_uncapped` |
+| G63 rig Start gate (v3.7.7, v3.8.2) | total rig depth equal to the cap (400 cells) starts; one cell above is refused `rig_over` with "Rig: Max Length Exceeded"; zero holes starts (auto plan); `Round` throws on a hand plan above the cap; reducing a depth clears the over state, left edits do not touch it. Zero control: a plan at or under the cap | `start_allows_over`, `round_accepts_over`, `over_bound_lt` |
+| G1H-U-STOP, G1H-E1 stop texts (v3.8.3) | a Grow to 12 that stops after the network entered the painting reads the "reached the painted formation" text, on Next and on Grow alike, bold and larger than the key note; a first-click dead column and a stop before any branch entered keep the g1g text; a cap stop with a shorter fit names the dBranch, the plain limit text otherwise | `dead_text_old`, `cap_text_plain` |
+| G1H-U-BAND, G1H-E2 legend and zero portals (v3.8.3) | the legend does not say "may sit"; a portal outside the band is accepted; with no portal Next and Grow read "Place a portal first" | `none_text_old` |
+| G1H-U-START, G1H-E3 level start (v3.8.3) | surface mode stays in LEVEL_START after 300 s; the level select works after the wait; Space and Enter start; trunk mode still advances at 1.5 s | `level_auto` |
+| G1H-U-END, G1H-E6 campaign end (v3.8.3) | six levels give six score pairs equal to the readouts; Next after Level 6 is `ended`, the card shows eight rows and the button "Play again"; `restartCampaign` is illegal before the end and returns to Level 1 with no scores | none |
+| G1H-E4 paused (v3.8.3) | Space pauses and resumes; the Pause button shows the play triangle and the line reads "Paused - Space to resume" while paused; a focused Pause button is toggled once by Space | none |
+| G1H-U-FILL, G1H-E5 Fill (v3.8.3) | Fill is still the tool after a refusal and after a success; a refusal does not shake and the message is bold | `fill_one_shot` |
+| G1H-U-TOP, G1H-E8 formation top (v3.8.3) | the number is the shallowest painted cell of the portal's column (nearest painted column when empty, ties lower); the label is within 1.6 text heights of its line and inside the left panel at 960 x 540, 1366 x 768, 1920 x 1080 | `stop_top_comp`, `lay_off_stop_far` |
+| G1H-E7 rig labels (v3.8.3) | no two depth labels overlap in adjacent-column sets at 960 x 540 and 1366 x 768, full-depth holes included; the selected hole keeps its label | `lay_off_labelhit` |
+| G1H-E9, E10, E11, E12 layout and colour (v3.8.3) | the meter caption ends above the gauge; the header is 48 px or more and holds the toggle above its rule; the MIRROR sub line is inside its box; the dark planned-hole fill is (176, 96, 95) | the g1g build (header 39 px, caption on the bar, sub line outside the box, maroon) |
+| G1E-U-GROWTH, G1E-E2 growth probe (v3.8.1) | a dead column: `growth.status` dead, `canClick` false, the dead text on Next and on Grow to 12; a live column is ok and clears the text; no portal gives "select a portal first"; the buttons are grey in the page and the line under the left panel carries the text | `probe_ignored` |
+| G1E-U-CAPNOTE, G1E-E4 the note (v3.8.1, v3.8.2) | a cap stop below 2,000 m: the note reads "Next generation would exceed the 2,000 m limit" and Start is enabled; a rig over 2,000 m reads "Rig: Max Length Exceeded" in the rig line and the Start refusal, blocks Start, and leaves the borebot note unchanged (B5) | `note_max_always` |
+| G1E-U-BUDGET, G1E-U-UNSPENT, G1E-E5 unspent and the rig limit (v3.8.1, v3.8.2) | the rig limit is 400 cells = 2,000 m whatever the left length (`view.plan.budget` 400, `budgetM` 2,000); 400 cells fit, 401 are over and `start()` refuses `rig_over`; rig unspent = 2,000 m minus the rig total; the RUN lines carry no budget B; drilled + unspent = 2,000 m on both sides in RUN and in the result, from one field | `rig_pool_left` |
+| G65 independent rig cap (v3.8.2) | the surface auto plan draws on one pool of cap cells shared by all components: SW-A with a 4-cell network spends 400 cells in 10 holes of 40, one per column; cap 1000 gives 12 holes (480 cells); a cap of 375.5 cells gives 375 (never above the cap); the 15 S_* records hold at most 12 holes and at most the cap; two components share the pool; legacy trunk mode keeps the per-component budgets. Zero control: the cap 400 plan above | `rig_pool_left`, `rig_max_off`, `rig_pool_half_up` |
+| G1F-B6, B6-U default rig hole depth (v3.8.2) | a click places a hole at the column's formation bottom + 1 cell (at most 100), else 10 cells, whichever row is clicked, on the page and in the core, six levels. Zero control: the six level formations. Known-bad: a click-row default, a constant 100 | |
+| G1D-CAP meter colour (v3.8.2, B12) | at a growth stop on the cap the ghost is red and `meter.over` is false; the total is red only above the cap | |
+| G1E-U-PACE, G1E-E6 playback (v3.8.1) | speeds 1 2 4 8 16 accepted, 3 and 32 refused; a 16x run lasts 6 wall s or more; paused ticks hold | `run_pace_off` |
+| G1E-U-LEVELS, G1E-E7 boot and levels (v3.8.1) | the page boots Level 1; six level buttons pick any level; refused outside LEVEL_START; Levels 1, 2, 3 reach READOUT through the page and Next reaches 4 | none (the old boot fails the level id row) |
+| G1E-U-BACK, G1E-E3 Back to paint (v3.8.1) | the undo message; the dropped-clicks text names the portal; a hover from before the phase change is gone; no "S top" or "SROI" in the string table or the page text | none (the old strings fail) |
+| G1E-E1 drag release (v3.8.1) | no refusal ghost over the dragged portal; a click within 25 m inside 0.6 s adds nothing and shows nothing; a later one is refused | `ui_no_settle` |
+| G1E-E2c formation-top label (v3.8.1) | no label box meets a depth-axis label or "m deep" over portals at 0 m and 200 m with 0 to 2 generations | `lay_off_stop` |
+| G1E-E8, G1E-E9 labels and keys (v3.8.1) | hover in metres; legend text for the distance flags and the rig hole; no re-aims or adds counters; Ctrl+Z in PAINT and PLAN, redo keys inert; the Undo button text | none (the old page fails) |
+| G1E-E10 window (v3.8.1) | the overlay below 960 x 540 and not at it; no clipped button, no text outside the window, no overlapping text or buttons in LEVEL_START, PAINT, PLAN (three portals, a rig hole, a blocked portal, at the limit), RUN, READOUT at 960 x 540, 1197 x 726, 1366 x 768, 1920 x 1080 | `lay_off_fit` |
+| G2 start gate, site variant (45.11, goldens_v40) | the rig list is optional (zero holes = auto); rig edits carry their own refusals (range, sep, max); the start gate adds `rig_over` (G63); portals removed down to none refuse Start with the existing text | `rig_required`, `remove_blocked_last` |
+| G10 pass 0, site variant (45.11, goldens_v40) | pass 0 is the auto-plan generator gate; its vectors are unchanged; the auto-plan button output equals `rig_plan` | `autoplan_button_differs` |
+| G11 equal length, site variant (45.11, goldens_v40; v3.8.2) | the equal-length assertion holds in legacy trunk mode only; in surface mode a plan accepted by Start has total rig length at most the cap (G63, G65) | `budget_ignored` |
+| G31 Back to paint, site variant (45.11, goldens_v40; v3.8.2) | rig holes persist by column through every left edit and Back to paint; the rig limit is the cap and does not move, so the over state does not change (no clip) | `rig_cleared_on_back`, `clip_returns` |
+| G33 round driver, site variant (45.11, goldens_v40) | `Round` takes `rig`; `rig: null` reproduces GV4m; a hand plan equals its `goldens_v40.json` key | `rig_null_ignored` |
+| G35 add hole, site variant (45.11, goldens_v40) | an add into a column held by a plan hole is refused "sep" | `sep_not_checked_for_plan` |
+| G51 plan edits, site variant (45.11, goldens_v40) | hole add, move, set depth, remove, clear and auto-plan: replay equals a fresh build; Undo pops clicks only | `undo_pops_hole` |
+| G53 equal length, site variant (45.11, goldens_v40; v3.8.2) | the left minus right total of at most 0.5 cell holds in legacy trunk mode only; in surface mode the auto plan spends the cap or ends with the pool unspent, and a player plan accepted by Start has right total at most the cap (G63, G65) | `budget_ignored` |
+
+A-SIM3 note. The sim's inline G38 values are `col 80` and `n_region 829` at the trunk-mode timing; at R 3.4 they become `col 144` and `n_region 1,147` (regenerated by -3). The G38 row above states the trunk-mode values.
+
+Coring by angle (declared, sim, 400 start offsets per angle, 100-cell chains of 20 m segments): 1.000 at 0 deg, 0.975 at 15, 0.934 at 30, 0.915 at 45, 0.934 at 60. A slanted line cores up to 8.5 percent fewer cells per meter than a vertical hole. This loss is geometric (a slanted line in a square grid) and charged to the borebots; it is declared and left in.
+
+Rule-to-gate table (C1). Every rule above has a gate, and each gate has a zero control and a mutant.
+
+| Rule | Section | Gate |
+|---|---|---|
+| per-level drill cap, barren rows | 2, 8a | G24, G25 |
+| formation generator, noise cap, re-seed | 8b | G26, G27, G28 |
+| paint, Done painting, Undo | 4 | G29, G30 |
+| Back to paint | 4b | G31 |
+| portal add, move, remove, Undo scope | 4b | G19, G20 |
+| tick, ticks due, cell snap, tolerances | 2b, 6 | G32 (snap and tick), goldens (1e-9 tolerances) |
+| round driver, per-side reserves, re-aim cap | 6 | G33, G34 |
+| add hole, finish tick, limit | 6 | G35 |
+| frozen pairs | 5 | G36 |
+| re-aim input, codes, order, trunk, later re-aims | 6 | G37 |
+| advisor P1 to P5, spot, F-independence | 7 | G38, G40 |
+| advisor cooldown, cap, equality | 7 | G39 |
+| readout strings, drilled meters | 2b, 9 | G41 |
+| surface root, stay-mask, R4 ray prune, tip order | 4c | G46 to G49 |
+| cap and ceiling with overburden | 4c | G50 |
+| plan edits with free portals | 4b | G51 |
+| re-aim in surface mode | 6 | G52 |
+| equal length, pass 0, component attribution | 4c, 4d | G53, G54 |
+| borebot pair rule | 5 | G55 |
+| determinism, constants hygiene | 2, 4c | G56, G57 |
+| speed model, TIME_COMP, clock | 2d | G58, G59, G60 |
+| cover cap | 8a | G61 |
+
+Rule functions changed since the frozen v35 sim and their covering gates (F5): apply_pairs (G14, G36), left_sense (G23, G36), rig_sense (G14, G35, G38), reaim (G9, G34, G37), reaim_pick (G23, G37), apply_reaim (G33, G37), play_moves (G23).
+
+Rule functions changed by v3.7 and their covering gates. Wave -3: rig drill and travel constants, rig_sense and the view clock (G58, G59, G60). Wave -4: Network.__init__ (G47), margin_ok to make_ok (G48), ray_ok (G49), candidates (G48, G49, G56), component attribution (G54), meter_start (G47, G51), plan_add and plan_move (G51), reaim (G52), rig_plan pass 0 (G53), left_pairs (G55), start gate (G2), repaint (G31), cover check (G61).
+
+
+Storyboard panels (every segment, hole and count from section 9 and the goldens; art may style but not add, move or remove a segment). Panel labels read "intersected" and "imaged". Rows below describe storyboard rev 7.1. Storyboard rev 8 is the contract for look and flow (section 17); beats that spec v3.7 changed are listed in section 17, and figures in these rows are trunk-mode values that rev 8 replaces.
+
+| Panel | Content |
+|---|---|
+| 09 Done painting | stray removal at 1,250 m2; PLAN opens; default portals on the shadow band |
+| 09a Portal drop | snap slide; Balrog first-hole marker; meter starts at the trunk sum (GV4: 77 cells, 385 m) |
+| 09b dBranch slider | 20 to 100 m in 5 m steps; ghost generation; meter adds the ghost |
+| 09c Next generation | a generation lands; a tip-spacing-dropped candidate fades; Balrog redraws |
+| 09d Cap reached | red ghost, Next disabled, "Max Length Exceeded"; Undo or a shorter slider |
+| 09e Portal move | dragging a grown portal replays its generations at the new column; refused move shakes |
+| 10 Start | plan locks; both 1,495 m (GV4) |
+| 11 | GV4 network and 6 holes at 5 m resolution; bores drawn at one shared exaggerated width |
+| 11b Sparse radar at distance | one lone hole. Key: solid = the cored column only; speckle = single-hole radar, about 2 in 3 adjacent cells (p 0.64), 1 in 6 at 10 m (p 0.16), a scattered few to 50 m; no cell beside the hole is certain. A cross-hole pair appears only in panel 12: a solid lens centred between the two holes, never a full band. |
+| 12 | rig cross-hole pair (gap 10 cells, 50 m): draw exactly the imaged cells of section 5. A vertical lens, full depth on the midline column, narrowing toward each hole; the cells beside each hole are empty except the middle rows (a full-depth 50 m pair images 284 of 900 cells). Key: 'solid lens = cross-hole, certain'. |
+| 13, 14 | attempt at column 61 at 74.0 s, 5 m from hole 60: Vex P1, line 3 (also P2, P5); the marked spot is surface column 80 (x 400 m), in a largest unseen region of 829 cells; the hole at column 80, 300 m deep, at 75.0 s fires nothing |
+| 15 | borebot pairs at 10 to 50 m: each pair images the section 5 lens inside its window; short windows (D <= 1.19 d) image their full rectangle. Draw the imaged cells of section 5. |
+| 16, 17 | re-aim cost 146.9 m (cap 150 m), wanted 281.8 m; left reserve 375 - 146.9 = 228.1 m |
+| 18 to 20, 22 to 25 | pipe 49.7 / 59.9; timing strip with the PLAN row and the new finishes |
+| 21 Readout | GV4m, the round with both mid-run moves of panels 13 to 18: left 6.8 / 17.3 / 24.2, right 3.7 / 9.5 / 13.2 (intersected / imaged / total; sim golden); drilled left 1,639.4 m, right 1,795 m. GV4 (23.8 / 11.5) is the same round without the moves. |
+| keys | meter labels every 100 m; ticks every 50 / 100 / 200 m; tooltips of section 5 |
+
+## 14. Defects and open items
+
+| # | Status |
+|---|---|
+| A coring phase | Closed. Carried along the whole path (G16). At 5 m with integer dBranch the phase only shifts after a re-aim segment. |
+| B rounding | Closed. Half up (G17, section 2b). GV2 rounds 253.5 to 254 under both rules; GV4 (298.5) and GV3b (408.5) are the ties that distinguish them. |
+| C generation-1 clamp | Closed (G18). |
+| D worst case | Closed. Measured: cap max 103, uncapped max 5,321. |
+| E PLAN edits | Closed. 4b items 6 to 11 (G19, G20, G31). |
+| F hash | Closed. Math.imul note and vectors (section 5). |
+| G mutants | Closed. Every gate runs a mutant. |
+| H constants | Closed. dBranch step is 5 m in spec and sim; the four unstated rules are in section 2. |
+| I equal length | Closed. Within 0.5 cell (2.5 m); both totals printed. |
+| J borebot pairs | Closed. Rule: pairs use final-layout adjacency, recomputed after every accepted action, with completed pairs frozen (G36). Measured (SWE): completion-order adjacency would add 3 (GV2), 4 (GV3) and 1 (GV4) row pairs. Rig pairs use completion order because a densify hole drilled between two paired holes would otherwise delete a whole full-depth pair. |
+| D10 cross-hole shape near the lines | Open for the SRE. The cross-hole image is a lens centred between the lines and leaves the cells beside the holes empty (31 to 50 percent of each golden pair's rectangle is imaged). Panels 12 and 15 draw the section 5 cells until D10 closes. |
+| D13 time compression | Closed by ruling 2026-10-16 (v3.7): borebot 1 m/h, rig R x 1 m/h with R 3.4, TIME_COMP 0.4 game s per real hour (section 2d). R is weakly sourced (D26). |
+| D14 wording | Closed by ruling 2026-10-15: "intersected". |
+| D17 r0 | Closed by ruling: r0 = 4 m, below the 5 m cell pitch, so no neighbor cell is certain. |
+| D18 barren cover | Closed by ruling: per-level field barren_rows (default 5 rows, 25 m). Earth weathered zones vary from a few meters to over 100 m; per-level tuning is a 45.14 item. |
+| D19 | Open readability risk, not a rule defect: intersected percentages fall to 3 to 25 percent at 5 m (section 12). |
+| D20 edge-noise cap | Closed: noise is capped at half-up(half-thickness / 2) cells per archetype (G22 worst cases, G27 on generated levels). |
+| D21 re-seed rate | Closed: measured 0 re-seeds in 200 variants per level; the fallback path is forced in G28. |
+| D22 Level 3 seed | Placeholder 23,757 (3 x 7,919 + variant 0) until playtest picks variants. |
+| D23 performance targets | Default 30, section 2c; the Manager's play.html size and rebuild targets agree. |
+| D24 rig bore | rig_bore_mm 63.5 mm is the Durin prototype; the production rig diameter was not found. |
+| D25 time-compression direction | Closed in v3.7. The V9 wording "1 game s = 0.4 real h" is the ratio 0.4 game s per real hour. The borebot at 1 m/h equals 2.5 m per game s (SPEED_L) only when 1 game s = 2.5 real h; at 0.4 real h per game s the borebot would drill 0.4 m per game s and every borebot time would move. Section 2d states 2.5 real h per game s. |
+| D26 R sourcing | Open. R = 3.4 is model output at 50 m depth (FHWA-RD-75-96 rule of thumb); no Durin m/h was found. The depth decline (4.8 to 2.6 m/h over 100 m) is not modeled (DEFAULT 36). Bot sweep R = 1, 3.4, 10 in 45.14. |
+| D27 overburden pairs | Closed by ruling (Quinn 2026-10-16): dropped, G55. |
+| D28 deep cover | Closed by level design: cover cap 150 m at the default-portal column (G61, DEFAULT 39), L3 to L6 regenerated in 45.12. Readout cost on deep or multi-component worlds accepted (V11); the S-top label is the steer. |
+| D29 target set and attribution | Ruled v3.7.3: ties share (all tied portals serve the body); literal tie-to-lower is mutant `tie_lower`. Was open for the sim: T per portal and component attribution are DEFAULT 33; -4 confirms against the prototype `uniform.py` and records any difference. |
+| D30 cover measure | Open for the sim: S_ref = F dilated by 2 cells is a prototype assumption (DEFAULT 35), read at the column c_d (DEFAULT 39); a player-painted S is not capped, only labeled. |
+
+## 15. r0 = 4 m (Quinn ruling 2026-10-15) and the sensitivity behind it
+
+Ruled: r0 = 4 m (0.8 cell). The table is the sensitivity run that informed the ruling. Source: cr_scratch/step45_r0_sensitivity.py (an earlier sim with r0 = 6.25 m, goldens GV1 to GV4, r0 varied, all else fixed). Readout is intersected / imaged / total. "Ring" is the share of the side's total that comes from F cells within r0 of a cored cell (reveal probability 1). Gap is left minus right by the section 13 gap rule (counts, half up).
+
+| r0 | Case | Left (ring) | Right (ring) | Gap |
+|---|---|---|---|---|
+| 2.5 m | GV1 test world | 17.5 / 23.8 / 41.3 (0%) | 15.0 / 8.8 / 23.8 (0%) | +17.5 |
+| 2.5 m | GV2 pipe 6 | 13.4 / 29.7 / 43.1 (0%) | 16.7 / 27.4 / 44.0 (0%) | -0.9 |
+| 2.5 m | GV3 pipe 24 | 20.0 / 47.7 / 67.7 (0%) | 25.0 / 37.5 / 62.5 (0%) | +5.2 |
+| 2.5 m | GV4 main | 6.7 / 11.7 / 18.4 (0%) | 3.2 / 4.8 / 8.0 (0%) | +10.4 |
+| 4.0 m (ruled) | GV1 test world | 17.5 / 30.0 / 47.5 (0%) | 15.0 / 28.8 / 43.8 (0%) | +3.8 |
+| 4.0 m | GV2 pipe 6 | 13.4 / 36.3 / 49.7 (0%) | 16.7 / 43.2 / 59.9 (0%) | -10.2 |
+| 4.0 m | GV3 pipe 24 | 20.0 / 55.7 / 75.7 (0%) | 25.0 / 47.9 / 72.9 (0%) | +2.7 |
+| 4.0 m | GV4 main | 6.7 / 17.0 / 23.8 (0%) | 3.2 / 8.3 / 11.5 (0%) | +12.2 |
+| 5.0 m | GV1 test world | 17.5 / 42.5 / 60.0 (48%) | 15.0 / 46.3 / 61.3 (51%) | -1.2 |
+| 5.0 m | GV2 pipe 6 | 13.4 / 42.7 / 56.2 (36%) | 16.7 / 58.5 / 75.2 (44%) | -19.0 |
+| 5.0 m | GV3 pipe 24 | 20.0 / 63.5 / 83.5 (39%) | 25.0 / 58.9 / 83.9 (50%) | -0.4 |
+| 5.0 m | GV4 main | 6.7 / 21.7 / 28.4 (41%) | 3.2 / 11.2 / 14.4 (44%) | +13.9 |
+| 6.25 m (previous setting) | GV1 test world | 17.5 / 46.3 / 63.8 (45%) | 15.0 / 50.0 / 65.0 (48%) | -1.2 |
+| 6.25 m | GV2 pipe 6 | 13.4 / 45.1 / 58.5 (35%) | 16.7 / 62.5 / 79.1 (42%) | -20.6 |
+| 6.25 m | GV3 pipe 24 | 20.0 / 65.5 / 85.5 (38%) | 25.0 / 61.6 / 86.6 (48%) | -1.1 |
+| 6.25 m | GV4 main | 6.7 / 25.4 / 32.1 (36%) | 3.2 / 12.9 / 16.1 (40%) | +16.1 |
+| 7.5 m | GV1 test world | 17.5 / 53.8 / 71.3 (56%) | 15.0 / 55.0 / 70.0 (48%) | +1.2 |
+| 7.5 m | GV2 pipe 6 | 13.4 / 47.2 / 60.6 (43%) | 16.7 / 65.9 / 82.5 (40%) | -22.0 |
+| 7.5 m | GV3 pipe 24 | 20.0 / 67.3 / 87.3 (47%) | 25.0 / 63.1 / 88.1 (47%) | -0.9 |
+| 7.5 m | GV4 main | 6.7 / 29.6 / 36.3 (47%) | 3.2 / 14.9 / 18.1 (36%) | +18.2 |
+| 10 m | GV1 test world | 17.5 / 60.0 / 77.5 (60%) | 15.0 / 66.3 / 81.3 (68%) | -3.8 |
+| 10 m | GV2 pipe 6 | 13.4 / 52.8 / 66.3 (56%) | 16.7 / 77.4 / 94.0 (75%) | -27.7 |
+| 10 m | GV3 pipe 24 | 20.0 / 71.9 / 91.9 (60%) | 25.0 / 71.1 / 96.1 (69%) | -4.2 |
+| 10 m | GV4 main | 6.7 / 36.1 / 42.9 (52%) | 3.2 / 21.3 / 24.5 (51%) | +18.4 |
+
+Reading:
+- Intersected never moves; r0 changes imaged only.
+- Below 5 m no neighbor cell is guaranteed (ring 0 percent) and readouts change smoothly with r0. At 5 m the four side neighbors become certain (p = 1) and the ring jumps to 36 to 51 percent of each total. A second step comes at 7.07 m (diagonals).
+- The pipe gap tracks the ring: -0.9 at 2.5 m, -10.2 at 4 m, -19.0 at 5 m, -20.6 at 6.25 m, -27.7 at 10 m. Vertical holes inside a vertical body profit most from a guaranteed neighbor band.
+
+Why 4 m:
+- 4 m is below the 5 m cell pitch, so no cell beside a line is certain. p = 0.64 at 5 m, 0.32 at 7.07 m, 0.16 at 10 m and 0.026 at 25 m, so the speckle visibly thins with distance and the 1/r^2 falloff is readable from the first neighbor out.
+- Imaged is still 63 to 73 percent of each total on GV1 and GV2, so radar still matters.
+- The pipe favors Balrog by 10.2 points and the main round favors the fractal by 12.2 (11.0 with both moves), by the gap rule (counts, half up). Neither method wins by construction.
+- Readouts are continuous in r0 below 5 m, so small later changes to r0 move readouts smoothly. The steps at 5 m (neighbors become certain) and 7.07 m (diagonals) are avoided.
+
+## 16. Defaults for Quinn to veto
+
+Every default is tagged DEFAULT n once in the body; this list has the same 45 entries (39 to 41 added in v3.7.1; 42 to 45 added in v3.7.2; DEFAULT 35 extended by 39).
+
+| # | Value | Chosen | Why a default | Who may overturn | Where |
+|---|---|---|---|---|---|
+| 1 | Readout label for tier 1 | "imaged" (replaces "inferred"; matches the ruled state name) | the ruling fixed "intersected" only | Quinn | 0, 9 |
+| 2 | Tooltips for imaged and unseen | "radar revealed this cell"; "no hole or radar reached this cell" | wording not ruled | Quinn | 5 |
+| 3 | Re-seed budget and fallback | 16 re-seeds with variant + 1, then edge noise 0 | measured 0 re-seeds in 200 variants, so the budget only guards | Quinn, SWE | 8b |
+| 4 | Body clearance, edge margin | 75 m between bodies, 25 m from the grid edges | keeps two-body levels readable | Quinn after playtest | 2, 8b |
+| 5 | Noise algorithm | value noise on a 40 m lattice, smoothstep, 1/64 rounding, signed-distance displacement | any smooth noise serves; this one is portable | Quinn, SWE | 8b |
+| 6 | Level-1 bodies | flat layer (t 20 to 30) or lens (center row 20 to 24) | pipe and flat layer favor straight holes (fairness posture) | Quinn after playtest | 8a |
+| 7 | Thick dipping layer (L3) | t 20 to 26 rows (100 to 130 m), width 120, top row 5 to 15 | ruling gave the archetype, not the sizes | Quinn after playtest | 8a |
+| 8 | Two-body widths | dipping layer width 80 cells when paired with a lens (L4) | leaves room for the lens and 75 m clearance | Quinn after playtest | 8a |
+| 9 | Level seeds beyond L1 to L3 | level_id x 7,919 + variant (L4 31,676, L5 39,595, L6 47,514); L3 23,757 placeholder | playtest picks variants | Quinn after playtest | 8a |
+| 10 | Per-level drill_cap_m and barren_rows | 2,000 m and 5 rows on all six levels | the ruling made them fields, not their values | Quinn | 8a |
+| 11 | Reserve is per side; the cap bounds the plan; the reserve sits on top | left reserve pays re-aims, right reserve pays added holes; total per side up to cap + reserve | two sides cannot share a pool and stay comparable | Quinn | 6 |
+| 12 | Re-aim cost cap | min(floor(0.4 x initial reserve), reserve left); a negative cost refunds, capped at the initial reserve | stops one re-aim draining the side | Quinn | 6 |
+| 13 | Re-aim target and source | target in the grid and off cored cells; source partly drilled; refusal codes and texts | makes every refusal explainable | Quinn | 6 |
+| 14 | Pick tolerance | max(2 cells, 12 px) | finger-sized target at 4.5 px per cell | Quinn after playtest | 6 |
+| 15 | Add-hole input | tap for the default depth, vertical drag for a chosen depth; at least 2 cells; refusal texts | one gesture for the common case | Quinn after playtest | 6 |
+| 16 | Side lock | a side accepts actions only before its own finish tick | an action after the end carries no meaning | Quinn | 6 |
+| 17 | Pacing | 1x = 0.1 wall s per game s; 4x, 16x, pause, skip; auto-pause while a drag is held | 192 s of GV4 plays in 19.2 s | Quinn after playtest | 2, 6 |
+| 18 | Tick | 0.1 game s; actions floor to the tick | exact replay at any frame rate | SWE | 2b, 6 |
+| 19 | Frozen pairs | pairs ready at or before an action keep their cells | revealed cells never un-reveal | Quinn | 5 |
+| 20 | Back to paint | re-snap, drop under 5 cells (right one), default per new component, trim to 3 by the largest shared-component column | keeps the player's clicks where possible | Quinn | 4b |
+| 21 | Paint | default brush 25 m; Fill and Clear count as strokes; no redo; undo stack cleared at PLAN | common paint-tool behavior | Quinn after playtest | 4 |
+| 22 | Paint cap order | new cells added by distance from the center until the cap | a clipped stroke stays a blob | Quinn | 4 |
+| 23 | Advisor P2 | a pair with more than 80 percent of its footprint already cored or imaged in the plan | mirrors the pair skip test | Quinn after playtest | 7 |
+| 24 | Advisor P4 | terminal cell farther than W_min / 2 from every S cell (an observed-barren-core trigger would read F) | public information only | Quinn | 7 |
+| 25 | Advisor P1 for re-aim | at least half the new segment's cells near other branches | a re-aim has many cells | Quinn after playtest | 7 |
+| 26 | Advisor priors | max_depth_rows and W_min from the generator ranges (section 7 table) | public by construction | Quinn | 7 |
+| 27 | Advisor pop-up | non-blocking; 12 s cooldown; 4 per side per run; bubble 8 wall s; lowest unused line | a blocking pop-up pauses the clock | Quinn after playtest | 7 |
+| 28 | Spot rule | right: nearest qualifying S column to the unseen-region centroid; left: nearest region cell to the centroid | uses S and observed state only | Quinn | 7 |
+| 29 | END_REVEAL | 2.0 s fade-in with the overlay | matches the fade | Quinn after playtest | 3 |
+| 30 | Performance targets | section 2c | no ruling; the Manager's play.html targets agree | Quinn, Manager | 2c |
+| 31 | Levels beyond 6 | Next level after Level 6 replays Level 6 at variant + 1 | no archetype pair is specified | Quinn | 8a |
+| 32 | Speed change mid-run | rebase at the switch, fractional tick credit carried across switches and pauses; pause and drag auto-pause add 0 | spec was silent; this makes ticks a pure function of the speed-interval history | SWE, Quinn after playtest | 6 |
+| 33 | Portal target set T and overburden component attribution | each component goes to the portal with the nearest S column (ties share: all tied portals serve it); a segment's comp is the component of the S cell nearest its end cell if inside the margin, else the component its R4 ray meets | the ruling named the component the ray meets, not the assignment | Quinn, SWE | 4c |
+| 34 | Pair-drop test | a borebot pair is dropped when none of its cored row cells lies within 10 cells (Euclidean) of the S margin; kept pairs keep all rows | the ruling said "within RADAR_RANGE of the S margin", not at pair or row level | Quinn, SWE | 5 |
+| 35 | Cover measure | 5 m x the shallowest row of S_ref = F dilated by 2 cells, read at the default-portal column (39); at most 150 m | the cap is a level-design check; the player's painting varies | Quinn, Manager | 8a |
+| 36 | Constant R with depth | R does not vary with depth | the research model gives 4.8 to 2.6 m/h over 100 m; one ratio was ruled | Quinn | 2d |
+| 37 | Rig pass 0 with a free portal | one hole per served component at its S column nearest the portal | a portal need not lie over S | SWE | 4d |
+| 38 | NEXT on READOUT | restarts the current level at the same variant until 45.12 adds advance | V5 says restart, not which variant | Quinn | 3a |
+| 39 | Cover-cap column (G61) | one column per level instance: the V3 centre column of S_ref (half up), snapped to the nearest S_ref column when the centre has none, ties to the lower column; cover = 5 m x the shallowest S_ref row there | Q2 ruled the centre column and the snap; the tie rule is the legacy snap tie (4b item 2) | Quinn, Manager | 8a, G61 |
+| 40 | Speck message at n = 0 | no line when no component dissolves; n = 1 "Removed 1 small speck.", n >= 2 "Removed n small specks." | N2 ruled the text for n = 1 and the count, not n = 0 or the plural | Quinn | 3a, 4 |
+| 41 | Clock from run end | the header holds the run-end value (larger finish time x 2.5) through END_REVEAL and READOUT | N6 ruled where the clock shows, not its value after the run ends; storyboard rev 7.1 panel 20 counts 192.0 to 194.0 s through END_REVEAL | Quinn, Manager | 3a, 17 |
+| 42 | Rig hole column and depth range | column free over 0..W-1 (S need not lie below it); depth 1 to 100 cells (the limit never refuses an edit, v3.7.7) | Option B ruling gave player-placed holes, not the ranges | Quinn | 4e |
+| 43 | Rig hole count | at most 12 holes in the plan (mid-run add hole keeps 6) | no count ruled | Quinn | 4e |
+| 44 | Rig budget rule | v3.8.2: the rig total is at most the cap, 2,000 m, independent of the left length; unspent length lost (v3.7 text: at most the left drilled length) | Quinn 2026-10-18 reversed the Option B coupling: both sides can each drill 2,000 m | Quinn | 4e |
+| 45 | Rig order | drill order = placement order; no reorder control until a later step | order was not ruled | Quinn | 4e |
+
+## 17. Storyboard binding clause
+
+Storyboard rev 8 (`cr_scratch/step45_storyboard_v3/`, built by `build_storyboard.js`, 102 checks; numbers match `sim_export.json`) is the binding contract for the look and flow of the build. A screen that differs from the rev 8 frame of its state is a defect unless a spec section rules the beat. Every Designer pass diffs screenshots against the rev 8 frames (V-PANEL J13). The table below lists the beats spec v3.7 changed from rev 7.1; rev 8 draws each of them.
+
+| Panel | Rev 7.1 beat | v3.7 beat |
+|---|---|---|
+| 02 | Show formation; countdown | V1: auto-show at 1.5 s, SHOW kept, state widget "auto at 1.5 s" |
+| 02 to 09e | tag "level clock" in MEMORY, PAINT and PLAN (for example "level clock 14 s (paint has no limit)") | tag dropped: no clock before RUN (N6, section 3a) |
+| 09 | message "Removed 1 small speck." | unchanged text, written as "Removed n small speck(s)." with the count (N2, section 3a) |
+| 10 | playback stopped, "press play" | START autoplays at 1x; "press play" struck (N1, section 3a) |
+| 09 | one default portal per component on the shadow band | one portal at the S bounding-box centre column (V3), nearest S column when the centre has none (v3.7.6); S-top depth label |
+| 09a | snap slide; meter starts at the trunk sum (GV4 385 m) | no snap; no trunk; meter starts at 0 |
+| 09b | ghost always drawn | ghost on demand (V2); Start disabled with "Start needs one generation" |
+| 09c | tip-spacing-dropped candidate fades | the first click drills one straight segment from the surface and the second click forks its tip (v3.7.5; storyboard rev 8 still draws the v3.7.4 first-click pair: open item for the Designer); R4-dropped candidates drawn as X |
+| 09e | portal move snaps to an S column; trunk refusal | portal move to any column; no trunk refusal |
+| 10 | timing strip in seconds | timing strip in hours at R 3.4 |
+| 11, 12, 15 | trunk drawn; pairs in overburden | no trunk; the network starts at the surface; overburden pairs absent |
+| 16, 17 | trunk and branch re-aim | overburden branches re-aimable; no trunk pick |
+| 18 to 20, 22 to 25 | run clock in seconds | run clock "elapsed N.N h"; RUN, END_REVEAL and READOUT only (N6) |
+| 20 | "run clock 192.0 to 194.0 s" through END_REVEAL | the clock holds the run-end value in hours through END_REVEAL (DEFAULT 41) |
+| 09a | tap far from S: not shown | click 1 refused "no branch fits inside the region" (section 4b item 2) |
+| 09, 09a | portal added by a tap on the surface line; Balrog takes no clicks | a click in the left panel or the sky above it adds a portal; a click in the right panel adds a rig hole; ghost markers; help text (45.10b-10, section 4a, 4e) |
+| 21 | Play again, Next level | NEXT in the spine (V5); elapsed hours line |
+| spine | free playback set | pause, 1x, 4x, 16x in a 2 x 2 grid, Skip link (V4) |
+
+Erratum note (TIME_COMP wording; Manager close 45.10b-1/-2 sec. 2, E1 to E12). Several non-spec files carry the V9 and G59 wording "1 game s = 0.4 real hr" or "TIME_COMP 0.4 hr per game s", and a rig travel of "1,440 m per game second". The direction is inverted: 0.4 is game seconds per real hour. Correct: 1 game s = 2.5 real h; rig travel 9,000 m per game s (1,800 cells/s); borebot 1 m/h = 2.5 m per game s. This spec (section 2d, G58 to G60, D25) already states the correct values and needs no change. The affected files are corrected by their owners; the spec does not edit them: `step45_g1_final_plan.md` lines 14, 70, 91 (E1 to E4); `step45_10b_manager_open.md` M1, M3, G59 and the spawn prompts (E5 to E7); `step45_10b_1_flow_trace.md` panel 01, V9 line, U15 (E8); `step45_10b_testplan.md` source-verification rows 2 and 3 and Q1 (E9); storyboard rev 8 caption "1 game second is about one day" and "about 25 real h" (E10, owner -7); `gameplan.md` line 308 (E12, Orchestrator). A reader who meets 0.4 real hr per game s or 1,440 m per game s in any of them reads this note.
+
+## Changelog appendix: history tables (superseded values, kept for the record)
+
+Old (v3.1, 12.5 m cells) vs new (v3.2, 5 m cells), in meters, labels as they were then (history). Worlds are redefined in meters at 5 m resolution: the pipe is 60 m wide (was 62.5 m), the 37.5 m click is now 35 m, and the GV1 test world is 125 x 125 m with F 50 x 40 m (was 50 x 37.5 m). Old values come from cr_scratch/step45_reference_sim_v31.py.
+
+| ID | Item | v3.1 | v3.2 |
+|---|---|---|---|
+| GV1 | budget | 150 m | 170 m |
+| GV1 | left readout | 33.3 / 33.3 / 66.7 | 17.5 / 46.3 / 63.8 |
+| GV1 | right readout | 25.0 / 25.0 / 50.0 | 15.0 / 50.0 / 65.0 |
+| GV1 | finish L / R | 42.0 / 9.5 s | 46.0 / 10.3 s |
+| GV2 | budget | 1,175 m (94.5 cells, half-even 94) | 1,270 m (253.5 cells, half-up 254) |
+| GV2 | left | 26.5 / 31.2 / 57.6 | 13.4 / 45.1 / 58.5 |
+| GV2 | right | 40.0 / 35.9 / 75.9 | 16.7 / 62.5 / 79.1 |
+| GV2 | finish L / R | 164.0 / 51.5 s | 211.0 / 55.3 s |
+| GV3 | budget | 1,987.5 m | 2,000 m |
+| GV3 | left / right total | 85.9 / 87.1 | 85.5 / 86.6 |
+| GV3 | finish L / R | 234.0 / 81.8 s | 310.0 / 88.2 s |
+| GV3b | budget, left / right | 2,012.5 m, 85.9 / 87.1 | 2,045 m, 85.5 / 86.6 |
+| GV4 | budget | 1,562.5 m | 1,495 m |
+| GV4 | left | 16.0 / 19.4 / 35.5 | 6.7 / 25.4 / 32.1 |
+| GV4 | right | 9.0 / 9.6 / 18.5 | 3.2 / 12.9 / 16.1 |
+| GV4 | finish L / R | 194.0 / 79.0 s | 192.0 / 76.4 s |
+| re-aim | success | 120 s, cost 144.5 m, cap 150 m, wanted 301.5 m | 90 s, cost 146.9 m, cap 150 m, wanted 281.8 m |
+| re-aim | refused | 60 s | 60 s |
+| GV5 | uncapped 24 clicks at 20 m, 250 x 500 m SROI | 376 segments (v3.1 claim) | 2,085 segments |
+| worst | capped / uncapped segments | "376 worst" (false, SWE measured 103 / 2,383) | 103 / 5,321 |
+
+Old (v3.3, r0 = 6.25 m) vs new (v3.4, r0 = 4 m). Intersected, budgets, holes, pairs, clocks and re-aim do not move; imaged falls on both sides. Gap rule, used in every gap column and gap figure in this spec: gap = 100 x (left counted cells - right counted cells) / |F|, from integer counts, rounded half up to 1 decimal. It can differ by 0.1 from the difference of the two printed totals (GV4: 12.2 by rule, 23.8 - 11.5 = 12.3).
+
+| ID | Left v3.3 | Left v3.4 | Right v3.3 | Right v3.4 | Gap v3.3 | Gap v3.4 |
+|---|---|---|---|---|---|---|
+| GV1 test world | 17.5 / 46.3 / 63.8 | 17.5 / 30.0 / 47.5 | 15.0 / 50.0 / 65.0 | 15.0 / 28.8 / 43.8 | -1.2 | +3.8 |
+| GV2 pipe 6 | 13.4 / 45.1 / 58.5 | 13.4 / 36.3 / 49.7 | 16.7 / 62.5 / 79.1 | 16.7 / 43.2 / 59.9 | -20.6 | -10.2 |
+| GV3 pipe 24 | 20.0 / 65.5 / 85.5 | 20.0 / 55.7 / 75.7 | 25.0 / 61.6 / 86.6 | 25.0 / 47.9 / 72.9 | -1.1 | +2.7 |
+| GV3b | 20.2 / 65.3 / 85.5 | 20.2 / 55.8 / 76.0 | 25.0 / 61.6 / 86.6 | 25.0 / 47.9 / 72.9 | -1.1 | +3.0 |
+| GV4 main | 6.7 / 25.4 / 32.1 | 6.7 / 17.0 / 23.8 | 3.2 / 12.9 / 16.1 | 3.2 / 8.3 / 11.5 | +16.1 | +12.2 |
+| GV4m main + moves | 6.8 / 25.8 / 32.7 | 6.8 / 17.3 / 24.2 | 3.7 / 14.9 / 18.6 | 3.7 / 9.5 / 13.2 | +14.1 | +11.0 |
+| sparse cells L / R (GV1, GV2) | 98 / 110, 487 / 726 | 43 / 59, 250 / 403 | | | | |

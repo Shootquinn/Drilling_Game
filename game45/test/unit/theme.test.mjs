@@ -174,7 +174,6 @@ export function plannedHoleFails(P, name, minGround, minTeal) {
 test('D2 planned rig hole in dark mode reaches about 2:1 over the painting, stays darker than a drilled hole; zero control (light) and known-bad (the g1g maroon) are told apart', () => {
   assert.deepEqual(plannedHoleFails(DARK, 'dark', 3, 1.8), []);
   assert.deepEqual([...DARK.holePlan], [176, 96, 95]);
-  assert.deepEqual([...LIGHT.holePlan], [...LIGHT.hole], 'light mode keeps the hole colour for its wash');
   // known-bad: the g1g planned hole = the hole colour at 26 percent over the ground (88,54,56 in dark)
   const g1g = { ...DARK, holePlan: DARK.hole };
   const asG1g = (P) => [contrast(over(P.holePlan, 0.26, P.ground), P.ground), contrast(over(P.holePlan, 0.26, teal(P)), teal(P))];
@@ -183,4 +182,28 @@ test('D2 planned rig hole in dark mode reaches about 2:1 over the painting, stay
   assert.ok(plannedHoleFails({ ...DARK, holePlan: [88, 54, 56] }, 'dark', 3, 1.8).length >= 2, 'the maroon is flagged');
   // zero control: a bright hole passes, a lighter-than-drilled planned hole is flagged
   assert.ok(plannedHoleFails({ ...DARK, holePlan: [255, 255, 255] }, 'dark', 3, 1.8).some((m) => /lighter/.test(m)));
+});
+
+// ---- E1 (v3.8.4): the planned rig hole in light mode ----
+// light mode draws the planned part solid (#c0605a), about 2:1 over the light-teal painting and lighter than a drilled hole (the g1h wash measured 1.46:1)
+export function lightPlannedFails(P, minGround, minTeal) {
+  const out = [];
+  const t = teal(P);
+  const cg = contrast(P.holePlan, P.ground), ct = contrast(P.holePlan, t);
+  if (cg < minGround) out.push(`planned hole on ground ${cg.toFixed(2)} < ${minGround}`);
+  if (ct < minTeal) out.push(`planned hole on the painting ${ct.toFixed(2)} < ${minTeal}`);
+  if (!(relLum(P.holePlan) > relLum(P.hole))) out.push('planned hole is not lighter than a drilled hole');
+  return out;
+}
+test('E1 light planned rig hole: solid #c0605a, about 2:1 over the painting, lighter than a drilled hole; known-bad (the g1h wash) and zero-control (a white hole) are told apart', () => {
+  assert.deepEqual([...LIGHT.holePlan], [192, 96, 90]);
+  assert.deepEqual(lightPlannedFails(LIGHT, 3, 2), []);
+  const wash = over(LIGHT.hole, 0.26, teal(LIGHT));
+  const washGround = over(LIGHT.hole, 0.26, LIGHT.ground);
+  assert.ok(contrast(wash, teal(LIGHT)) < 1.6, `the g1h wash measures ${contrast(wash, teal(LIGHT)).toFixed(2)} over the teal`);
+  assert.ok(lightPlannedFails({ ...LIGHT, holePlan: wash }, 3, 2).length >= 1, 'the pale wash is flagged');
+  assert.ok(lightPlannedFails({ ...LIGHT, holePlan: washGround }, 3, 2).length >= 1);
+  // a hole as dark as the drilled one is flagged (it must stay lighter), a mid colour passes
+  assert.ok(lightPlannedFails({ ...LIGHT, holePlan: LIGHT.hole }, 3, 2).some((m) => /not lighter/.test(m)));
+  assert.deepEqual(lightPlannedFails({ ...LIGHT, holePlan: [190, 80, 75] }, 3, 2), []);
 });

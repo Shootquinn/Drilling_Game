@@ -287,6 +287,29 @@ function rdSTop(ctx, model, panel, cs, lay) {
   const w = ctx.measureText(txt).width;
   const h = fz + 4;
   const pos = rdSTopSpot(model, panel, cs, x, yb, w, h, lay);
+  const xl = pos.left ? pos.x - w : pos.x;
+  // a dashed guide at the stated depth from the drop to the label, over the network, with a page-colour underlay so tree lines do not hide it (v3.8.4, E3)
+  if (pos.out) {
+    const xe = xl > x ? xl - 4 : xl + w + 4;
+    ctx.lineCap = 'butt';
+    ctx.strokeStyle = rgbCss(PALETTE.ground, 0.8);
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(x, yb);
+    ctx.lineTo(xe, yb);
+    ctx.stroke();
+    ctx.strokeStyle = rgbCss(PALETTE.sroiLine, 1);
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 3]);
+    ctx.beginPath();
+    ctx.moveTo(x, yb);
+    ctx.lineTo(xe, yb);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  // an opaque page-colour plate behind the text, so the network and the painting never run through the number
+  ctx.fillStyle = rgbCss(PALETTE.ground, 1);
+  ctx.fillRect(xl - 4, pos.y - fz - 1, w + 8, fz + 0.2 * fz + 5);
   ctx.textAlign = pos.left ? 'right' : 'left';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = rgbCss(PALETTE.ground, 1);
@@ -315,6 +338,19 @@ function rdSTopSpot(model, panel, cs, x, yb, w, h, lay) {
     }
     return true;
   };
+  // outside the horizontal span of the borebot tree first (right of it, else left), at the stated depth (v3.8.4, E3)
+  let a = Infinity;
+  let b = -Infinity;
+  for (const list of [model.segments, model.ghost && model.ghost.segments]) for (const sg of list || []) for (const k of sg.cells) { const c = Math.floor(k / 100); if (c < a) a = c; if (c > b) b = c; }
+  if (a <= b && !RD_MUT.has('lay_off_stop_tree')) {
+    const t0 = panel.x + a * cs;
+    const t1 = panel.x + (b + 1) * cs;
+    for (const left of [false, true]) {
+      const ox = left ? t0 - 6 - w : t1 + 6;
+      const y = yb + 0.35 * (h - 4);
+      if (clear(ox, y)) return { left: false, x: ox, y, out: true };
+    }
+  }
   // centred on the line first, then just above it, then just below it
   const dys = RD_MUT.has('lay_off_stop_far') ? [h + 2 + 250 * lay.s] : [0.35 * (h - 4), -4, h + 2];
   for (const dy of dys) {
@@ -381,22 +417,33 @@ function holeNumLayout(ctx, model, panel, cs, lay) {
   const bw = boreWidthPx(cs);
   const shafts = model.holes.map((h) => ({ x: panel.x + (h.col + 0.5) * cs - bw / 2 - 1, y: panel.y, w: bw + 2, h: h.depth * cs }));
   const out = [];
-  model.holes.forEach((h, i) => {
+  // the hole being drilled (RUN) or selected (PLAN) is placed first and always keeps its number; the others are placed in drill order and a number that cannot be placed
+  // clear of every shaft and every other number is not drawn (v3.8.4, E2: neighbouring numbers never touch)
+  const prio = model.phase === 'RUN' ? (model.run ? model.run.rigCol : null) : model.rig ? model.rig.selected : null;
+  const order = model.holes.map((h, i) => i).sort((p, q) => (model.holes[q].col === prio) - (model.holes[p].col === prio) || p - q);
+  const GAP = 3;
+  for (const i of order) {
+    const h = model.holes[i];
     const cx = panel.x + (h.col + 0.5) * cs;
     const label = String(i + 1);
     const w = ctx.measureText(label).width;
     const mk = (side, row) => {
       const y = panel.y + 12 * s + row * (fz + 2);
       const x0 = side === 'r' ? cx + bw / 2 + 3 : cx - bw / 2 - 3 - w;
-      return { label, x0, y, w, box: { x: x0, y: y - fz * 0.8, w, h: fz } };
+      return { label, x0, y, w, i, box: { x: x0, y: y - fz * 0.8, w, h: fz, col: h.col } };
     };
-    const free = (c) => c.box.x >= panel.x + 2 && c.box.x + c.box.w <= panel.x + panel.w - 2
-      && !shafts.some((sh) => boxHit(c.box, sh)) && !out.some((o) => boxHit(c.box, o.box, 1));
+    const inPanel = (c) => c.box.x >= panel.x + 2 && c.box.x + c.box.w <= panel.x + panel.w - 2 && c.box.y + c.box.h <= panel.y + panel.h - 2;
+    const free = (c) => inPanel(c) && !shafts.some((sh) => boxHit(c.box, sh)) && !out.some((o) => boxHit(c.box, o.box, GAP));
     let pick = null;
-    if (RD_MUT.has('lay_off_hnum')) pick = { label, x0: cx - w / 2, y: panel.y + 12 * s, w, box: { x: cx - w / 2, y: panel.y + 12 * s - fz * 0.8, w, h: fz } };
-    else for (let row = 0; row < 8 && !pick; row++) for (const side of ['r', 'l']) { const c = mk(side, row); if (free(c)) { pick = c; break; } }
-    out.push(pick || mk('r', 0));
-  });
+    if (RD_MUT.has('lay_off_hnum')) pick = { label, x0: cx - w / 2, y: panel.y + 12 * s, w, i, box: { x: cx - w / 2, y: panel.y + 12 * s - fz * 0.8, w, h: fz, col: h.col } };
+    else {
+      for (let row = 0; row < 40 && !pick; row++) for (const side of ['r', 'l']) { const c = mk(side, row); if (free(c)) { pick = c; break; } }
+      if (!pick && h.col === prio) for (let row = 0; row < 40 && !pick; row++) for (const side of ['r', 'l']) { const c = mk(side, row); if (inPanel(c) && !out.some((o) => boxHit(c.box, o.box, GAP))) { pick = c; break; } }
+      if (!pick && h.col === prio) pick = mk('r', 0);
+    }
+    if (pick) out.push(pick);
+  }
+  out.sort((p, q) => p.i - q.i);
   return out;
 }
 
@@ -411,8 +458,8 @@ function rdHoles(ctx, model, panel, cs, bw, lay) {
     const x = cx - bw / 2;
     const hh = h.depth * cs;
     LAYOUT_BOXES.shafts.push({ x: x, y: panel.y, w: bw, h: hh, col: h.col });
-    // the planned (undrilled) part: light mode a 26 percent wash of the hole colour; dark mode the solid planned-hole colour, which stays 2:1 over the teal painting (D2)
-    ctx.fillStyle = rgbCss(PALETTE.holePlan, getTheme() === 'dark' ? 1 : 0.26);
+    // the planned (undrilled) part: the solid planned-hole colour in both themes, about 2:1 over the teal painting and lighter or dimmer than a drilled hole (D2, E1)
+    ctx.fillStyle = rgbCss(PALETTE.holePlan, 1);
     ctx.fillRect(x, panel.y, bw, hh);
     const frac = h.planned ? 0 : h.drilledFrac == null ? 1 : h.drilledFrac;
     if (frac > 0) {
@@ -1287,6 +1334,7 @@ export function createRenderer(canvas, mut) {
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.imageSmoothingEnabled = false;
     rdFrameBack(ctx, lay);
+    if (model.campaignEnd) return;   // the end-of-campaign card stands on the bare frame: no panels, bars or glyphs of the Level 6 result behind it (v3.8.4, E7)
     const sides = [['left', lay.panels.left], ['right', lay.panels.right]];
     ctx.save();
     ctx.translate(v.shakeX || 0, 0);

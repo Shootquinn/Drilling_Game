@@ -87,7 +87,7 @@ function mnBoot() {
       countdown: v.countdown,
       portals: v.portals,
       selected: v.selected,
-      meter: v.meter ? { used: v.meter.used_m, cap: v.meter.cap_m } : null,
+      meter: v.meter ? { used: v.phase === 'RUN' && v.unspent ? v.unspent.left.drilledM : v.meter.used_m, cap: v.meter.cap_m } : null,
       segments: v.segments,
       ghost: v.ghost,
       holes: v.holes,
@@ -111,6 +111,7 @@ function mnBoot() {
       run: v.run,
       capFull: v.capFull,
       rig: v.plan || null,
+      campaignEnd: v.phase === 'READOUT' && !!(v.campaign && v.campaign.ended),
     };
   }
 
@@ -177,7 +178,8 @@ function mnBoot() {
     return {
       phase: v.phase,
       message: v.ui.message,
-      meter: v.meter ? { used: v.meter.used_m, cap: v.meter.cap_m, over: v.meter.used_m > v.meter.cap_m } : null,     // v3.8.2 (B12): red only for a total above the cap; a stop on the cap is a legal plan
+      // RUN: the centre meter reads the borebot length drilled so far (view.unspent, the field the status lines read), not the planned total (v3.8.4, E9)
+      meter: v.meter ? { used: v.phase === 'RUN' && v.unspent ? v.unspent.left.drilledM : v.meter.used_m, cap: v.meter.cap_m, over: v.meter.used_m > v.meter.cap_m } : null,     // v3.8.2 (B12): red only for a total above the cap; a stop on the cap is a legal plan
       ghostM: v.ghostM,
       cellM: v.cellM,
       countdown: v.countdown,

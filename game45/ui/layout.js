@@ -19,12 +19,12 @@ export function uiText(key) {
 // ---- controls: id, label key, group, grid rect (absolute storyboard coordinates), style variant, base font ----
 export const CONTROL_SPECS = Object.freeze([
   { id: 'show-formation', label: 'btn_show_formation', group: 'start', g: [679, 96, 82, 46], v: 'plain', fs: 12 },
-  { id: 'level-1', label: 'btn_level', group: 'start', arg: '1', g: [677, 322, 26, 26], v: 'brush', fs: 12 },
-  { id: 'level-2', label: 'btn_level', group: 'start', arg: '2', g: [707, 322, 26, 26], v: 'brush', fs: 12 },
-  { id: 'level-3', label: 'btn_level', group: 'start', arg: '3', g: [737, 322, 26, 26], v: 'brush', fs: 12 },
-  { id: 'level-4', label: 'btn_level', group: 'start', arg: '4', g: [677, 352, 26, 26], v: 'brush', fs: 12 },
-  { id: 'level-5', label: 'btn_level', group: 'start', arg: '5', g: [707, 352, 26, 26], v: 'brush', fs: 12 },
-  { id: 'level-6', label: 'btn_level', group: 'start', arg: '6', g: [737, 352, 26, 26], v: 'brush', fs: 12 },
+  { id: 'level-1', label: 'btn_level', group: 'start', arg: '1', g: [677, 322, 40, 38], v: 'brush', fs: 12 },
+  { id: 'level-2', label: 'btn_level', group: 'start', arg: '2', g: [723, 322, 40, 38], v: 'brush', fs: 12 },
+  { id: 'level-3', label: 'btn_level', group: 'start', arg: '3', g: [677, 364, 40, 38], v: 'brush', fs: 12 },
+  { id: 'level-4', label: 'btn_level', group: 'start', arg: '4', g: [723, 364, 40, 38], v: 'brush', fs: 12 },
+  { id: 'level-5', label: 'btn_level', group: 'start', arg: '5', g: [677, 406, 40, 38], v: 'brush', fs: 12 },
+  { id: 'level-6', label: 'btn_level', group: 'start', arg: '6', g: [723, 406, 40, 38], v: 'brush', fs: 12 },
   { id: 'brush-tool', label: 'btn_brush', group: 'paint', g: [677, 210, 86, 26], v: 'tool', fs: 12 },
   { id: 'erase', label: 'btn_erase', group: 'paint', g: [677, 239, 86, 26], v: 'tool', fs: 12 },
   { id: 'fill', label: 'btn_fill', group: 'paint', g: [677, 268, 86, 26], v: 'tool', fs: 12 },
@@ -270,11 +270,12 @@ export const PAGE_CSS = [
   // paused (B13): the two bars become a play triangle
   '.btn[data-v="pause"][data-paused="1"]::before{width:0;height:0;background:none;box-shadow:none;margin-right:0;border-style:solid;border-color:transparent transparent transparent currentColor;border-width:calc(var(--s)*8px) 0 calc(var(--s)*8px) calc(var(--s)*14px)}',
   // end-of-campaign card (B10)
-  `.cend{position:absolute;box-sizing:border-box;display:none;flex-direction:column;justify-content:center;gap:calc(var(--s)*6px);padding:calc(var(--s)*10px) calc(var(--s)*40px);background:var(--c-surface);border:3px solid ${INK};color:${INK};pointer-events:none}`,
+  `.cend{position:absolute;box-sizing:border-box;display:none;flex-direction:column;justify-content:flex-start;gap:calc(var(--s)*6px);padding:calc(var(--s)*10px) calc(var(--s)*40px);background:var(--c-surface);border:3px solid ${INK};color:${INK};pointer-events:none}`,
   `.cend .cg{display:grid;grid-template-columns:1fr 1.4fr 1.4fr 1.5fr;column-gap:calc(var(--s)*14px);align-items:baseline;font-size:${fz(15, 11)};font-variant-numeric:tabular-nums;padding:calc(var(--s)*3px) 0;border-bottom:1px solid var(--c-dashLine)}`,
   `.cend .cg.ch{font-weight:800;font-size:${fz(13, 10)};letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid ${INK}}`,
   '.cend .cg.cf{font-weight:800;border-top:2px solid var(--c-ink);border-bottom:none}',
   '.cend .cg>*:nth-child(n+2){text-align:right}.cend .cg>*:last-child{text-align:left}',
+  `.cend .ct{font-size:${fz(26, 16)};font-weight:800;letter-spacing:0.5px;padding:calc(var(--s)*6px) 0 calc(var(--s)*10px)}`,
   `.cend .cn{font-size:${fz(12, 10)};color:${SUB}}`,
   'input[data-s45="dbranch"]{position:absolute;margin:0;padding:0;transform:rotate(-90deg);transform-origin:50% 50%;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}',
   `input[data-s45="dbranch"]::-webkit-slider-runnable-track{height:4px;background:${INK};border-radius:2px}`,
@@ -412,6 +413,7 @@ export function mountPage(doc, host, mut) {
   stage.appendChild(canvas);
   app.appendChild(stage);
   const card = mkEl(doc, 'div', { class: 'cend', 'data-s45': 'campaign-end' });
+  card.appendChild(mkEl(doc, 'div', { class: 'ct' }));
   card.appendChild(mkEl(doc, 'div', { class: 'cg ch' }));
   for (let n = 1; n <= 6; n++) card.appendChild(mkEl(doc, 'div', { class: 'cg', 'data-row': String(n) }));
   card.appendChild(mkEl(doc, 'div', { class: 'cg cf', 'data-row': 'avg' }));
@@ -472,7 +474,7 @@ export function mountPage(doc, host, mut) {
   txt(dom, SP, 'capb c', null, [677, 98, 86, 14], ['PLAN'], uiText('lbl_dbranch'));
   dom.sliderOut = txt(dom, SP, 'val c', 'dbranch-value', [677, 112, 86, 26], ['PLAN'], '50 m');
   dom.sliderNote = txt(dom, SP, 'small c', 'dbranch-note', [677, 266, 86, 20], ['PLAN'], '');
-  dom.sliderNote.style.color = REDC;
+  dom.sliderNote.style.color = SUB;
   const slider = mkEl(doc, 'input', { type: 'range', min: '20', max: '100', step: '5', value: '50', 'data-s45': 'dbranch', 'data-red': '0' });
   addItem(dom, SP, slider, [685, 140, 30, 122], ['PLAN']);
   dom.slider = slider;
@@ -737,6 +739,7 @@ function updateCampaignEnd(dom, hud) {
   }
   cells(card.querySelector('[data-row="avg"]'), [uiText('lbl_average'), n ? pct(sl / n) : '-', n ? pct(sr / n) : '-', `${uiText('lbl_left')} ${a} : ${uiText('lbl_right')} ${b}`]);
   setTxt(card.querySelector('.cn'), uiText('lbl_prospected_note'));
+  setTxt(card.querySelector('.ct'), uiText('lbl_campaign_title'));
 }
 
 // hud: {phase, message, meter: {used, cap, over}|null, ghostM: number|null, counters: {col: n}|null, cellM, readout: {left, right}|null,
@@ -757,7 +760,7 @@ export function updateHud(dom, hud) {
   setStyle(dom.message, 'display', ph === 'PLAN' || ph === 'PAINT' ? 'none' : '');
   const noteText = hud.message || hud.reason || (ph === 'RUN' && hud.paused ? uiText('lbl_paused') : '');
   setTxt(dom.planNote, noteText);
-  setAttr(dom.planNote, 'data-msg', hud.message ? '1' : '0');
+  setAttr(dom.planNote, 'data-msg', hud.message || (noteText && hud.capNote) ? '1' : '0');
   setAttr(dom.planNote, 'data-on', noteText ? '1' : '0');
   // paused (B13): the Pause button shows a play triangle and names the key
   setAttr(dom.buttons.pause, 'data-paused', hud.paused ? '1' : '0');
@@ -815,7 +818,7 @@ export function updateHud(dom, hud) {
   // the note slot (v3.8.1, v3.8.2): the borebot side only. "Max Length Exceeded" when the borebot total is above the cap; "Next generation would exceed
   // the 2,000 m limit" when only the next generation does not fit; else the Start hint. A rig over its own 2,000 m reads "Rig: Max Length Exceeded" in the rig status line.
   const noteOn = !!hud.capNote;
-  setTxt(dom.capNote, hud.capNote || '');
+  setTxt(dom.capNote, hud.capNote === uiText('lbl_cap_full') ? hud.capNote : '');   // the cap-stop text reads once, under the left panel (v3.8.4, E4)
   setStyle(dom.capNote, 'color', hud.capNote && hud.capNote !== uiText('lbl_cap_full') ? SUB : '');   // red only for the Start-blocking note
   setTxt(dom.startHint, !noteOn && hud.needsGen ? uiText('start_needs_gen') : '');
   if (hud.runInfo && hud.unspent) {
@@ -823,8 +826,8 @@ export function updateHud(dom, hud) {
     const m = (v) => `${meterNumText(v)} m`;
     const rl = hud.runInfo.left;
     const rr = hud.runInfo.right;
-    setTxt(dom.runL, `${uiText('lbl_drilled')} ${m(rl.drilledM)} | ${unspentText(u.left.unspentM, u.capM)}`);
-    setTxt(dom.runR, `${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${unspentText(u.right.unspentM, u.capM)}`);
+    setTxt(dom.runL, `${uiText('lbl_left')} ${uiText('lbl_drilled')} ${m(rl.drilledM)} | ${unspentText(u.left.unspentM, u.capM)}`);
+    setTxt(dom.runR, `${uiText('lbl_right')} ${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${unspentText(u.right.unspentM, u.capM)}`);
   }
   // rig sites (surface mode): the rig readout under the right panel (its own 2,000 m, apart from the borebots) and the placement help under both
   const rg = hud.rig || null;
@@ -840,8 +843,11 @@ export function updateHud(dom, hud) {
   setStyle(dom.helpL, 'display', ph === 'PLAN' && hud.surface ? '' : 'none');
   setStyle(dom.helpR, 'display', ph === 'PLAN' && hud.surface ? '' : 'none');
   const atMin = hud.dbranch != null && hud.dbranch <= 20;
-  setAttr(dom.slider, 'data-red', capFull && atMin ? '1' : '0');
+  // red only for an illegal plan (the total above the cap); a legal plan at the minimum is neutral grey (v3.8.4, E5)
+  const illegal = !!(hud.meter && hud.meter.over);
+  setAttr(dom.slider, 'data-red', capFull && atMin && illegal ? '1' : '0');
   setTxt(dom.sliderNote, capFull && atMin ? uiText('lbl_at_min') : '');
+  setStyle(dom.sliderNote, 'color', illegal ? REDC : SUB);
   setAttr(dom.buttons['plan-undo'], 'data-red', capFull ? '1' : '0');
   // the Undo button names the action it undoes: the last accepted click, "Undo: portal 765 m, gen 1"
   const ut = hud.undoTarget;
