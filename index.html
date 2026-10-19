@@ -184,6 +184,7 @@ lbl_no_limit:'no time limit',
 lbl_playback:'playback',
 lbl_at_min:'at minimum',
 lbl_cap_full:'Max Length Exceeded',
+lbl_rig_cap_full:'Rig: Max Length Exceeded',
 lbl_cap:'cap',
 lbl_locked:'locked',
 lbl_s_top:'formation top',
@@ -210,7 +211,6 @@ key_run_unseen:'unseen',
 key_run_barren:'revealed, no formation',
 key_dropped:'dropped (X): no branch fits',
 start_needs_gen:'Start needs one generation',
-lbl_budget:'budget',
 lbl_sroi_once:'your painting',
 key_note:'hole width exaggerated for visibility',
 rd_prospected:'formation prospected',
@@ -226,7 +226,7 @@ lbl_rig:'rig',
 lbl_holes:'holes',
 rig_auto:'no rig holes placed: Balrog plans the rig',
 plan_help_left:'Click the surface or the left panel to place a portal (3 at most, 25 m apart). Drag a portal to move it. Remove the selected portal with its x, the Remove portal button, Delete, or right-click.',
-plan_help_right:'Click the right panel to place a rig hole (12 at most, one per column, drilled in the order placed). Drag a hole to move it, off the panels to remove it. Drag its square handle, roll the wheel or press + and - to set its depth (1 to 100 cells). Total depth beyond the borebot length shows in red and blocks Start. No holes: Balrog plans the rig.',
+plan_help_right:'Click the right panel to place a rig hole (12 at most, one per column, drilled in the order placed). Drag a hole to move it, off the panels to remove it. Drag its square handle, roll the wheel or press + and - to set its depth (1 to 100 cells). Total depth beyond the drill limit shows in red and blocks Start. No holes: Balrog plans the rig.',
 lbl_ghost:'ghost',
 lbl_phase_LEVEL_START:'Level start',
 lbl_phase_REVEAL:'Memorize the formation',
@@ -669,7 +669,10 @@ b[b.length - 1]=budget - others;
 const reserve=Math.ceil(RESERVE_FRAC*budget);
 return{budget,b,reserve,reaimCap:mut.has('reaim_cap_inf')?1e9:Math.floor(REAIM_FRAC*reserve)};
 }
-function rigPlan(Cs,portalsByComp,b,{holeSpacing=HOLE_SPACING_R,floor=1,snap=false}={},mut=EMPTY){
+function rigPoolCells(capCells,mut=EMPTY){
+return mut.has('rig_pool_half_up')?rhu(capCells):Math.floor(Number(capCells.toFixed(6)));
+}
+function rigPlan(Cs,portalsByComp,b,{holeSpacing=HOLE_SPACING_R,floor=1,snap=false,pool=null,maxHoles=null}={},mut=EMPTY){
 const n=Cs.length;
 const holes=Array.from({length:n},()=>[]);
 const spent=new Array(n).fill(0);
@@ -687,10 +690,18 @@ const dist=(c)=>(ps.length?Math.min(...ps.map((p)=> Math.abs(c - p))):0);
 cols.sort((a,c)=>(dist(a)- dist(c))||(a - c));
 info.push({deep,cols,ps});
 }
+const shared=pool !==null;
+const closeAll=()=> closed.fill(true);
 const tryAdd=(i,col)=>{
-const need=info[i].deep.get(col)??0,rem=b[i]- spent[i];
+const need=info[i].deep.get(col)??0;
+let rem;
+if(shared){
+if(maxHoles !==null&&holes.reduce((a,h)=> a + h.length,0)>=maxHoles){closeAll();return false;}
+rem=pool - spent.reduce((a,v)=> a + v,0);
+}else rem=b[i]- spent[i];
 if(need <=rem){holes[i].push([col,need]);spent[i]+=need;return true;}
 if(rem > 0){holes[i].push([col,rem]);spent[i]+=rem;}
+if(shared)closeAll();
 closed[i]=true;
 return false;
 };
@@ -722,6 +733,7 @@ return{holes,spent};
 }
 function planRig(net,b,rig=null,mut=EMPTY){
 if(rig !==null)return{holes:rig.map((hs)=> hs.map((h)=>[...h])),spent:rig.map((hs)=> hs.reduce((a,h)=> a + h[1],0))};
+if(net.mode===MODE_SURFACE&&!mut.has('rig_pool_left'))return rigPlan(net.Cs,net.pbc(),b,{snap:true,pool:rigPoolCells(net.cap,mut),maxHoles:mut.has('rig_max_off')?null:MAX_RIG_HOLES},mut);
 return rigPlan(net.Cs,net.pbc(),b,{snap:net.mode===MODE_SURFACE},mut);
 }
 // ---- core/readout.js
@@ -1117,17 +1129,18 @@ const L=levels[id];
 const g=genLevel(L,variant,{cover:true,mut});
 return{level:publicLevel({...L,F:g.F,F0:g.F0}),F:g.F,variant:g.variant,seed:g.seed};
 }
-function budgetLine(snapshot,budget,mut=new Set()){
+function budgetLine(snapshot,budget,mut=new Set(),rigBudget=budget){
 let drilled=0;
 for(const q of snapshot.layout)drilled +=mut.has('planned_as_spent')?q[2]:q[2]*q[6];
 let placed=0;
 for(const hs of snapshot.holes)for(const h of hs)placed +=h[1];
-const spentL=Math.min(budget,rhu(drilled)),spentR=Math.min(budget,placed);
+const spentL=Math.min(budget,rhu(drilled)),spentR=Math.min(rigBudget,placed);
 return{
 budget,
+rigBudget,
 left:{spent:spentL,unspent:budget - spentL},
-right:{spent:spentR,unspent:budget - spentR},
-rigUnplaced:budget - spentR,
+right:{spent:spentR,unspent:rigBudget - spentR},
+rigUnplaced:rigBudget - spentR,
 };
 }
 // ---- core/speed.js
@@ -2125,7 +2138,8 @@ this.net=new Network(S,portals,planCap(level,mut),this.W,this.H,true,mut,mode);
 this.reach=this.net.reach();
 this.clickResults=clicks.map(([p,D])=> this.net.nextGen(p,D));
 const bg=budgets(this.net,mut);
-if(rig !==null&&!mut.has('round_accepts_over')&&sumDepth(rig)> bg.budget)throw new Error('rig plan above the budget');
+this.rigBudget=mode===MODE_SURFACE?rigPoolCells(this.net.cap,mut):bg.budget;
+if(rig !==null&&!mut.has('round_accepts_over')&&sumDepth(rig)> this.rigBudget)throw new Error('rig plan above the budget');
 this.budget=bg.budget;this.b=bg.b;this.reserve0=bg.reserve;this.rcap=bg.reaimCap;
 const rp=planRig(this.net,this.b,rig,mut);
 this.holes=rp.holes;this.spent=rp.spent;
@@ -2587,10 +2601,9 @@ const h=rv.holes[i];
 dr +=h.depth*h.drilledFrac;
 if(rigIdx===rv.holes.length - 1&&h.drilledFrac < 1)rigIdx=i;
 }
-const budgetM=plan?plan.net.length()*CELL_M:round.budget*CELL_M;
 return{
-left:{drilledM:dl*CELL_M,budgetM,unspentM:capM()- dl*CELL_M,reserveM:sn.resL*CELL_M,movesLeft:REAIM_LIMIT - sn.nre},
-right:{drilledM:dr*CELL_M,budgetM,unspentM:capM()- dr*CELL_M,reserveM:sn.resR*CELL_M,movesLeft:ADD_LIMIT - sn.nadd},
+left:{drilledM:dl*CELL_M,unspentM:capM()- dl*CELL_M,reserveM:sn.resL*CELL_M,movesLeft:REAIM_LIMIT - sn.nre},
+right:{drilledM:dr*CELL_M,unspentM:capM()- dr*CELL_M,reserveM:sn.resR*CELL_M,movesLeft:ADD_LIMIT - sn.nadd},
 rigCol:rigIdx >=0?rv.holes[rigIdx].col:null,
 rigIdx,
 };
@@ -2602,7 +2615,7 @@ return painter;
 function syncInplace(){
 if(M.has('s_inplace')&&inplace&&painter)inplace.splice(0,inplace.length,...Array.from(painter.cells()));
 }
-const rigBudget=()=>(plan?(M.has('budget_rounded')?budgets(plan.net,M).budget:plan.net.length()):0);
+const rigBudget=()=>(!plan?0:surface&&!M.has('rig_pool_left')?rigPoolCells(plan.net.cap,M):plan.net.length());
 const rigIsOver=()=> !!plan&&plan.rigHoles.length > 0&&rigOver(plan.rigHoles,rigBudget(),M);
 const droppedText=(n)=> n + ' ' + strings.clicks_dropped;
 function droppedByRegion(before,after){
@@ -2971,7 +2984,7 @@ return{status:'ok'};
 function start(){
 if(!guard('PLAN')||!plan)return illegal();
 if(!startOk(plan.net.Cs,plan.S,plan.portals,plan.clicks.length,M,mode))return refuse('blocked',surface?strings.start_blocked_surface:strings.start_blocked);
-if(!startOk(plan.net.Cs,plan.S,plan.portals,plan.clicks.length,M,mode,rigIsOver()))return refuse('rig_over',strings.lbl_cap_full);
+if(!startOk(plan.net.Cs,plan.S,plan.portals,plan.clicks.length,M,mode,rigIsOver()))return refuse('rig_over',strings.lbl_rig_cap_full);
 const hand=plan.rigHoles.length?[plan.rigHoles.map((h)=>[h[0],h[1]])]:plan.rig;
 round=new Round(publicLevel(level),F,plan.S,[...plan.portals],plan.clicks.map((c)=>[c[0],c[1]]),level.seed,M,mode,hand);
 sched=buildSchedule(round,M);
@@ -3103,6 +3116,7 @@ spentM:spent*CELL_M,
 unspentM:hand?(budget - spent)*CELL_M:0,
 selected:rigSel,
 over,
+overNote:over?strings.lbl_rig_cap_full:'',
 overCells:overTotal,
 overM:overTotal*CELL_M,
 depthMin:RIG_DEPTH_MIN,
@@ -3136,7 +3150,7 @@ b.capFull=!!(pv.ghost&&pv.ghost.over_cap);
 const gst=sel !==null&&pv.ghost?pv.ghost.status:null;
 b.growth=growthOf(gst);
 const totalOver=plan.net.length()*CELL_M > level.drill_cap_m + 1e-9;
-b.capNote=totalOver||rigIsOver()?strings.lbl_cap_full:gst==='cap'?(M.has('note_max_always')?strings.lbl_cap_full:capText()):'';
+b.capNote=totalOver?strings.lbl_cap_full:gst==='cap'?(M.has('note_max_always')?strings.lbl_cap_full:capText()):'';
 const lastClick=plan.clicks.length?plan.clicks[plan.clicks.length - 1]:null;
 b.undoTarget=lastClick?{portal:lastClick[0],gen:plan.net.gens[lastClick[0]]}:null;
 }
@@ -3171,7 +3185,7 @@ b.unspent={capM:capM(),left:{drilledM:dm(readoutData.left),unspentM:capM()- dm(r
 }
 if(phase !=='RUN')b.F=Farr;
 if(surface){
-b.budgetLine=budgetLine(round.snapshot(),round.budget,M);
+b.budgetLine=budgetLine(round.snapshot(),round.budget,M,round.rigBudget);
 b.meter={used_m:plan.net.length()*CELL_M,cap_m:level.drill_cap_m};
 b.plan=plan?rigViewOf():planRigView(null);
 }
@@ -3273,7 +3287,7 @@ const PA=Object.freeze({brushCells,strokeCenters,Painter,donePainting,repaintPor
 const PO=Object.freeze({snapPortal,trunkLen,portalComp,startOk,defaultPortalSurface,placePortal,defaultPortal,thetaOf});
 const GR=Object.freeze({ruleOf,sample,assignComponents,Network,chainRate,tipViolations});
 const PL=Object.freeze({replay,meterStart,planAddPortal,planMovePortal,planRemovePortal,planRigView,colExtent,rigSpent,rigDefaultDepth,rigOver,rigOverCells,rigAddHole,rigMoveHole,rigRemoveHole,rigSetDepth,rigClipMutant,probePortal,newPlan,planClick,planUndo,planAdd,planMove,planRemove,planRepaint,grow,counterData});
-const BA=Object.freeze({budgets,rigPlan,planRig});
+const BA=Object.freeze({budgets,rigPoolCells,rigPlan,planRig});
 const SE=Object.freeze({r0Of,pReveal,sparseInto,sparse,imaged,applyPairs,reachFn,leftPairs,frozenPairs,leftSense,rigTimeline,rigSense,runEnd,score});
 const RO=Object.freeze({fmt1,pct1,fmtM,readout});
 const createClockR=createClock;
@@ -3324,7 +3338,7 @@ planMovePortal:(S,portals,clicks,old,col,cap,W=K.W_GRID,H=K.H_GRID)=> PL.planMov
 planRemovePortal:(S,portals,clicks,old,cap,W=K.W_GRID,H=K.H_GRID)=> PL.planRemovePortal(S,portals,clicks,old,cap,W,H,M,mode),
 newPlan:(o)=> PL.newPlan({...o,mut:M,mode}),planClick:PL.planClick,planUndo:PL.planUndo,planAdd:PL.planAdd,planMove:PL.planMove,
 planRemove:PL.planRemove,planRepaint:PL.planRepaint,grow:PL.grow,counterData:PL.counterData,
-budgets:(net)=> BA.budgets(net,M),rigPlan:(Cs,pbc,b,o={})=> BA.rigPlan(Cs,pbc,b,o,M),planRig:(net,b,rig=null)=> BA.planRig(net,b,rig,M),
+budgets:(net)=> BA.budgets(net,M),rigPoolCells:(cap)=> BA.rigPoolCells(cap,M),rigPlan:(Cs,pbc,b,o={})=> BA.rigPlan(Cs,pbc,b,o,M),planRig:(net,b,rig=null)=> BA.planRig(net,b,rig,M),
 pReveal:(r,r0)=> SE.pReveal(r,r0??SE.r0Of(M),M),
 sparse:(t2,t1,sd,W,H,opts={})=> SE.sparse(t2,t1,sd,W,H,opts,M),imaged:SE.imaged,
 applyPairs:SE.applyPairs,leftPairs:SE.leftPairs,frozenPairs:SE.frozenPairs,reachFn:(S,W=K.W_GRID,H=K.H_GRID)=> SE.reachFn(S,W,H,M),
@@ -4183,14 +4197,14 @@ const m=(v)=> `${meterNumText(v)} m`;
 const rl=hud.runInfo.left;
 const rr=hud.runInfo.right;
 setTxt(dom.runL,`${uiText('lbl_drilled')} ${m(rl.drilledM)} | ${unspentText(u.left.unspentM,u.capM)}`);
-setTxt(dom.runR,`${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${uiText('lbl_budget')} ${m(rr.budgetM)} | ${unspentText(u.right.unspentM,u.capM)}`);
+setTxt(dom.runR,`${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${unspentText(u.right.unspentM,u.capM)}`);
 }
 const rg=hud.rig||null;
 const mm=(v)=> `${meterNumText(v)} m`;
 if(rg){
 const parts=rg.count===0
-?[uiText('rig_auto'),`${uiText('lbl_budget')} ${mm(rg.budgetM)}`]
-:[`${uiText('lbl_rig')} ${mm(rg.spentM)} ${uiText('sw_of')} ${mm(rg.budgetM)}`,rg.over?uiText('lbl_cap_full'):'',`${rg.count} ${uiText('sw_of')} ${rg.cap} ${uiText('lbl_holes')}`,hud.meter&&!rg.over?unspentText(hud.meter.cap - rg.spentM,hud.meter.cap):''];
+?[uiText('rig_auto')]
+:[rg.over?`${uiText('lbl_rig')} ${mm(rg.spentM)} ${uiText('sw_of')} ${mm(rg.budgetM)}`:`${uiText('lbl_rig')} ${mm(rg.spentM)}`,rg.over?uiText('lbl_rig_cap_full'):'',`${rg.count} ${uiText('sw_of')} ${rg.cap} ${uiText('lbl_holes')}`,hud.meter&&!rg.over?unspentText(hud.meter.cap - rg.spentM,hud.meter.cap):''];
 setTxt(dom.statusR,parts.filter((p)=> p).join(' | '));
 setAttr(dom.statusR,'data-n',String(rg.count));
 setAttr(dom.statusR,'data-over',rg.over?'1':'0');
@@ -6020,7 +6034,7 @@ if(v.phase==='LEVEL_START')active.push(`level-${v.level.level_id}`);
 return{
 phase:v.phase,
 message:v.ui.message,
-meter:v.meter?{used:v.meter.used_m,cap:v.meter.cap_m,over:!!(v.ghost&&v.ghost.over_cap)||v.meter.used_m > v.meter.cap_m||(v.phase==='PLAN'&&!!v.capFull&&v.capNote !==uiTextOf('lbl_cap_full'))}:null,
+meter:v.meter?{used:v.meter.used_m,cap:v.meter.cap_m,over:v.meter.used_m > v.meter.cap_m}:null,
 ghostM:v.ghostM,
 cellM:v.cellM,
 countdown:v.countdown,

@@ -166,7 +166,7 @@ const mainRound = (C, G) => { const w = scenWorld(G); return new C.Round(C.TEST_
 
 // ---------------------------------------------------------------- UG33S G33 round driver, per-side reserves
 export const ug33s = {
-  id: 'UG33S', title: 'G33 surface: GV4 main round, add at 75.0 s col 80 (depth 20), re-aim at 100 s toward (20, 20): left reserve 33.72422, right 33, drilled 228.27578 / 229, score L and R equal S_MID', mode: 'surface',
+  id: 'UG33S', title: 'G33 surface: GV4 main round, add at 75.0 s col 80 (depth 20), re-aim at 100 s toward (20, 20): left reserve 33.72422, right 33, drilled left 228.27578 and right as in goldens_v42, score L and R equal S_MID', mode: 'surface',
   observe: async (C, G) => {
     const R = mainRound(C, G);
     const a = R.addHole(75.0, 80, 20);
@@ -182,7 +182,7 @@ export const ug33s = {
     cmp(e, 'L', o.L, M.result.L); cmp(e, 'R', o.R, M.result.R); cmpNum(e, 'drilled left', o.drilled[0], M.result.drilledL, 1e-6); cmp(e, 'drilled right', o.drilled[1], M.result.drilledR);
     return e;
   },
-  good: (G) => ({ add: ['ok', 20], reaim: ['ok', 11], resL: 33.72422, resR: 33, L: G.S_MID.result.L, R: G.S_MID.result.R, drilled: [228.27578, 229] }),
+  good: (G) => ({ add: ['ok', 20], reaim: ['ok', 11], resL: 33.72422, resR: 33, L: G.S_MID.result.L, R: G.S_MID.result.R, drilled: [228.27578, G.S_MID.result.drilledR] }),
   bad: [{ mut: ['shared_pool'] }],
   synth: [
     { name: 'shared_pool (the re-aim pays from the right pool as well)', obs: (G) => ({ ...ug33s.good(G), resL: -26.27578, resR: 33 }) },

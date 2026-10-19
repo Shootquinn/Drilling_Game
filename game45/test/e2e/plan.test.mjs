@@ -154,7 +154,7 @@ test('B-PLAN meter strings, ghost = post-click change, cap, counters and ceiling
           await D.click('next-gen'); acc++;
         } else {
           eq(`GV3 click ${i + 1} (cap) Next disabled`, enabled, false);
-          eq(`GV3 click ${i + 1} (cap) ghost red`, [over, ghostOver], ['1', true]);
+          eq(`GV3 click ${i + 1} (cap) ghost red, meter total plain (B12)`, [over, ghostOver], ['0', true]);
           const h = await D.hash(); await D.press('next-gen');
           eq(`GV3 click ${i + 1} (cap) press leaves hash`, await D.hash(), h);
         }

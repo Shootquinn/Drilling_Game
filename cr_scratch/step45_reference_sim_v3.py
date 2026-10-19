@@ -1,4 +1,4 @@
-"""Step 45 reference sim for spec v3.8.0 (cr_scratch/step45_toymaker_spec_v3.md). v3.8.0 (D1): surface-mode branch half-angle theta is the constant THETA_FIXED = 15 deg (30 deg between siblings) for every target set; trunk mode keeps the bounding-box theta_of; new mutant theta_bbox; new gate G64 (62 gates); frozen v3.7.7 sim: step45_reference_sim_v39_frozen.py. v3.7.5 (45.10b-9): the surface root drills ONE straight segment (heading 0, length D, generation 1) on its first click; every later tip forks as before; frozen v3.7.4 sim: step45_reference_sim_v38_frozen.py. v3.7.2 (45.10b-4) adds uniform surface-fork branching: START_MODE 'surface' (shipped)
+"""Step 45 reference sim for spec v3.8.2 (cr_scratch/step45_toymaker_spec_v3.md). v3.8.2 (Quinn 2026-10-18, independent 2 km budgets): the surface-mode auto rig plan draws on one pool = the level cap (400 cells), whole cells, at most MAX_RIG_HOLES = 12 holes, no longer on the left length (rig_pool_cells, rig_plan pool / max_holes, plan_rig); trunk mode keeps the per-component budgets; new gate G65 (63 gates), G53 re-worded; frozen v3.8.1 sim: step45_reference_sim_v41_frozen.py. v3.8.0 (D1): surface-mode branch half-angle theta is the constant THETA_FIXED = 15 deg (30 deg between siblings) for every target set; trunk mode keeps the bounding-box theta_of; new mutant theta_bbox; new gate G64 (62 gates); frozen v3.7.7 sim: step45_reference_sim_v39_frozen.py. v3.7.5 (45.10b-9): the surface root drills ONE straight segment (heading 0, length D, generation 1) on its first click; every later tip forks as before; frozen v3.7.4 sim: step45_reference_sim_v38_frozen.py. v3.7.2 (45.10b-4) adds uniform surface-fork branching: START_MODE 'surface' (shipped)
 and 'trunk' (the legacy anchor, reproduces goldens_v37 byte for byte), 61 gates before v3.8.0 (G1 to G61; G46 to G57 and G61 are new, ten earlier gates carry a surface variant). Frozen v37: step45_reference_sim_v37_frozen.py.
 Earlier text, spec v3.6.1:
 
@@ -54,6 +54,7 @@ RADAR_RANGE = int(cells_of(50.0))               # 10 cells
 GAP_L = GAP_R = RADAR_RANGE
 R0_M = 4.0; R0_FULL = cells_of(R0_M)           # Quinn ruling 2026-10-15: r0 = 4 m (0.8 cell)
 HOLE_SPACING_R = int(cells_of(50.0))            # 10 cells; densify 5, 2, 1
+MAX_RIG_HOLES = 12                              # rig holes in a plan (spec 4e); the auto plan stops at 12 (v3.8.2, B8)
 LABEL_FORMATION = 0.35                          # tier-1 cells carry value 1.0; threshold kept for the score test only
 RESERVE_FRAC, REAIM_FRAC = 0.25, 0.4
 REAIM_MASK = 8                                  # cells (40 m)
@@ -434,8 +435,14 @@ def budgets(net, rnd=rhu):
     return budget, b, reserve, math.floor(REAIM_FRAC * reserve)
 
 # ---------------- right: Balrog plan ----------------
-def rig_plan(Cs, portals_by_comp, b, hole_spacing=HOLE_SPACING_R, floor=1, snap=False, mut=()):
+def rig_pool_cells(cap_cells, mut=()):
+    """v3.8.2: the surface rig draws on one pool, the level cap (400 cells = 2,000 m), whole cells, never above the cap (B7).
+    Mutants: rig_pool_half_up (half-up of the cap, overdrills a cap with a half cell), rig_pool_left (the v3.8.1 left-length budget; see plan_rig)."""
+    return rhu(cap_cells) if 'rig_pool_half_up' in mut else math.floor(round(cap_cells, 6))
+def rig_plan(Cs, portals_by_comp, b, hole_spacing=HOLE_SPACING_R, floor=1, snap=False, mut=(), pool=None, max_holes=None):
     """Pass 0 at every portal column; spacing 10, then halving 5, 2, 1; the last hole takes the remainder.
+    v3.8.2: pool (cells) set = one shared pool for every component and at most max_holes holes; the plan stops at the first hole that exhausts the pool
+    or meets the limit (b is then unused). pool None = the per-component budgets b (legacy trunk mode).
     snap=True (surface mode, DEFAULT 37): pass 0 puts the hole at the S column of the served component nearest the portal (ties lower);
     two portals that resolve to one column of one component place one hole."""
     holes = [[] for _ in Cs]; spent = [0]*len(Cs); closed = [False]*len(Cs); info = []
@@ -444,9 +451,14 @@ def rig_plan(Cs, portals_by_comp, b, hole_spacing=HOLE_SPACING_R, floor=1, snap=
         ps = portals_by_comp.get(i, [])
         info.append((deep, sorted(cols, key=lambda c: (min(abs(c-p) for p in ps), c)), ps))
     def try_add(i, col):
-        need = info[i][0].get(col, 0); rem = b[i] - spent[i]
+        need = info[i][0].get(col, 0)
+        if pool is not None:
+            if max_holes is not None and sum(len(h) for h in holes) >= max_holes: closed[:] = [True]*len(Cs); return False
+            rem = pool - sum(spent)
+        else: rem = b[i] - spent[i]
         if need <= rem: holes[i].append((col, need)); spent[i] += need; return True
         if rem > 0: holes[i].append((col, rem)); spent[i] += rem
+        if pool is not None: closed[:] = [True]*len(Cs)
         closed[i] = True; return False
     for i in range(len(Cs)):
         for p in info[i][2]:
@@ -759,6 +771,8 @@ def play_moves(F, S, portals, clicks, cap, add, reaim_at, target, seed=0, W=W_GR
 def plan_rig(net, b, rig=None, mut=()):
     """Balrog plan. rig None = the auto plan (rig_plan); a list of per-component hole lists (col, depth) is a hand plan (45.10b seam, spec 4e)."""
     if rig is not None: return [list(hs) for hs in rig], [sum(h[1] for h in hs) for hs in rig]
+    if net.mode == MODE_SURFACE and 'rig_pool_left' not in mut:      # v3.8.2: one pool = the level cap, at most 12 holes (independent of the left length)
+        return rig_plan(net.Cs, net.pbc(), b, snap=True, mut=mut, pool=rig_pool_cells(net.cap, mut), max_holes=None if 'rig_max_off' in mut else MAX_RIG_HOLES)
     return rig_plan(net.Cs, net.pbc(), b, snap=net.mode == MODE_SURFACE, mut=mut)
 def plan_rig_view(rig=None):
     """view.plan.rig of the seam: no player holes, auto true."""
@@ -1763,9 +1777,9 @@ def branching_gates(gate, src_path=None):
     CsA = comps(SWA)
     p0 = lambda col, mut=(): rig_plan(CsA, {0: [col]}, [8], snap=True, mut=mut)[0][0][0]
     dup = lambda mut=(): sum(1 for h in rig_plan(CsA, {0: [40, 50]}, [100], snap=True, mut=mut)[0][0] if h[0] == 90)
-    z53 = (nB.length() == 4.0 and bud == 4 and bs == [4] and sum(spB) == 4 and abs(nB.length() - sum(spB)) <= 0.5 and p0(50)[0] == 90 and p0(89)[0] == 90 and p0(91)[0] == 91 and p0(100)[0] == 100
+    z53 = (nB.length() == 4.0 and bud == 4 and bs == [4] and sum(spB) == 400 and p0(50)[0] == 90 and p0(89)[0] == 90 and p0(91)[0] == 91 and p0(100)[0] == 100
            and dup() == 1 and sum(1 for h in rig_plan(CsA, {0: [40, 100]}, [100], snap=True)[0][0] if h[0] in (90, 100)) == 2)
-    gate("G53 equal length and pass 0: |left - right| <= 0.5 cell with overburden included; pass 0 at a free portal column uses the nearest column of the served component; one hole per column",
+    gate("G53 pass 0: the surface rig draws on the cap, not the left length (left 4 cells, rig 400); pass 0 at a free portal column uses the nearest column of the served component; one hole per column",
          z53, bads('G53', budget_excl_ob=budx == 0, pass0_no_snap=p0(50, ('pass0_no_snap',)) == (50, 0) and p0(89, ('pass0_no_snap',))[0] == 89, pass0_dup=dup(('pass0_dup',)) == 2))
     # ---- G54 component attribution (B-D1 target set, B-D2 tie) ----
     S2m = rect(70, 89, 20, 39) | rect(110, 139, 20, 39) | rect(99, 101, 38, 39)      # left body 400 cells, right body 600, a 6-cell sliver under the portal: comps 0 = right, 1 = left, 2 = sliver
@@ -1857,13 +1871,32 @@ def branching_gates(gate, src_path=None):
          all(n.theta[q] == 15.0 for n in z64n for q in n.theta) and nz.theta[100] is None and sib and all(abs(x - 30.0) < 1e-9 for x in sib) and max(dirs64) < 30.0
          and abs(Network(SWA, [100], 400, mode=TR).theta[100] - 26.565051177) < 1e-6 and abs(Network(SWflat, [100], 400, mode=TR).theta[100] - 70.0) < 1e-6 and tipsep_ok and clamp64,
          bads('G64', theta_bbox=any(abs(n.theta[q] - 15.0) > 1e-9 for n in b64n for q in n.theta), floor_removed=tip_sep_of(4.0, 15.0, 0.0) < TIP_SEP_FLOOR))
+    # ---- G65 independent rig cap (v3.8.2, B7, B8): the surface auto plan draws on one pool = the level cap, whole cells, at most 12 holes, independent of the left length ----
+    def rig65(S_, cap, clicks=(), ps=(100,), mut=()):
+        n = Network(S_, list(ps), cap, mut=mut, mode=SU)
+        for p_, D_ in clicks: n.next_gen(p_, D_)
+        hs, sp_ = plan_rig(n, budgets(n)[1], None, mut)
+        return n, hs, sp_
+    cnt = lambda hs: sum(len(h) for h in hs)
+    n65, h65, s65 = rig65(SWA, 400, [(100, 20.0)])                  # left 4 cells (budget 4); 20 columns of 40 cells; pool 400
+    _, h65b, s65b = rig65(SWA, 1000, [(100, 20.0)])                 # pool 1000: the 12-hole limit binds (12 x 40 = 480)
+    _, h65c, s65c = rig65(SWA, 375.5, [(100, 20.0)])                # a half-cell cap: the pool is 375, never above the cap
+    _, h65d, s65d = rig65(SWA | rect(150, 159, 20, 29), 400, [(100, 20.0)], (100, 154))
+    n65t = Network(SWA, [100], 400, mode=TR); b65t = budgets(n65t)[1]; ht65, st65 = plan_rig(n65t, b65t)
+    cols65 = lambda hs: [h_[0] for q in hs for h_ in q]
+    z65 = (budgets(n65)[0] == 4 and sum(s65) == 400 and cnt(h65) == 10 and len(set(cols65(h65))) == cnt(h65) and sum(s65) <= 400
+           and cnt(h65b) == 12 and sum(s65b) == 480 and sum(s65c) == 375 and sum(s65c) <= 375.5 and sum(h_[1] for q in h65c for h_ in q) == 375
+           and cnt(h65d) <= 12 and sum(s65d) <= 400 and len(h65d) == 2 and all(len(q) >= 1 for q in h65d) and sum(st65) == sum(b65t) and cnt(ht65) == 1)
+    badp = lambda m, S_=SWA, cap=400: rig65(S_, cap, [(100, 20.0)], mut=(m,))
+    gate("G65 independent rig cap: surface auto plan = one pool of cap cells (400 = 2,000 m), never above the cap (half-cell cap gives 375), at most 12 holes one per column, independent of the left length (left budget 4, rig 400); two components share the pool; legacy trunk mode keeps the per-component budgets",
+         z65, bads('G65', rig_pool_left=sum(badp('rig_pool_left')[2]) == 4, rig_max_off=cnt(badp('rig_max_off', cap=1000)[1]) > 12, rig_pool_half_up=sum(badp('rig_pool_half_up', cap=375.5)[2]) > 375.5))
 
 if __name__ == "__main__":
     import sys
     if "--export-json" in sys.argv:   # 45.8: write the JS parity goldens through the standard exporter and exit before any gate runs
         import runpy
         _i = sys.argv.index("--export-json"); _here = os.path.dirname(os.path.abspath(__file__))
-        _out = sys.argv[_i + 1] if _i + 1 < len(sys.argv) and not sys.argv[_i + 1].startswith("--") else os.path.join(_here, "..", "game45", "test", "goldens_v41.json")
+        _out = sys.argv[_i + 1] if _i + 1 < len(sys.argv) and not sys.argv[_i + 1].startswith("--") else os.path.join(_here, "..", "game45", "test", "goldens_v42.json")
         os.makedirs(os.path.dirname(os.path.abspath(_out)), exist_ok=True)
         sys.argv = [os.path.join(_here, "step45_07_export_goldens.py"), "--out", os.path.abspath(_out)]
         runpy.run_path(sys.argv[0], run_name="step45_export"); sys.exit(0)

@@ -1,7 +1,8 @@
-"""Step 45 D1 (v3.8.0): the branch half-angle is the constant 15 deg in surface mode (SPlan theta_rows='fixed'; 'T' = the v3.7.7 bounding-box angle, 'surface' = the same from row 0, both kept as mutants); W1 to W3, G4 re-valued; compared with goldens_v41.json. Frozen: step45_swe_v39_independent.py.
-Step 45.10b-9: v3.7.5 straight root (the SPlan.click root drills one segment, generation 1 forks); the section below is the 45.10b-4 text re-pointed at goldens_v41.json.
+"""Step 45 v3.8.2 (Quinn 2026-10-18, independent 2 km budgets): the surface-mode rig plan is re-derived from spec 4d: one pool of cap cells (floor of the level cap, 400 = 2,000 m) shared by every component and at most 12 holes, pass-major order (pass 0 for every component, then the spacing passes, each over the components in order), the plan stops at the first hole that exhausts the pool or meets the limit; balrog_s(pool=...), new checks W9 and W10; goldens_v42.json. Predecessor: step45_swe_v40_independent.py (notes/frozen).
+Step 45 D1 (v3.8.0): the branch half-angle is the constant 15 deg in surface mode (SPlan theta_rows='fixed'; 'T' = the v3.7.7 bounding-box angle, 'surface' = the same from row 0, both kept as mutants); W1 to W3, G4 re-valued; compared with goldens_v42.json. Frozen: step45_swe_v39_independent.py.
+Step 45.10b-9: v3.7.5 straight root (the SPlan.click root drills one segment, generation 1 forks); the section below is the 45.10b-4 text re-pointed at goldens_v42.json.
 Step 45.10b-4: v3.7.2 surface branching (section v39_branching at the end, own SPlan, own R4, own stay-mask, own attribution, own pass 0, own pair reach, own cover cap, compared with
-goldens_v41.json S keys); sections 45.10b-3 and below unchanged and run against the trunk-mode anchor (goldens_v41.json keeps every goldens_v37 key).
+goldens_v42.json S keys); sections 45.10b-3 and below unchanged and run against the trunk-mode anchor (goldens_v42.json keeps every goldens_v37 key).
 Step 45.10b-3: v3.7 speed model (spec 2d) on top of the v3.6 independent check below; section v37_speed at the end re-derives the speed and clock values
 from the spec text and compares them with goldens_v37.json. Env S45_ZC=1 runs the zero control (R 10, legacy travel 50 m, v36 values).
 
@@ -277,7 +278,7 @@ def box(x0m, x1m, y0m, y1m):   # cells whose 5 m block lies inside [x0, x1) x [y
 L1F, L1S = box(40, 90, 50, 90), box(25, 75, 40, 100)
 PF, PS = box(475, 535, 75, 500), box(475, 565, 50, 500)
 def main_world():
-    d = json.load(open(os.path.join(HERE, "step45_storyboard", "main_fs.json")))
+    d = json.load(open(os.path.join(HERE, "step45_storyboard_v3", "main_fs.json")))
     def res(old):
         old = {tuple(c) for c in old}; out = set()
         for i in range(GW):
@@ -617,7 +618,7 @@ def v37_speed(SIM, G):
     bad = (any(own_clock(t, mut=('trunc',)) != e for t, e in T60) and any(own_clock(t, mut=('seconds',)) != e for t, e in T60) and own_clock(Fraction(16000, 10), mut=('nocomma',)) == "elapsed 4000.0 h"
            and own_clock_even(0.1) == "elapsed 0.2 h" and own_clock(Fraction(1, 10)) == "elapsed 0.3 h")
     check("S5 clock strings: hand table (8 times, 7 ticks); half up; comma from 1,000 h", zero, bad, "mutants: truncation, seconds, no comma, Python tie-to-even at tick 1")
-    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v41.json"))
+    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v42.json"))
     J = json.load(open(gp)); E12 = J['E12']; mism = []
     for k in ('GV1', 'GV1b', 'GV2', 'GV3', 'GV3b', 'GV4'):
         for side, i in (('left', 0), ('right', 1)):
@@ -990,7 +991,7 @@ def v36_checks(SIM, G, FULL=False):
 
 # =====================================================================================================
 # v3.7.2 surface branching (Step 45.10b-4). Re-derived from the spec text (sections 2d, 4b, 4c, 4d, 5, 6, 8a): own class SPlan, own R4 ray, own stay-mask,
-# own attribution, own pass 0, own pair-reach filter, own cover cap. The sim is read only for outputs; worlds (F, S, seeds, click lists) come from goldens_v41.json.
+# own attribution, own pass 0, own pair-reach filter, own cover cap. The sim is read only for outputs; worlds (F, S, seeds, click lists) come from goldens_v42.json.
 # =====================================================================================================
 class SPlan:
     """Uniform surface fork. Root (p, 0), no trunk. Children: heading 0.5 x parent + s x theta (root: s x theta), clamp 60, length D. Stay-mask, R4, tip spacing.
@@ -1070,8 +1071,38 @@ class SPlan:
         if not new: return 'dead'
         if self.total() + sum(q['L'] for q in new) > self.cap + 1e-9: return 'cap'
         self.front[p] = list(range(len(self.seg), len(self.seg) + len(new))); self.seg += new; self.gen[p] += 0 if (self.ob_free and not any(q['ent'] for q in new)) else 1; self.clicks.append((p, Dm)); return 'ok'
-def balrog_s(n, b, spacings=SPACINGS, snap=True):
-    """4d pass 0 (surface): for every portal that serves a component, a hole at the S column of that component nearest the portal (ties lower); one hole per column."""
+def balrog_s(n, b, spacings=SPACINGS, snap=True, pool=None, limit=12, left_only=False):
+    """4d pass 0 (surface): for every portal that serves a component, a hole at the S column of that component nearest the portal (ties lower); one hole per column.
+    pool (cells) set (v3.8.2): one pool shared by all components and at most `limit` holes, pass-major; b is unused. pool None: per-component budgets b (the earlier rule)."""
+    if pool is not None:
+        deep, ps, order = [], [], []
+        for i, C in enumerate(n.C):
+            d = {}
+            for x, y in C: d[x] = max(d.get(x, -1), y + 1)
+            pi = sorted(p for p in n.ports if i in n.serve[p])
+            deep.append(d); ps.append(pi)
+            order.append(sorted(d, key=lambda c: (min(abs(c - p) for p in pi), c)) if pi else sorted(d))
+        holes = [[] for _ in n.C]; state = {'left': pool, 'count': 0, 'stop': False}
+        def put(i, col):
+            if state['count'] >= limit: state['stop'] = True; return False
+            need = deep[i].get(col, 0)
+            if need <= state['left']: holes[i].append((col, need)); state['left'] -= need; state['count'] += 1; return True
+            if state['left'] > 0: holes[i].append((col, state['left'])); state['left'] = 0; state['count'] += 1
+            state['stop'] = True; return False
+        for i in range(len(n.C)):
+            for p in ps[i]:
+                if state['stop']: break
+                col = min(sorted(deep[i]), key=lambda c: (abs(c - p), c)) if snap else p
+                if any(h[0] == col for h in holes[i]): continue
+                put(i, col)
+        for sp in spacings:
+            for i in range(len(n.C)):
+                if state['stop']: break
+                for col in order[i]:
+                    if state['stop']: break
+                    if any(abs(col - h[0]) < sp for h in holes[i]): continue
+                    put(i, col)
+        return holes, [sum(h[1] for h in hs) for hs in holes]
     holes = []; spent = []
     for i, C in enumerate(n.C):
         deep = {}
@@ -1125,7 +1156,7 @@ def sense_left_s(n, seed, W, H, halo, log=None, metric='euclid', R=RANGE, drop=T
     return cored, t1, xh, (sch, skp), sp, queue_end(times, max(s['t'] for s in n.seg))
 def play_s(F, S, ports, clicks, cap, W=GW, H=GH, seed=0, adds=(), **kw):
     n = SPlan(S, ports, cap, W, H, **kw); res = [n.click(p, D) for p, D in clicks]
-    B, b, rs, rc = budget(n); holes, spent = balrog_s(n, b); holes = [list(h) for h in holes]
+    B, b, rs, rc = budget(n); holes, spent = balrog_s(n, b, pool=int(math.floor(n.cap + 1e-9))); holes = [list(h) for h in holes]
     for a in adds: holes[-1].append(tuple(a))
     cL, tL, xL, pL, sL, eL = sense_left_s(n, seed, W, H, n.halo); cR, tR, xR, pR, sR, eR = sense_right(holes, seed, W, H)
     return dict(n=n, res=res, B=B, b=b, reserve=rs, rcap=rc, holes=holes, spent=spent, L=readout(F, cL, tL), R=readout(F, cR, tR), pairs=(pL, pR), sparse=(sL, sR),
@@ -1176,7 +1207,7 @@ def reaim_s(n, t, idx, target, cap):
 def v39_branching(SIM):
     t0 = time.time()
     print("== v3.7.2 surface branching (spec 4c), independent")
-    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v41.json"))
+    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v42.json"))
     J = json.load(open(gp)); cellset = lambda L: {tuple(c) for c in L}
     # ---- hand worlds: SW-A etc., values typed from the plan / spec ----
     def rect(c0, c1, r0, r1): return {(x, y) for x in range(c0, c1 + 1) for y in range(r0, r1 + 1)}
@@ -1234,7 +1265,26 @@ def v39_branching(SIM):
     check("W8 pass 0 at a free portal column: column 50 and 89 give hole 90, 91 gives 91, 100 gives 100", [p0(c)[0] for c in (50, 89, 91, 100)] == [90, 90, 91, 100] and p0(89) == (90, 8),
           balrog_s(type('N', (), dict(C=CsA, ports=[50], serve={50: [0]}))(), [8], snap=False)[0][0][0][0] == 50)
 
-    # ---- compare with goldens_v41 (S keys) ----
+    # W9 / W10 (v3.8.2): the rig plan draws on the cap, not on the left length; 12 holes at most; never above the cap
+    def rig_total(cap, S_=SWA, clicks=(20.0,), pool_mut=None, limit=12):
+        nq = SPlan(S_, [100], cap)
+        for D_ in clicks: nq.click(100, D_)
+        pl = int(math.floor(cap + 1e-9)) if pool_mut is None else pool_mut(cap)
+        hs, sp_ = balrog_s(nq, budget(nq)[1], pool=pl, limit=limit)
+        return nq, hs, sp_
+    n9, h9, s9 = rig_total(400)
+    _, h9b, s9b = rig_total(1000)
+    _, h9c, s9c = rig_total(375.5)
+    cnt9 = lambda hs: sum(len(q) for q in hs)
+    left_pool = lambda cap: budget(rig_total(cap)[0])[0]
+    check("W9 rig pool: SW-A, one 20 m click (left 4 cells, budget 4): the auto plan spends the cap, 400 cells in 10 holes of 40, one per column; left_pool (the v3.8.1 rule) spends 4",
+          budget(n9)[0] == 4 and sum(s9) == 400 and cnt9(h9) == 10 and len({h[0] for q in h9 for h in q}) == 10,
+          sum(rig_total(400, pool_mut=left_pool)[2]) == 4)
+    check("W10 rig limits: cap 1000 gives 12 holes (480 cells, not 20); cap 375.5 cells gives 375 (never above the cap; rounding up would give 376); no limit gives 20 holes",
+          cnt9(h9b) == 12 and sum(s9b) == 480 and sum(s9c) == 375 and sum(s9c) <= 375.5,
+          cnt9(rig_total(1000, limit=99)[1]) == 20 and sum(rig_total(375.5, pool_mut=lambda c: int(c + 0.5))[2]) == 376)
+
+    # ---- compare with goldens_v42 (S keys) ----
     def cmp_rec(rec, own, tag):
         n = own['n']; bad = []
         if rec['results'] != own['res']: bad.append('results')
@@ -1262,7 +1312,7 @@ def v39_branching(SIM):
         o = play_s(F, S, rec['portals'], [tuple(c) for c in rec['clicks']], rec['cap'], rec['W'], rec['H'], rec['seed'])
         b_ = cmp_rec(rec, o, nm_)
         if b_: mism[nm_] = b_
-    check("G1 nine policy worlds (GV2, GV3, GV4, L1 to L6): attempts, results, budget, holes, every segment (cells, dir, len, t, comp), cored and revealed cells, scores, pairs, finish times equal goldens_v41 S_P",
+    check("G1 nine policy worlds (GV2, GV3, GV4, L1 to L6): attempts, results, budget, holes, every segment (cells, dir, len, t, comp), cored and revealed cells, scores, pairs, finish times equal goldens_v42 S_P",
           not mism and len(J['S_P']) == 9,
           any(len(SPlan(cellset(r['S']), r['portals'], r['cap'], theta_rows='surface').seg) >= 0 and policy_s(SPlan(cellset(r['S']), r['portals'], r['cap'], theta_rows='surface'), r['portals'][0], *r['policy']) != r['attempts']
               for r in J['S_P'].values()), f"mismatch {mism}; mutant: theta from row 0 changes the policy run on at least one world")
@@ -1279,7 +1329,7 @@ def v39_branching(SIM):
         b_ = cmp_rec(rec, o, nm_)
         if b_: mism[nm_] = b_
     gv4 = J['S_GV4']; o = play_s(cellset(gv4['F']), cellset(gv4['S']), gv4['portals'], [tuple(c) for c in gv4['clicks']], gv4['cap'], 200, 100, gv4['seed'])
-    check("G3 spec click lists in surface mode (GV1, GV1b, GV2, GV3, GV3b, GV4 with two free portals) equal goldens_v41 S_GV*", not mism, play_s(cellset(gv4['F']), cellset(gv4['S']), gv4['portals'], [tuple(c) for c in gv4['clicks']], gv4['cap'], 200, 100, gv4['seed'] + 1)['sparse'] != o['sparse'], f"mismatch {mism}; mutant: seed + 1")
+    check("G3 spec click lists in surface mode (GV1, GV1b, GV2, GV3, GV3b, GV4 with two free portals) equal goldens_v42 S_GV*", not mism, play_s(cellset(gv4['F']), cellset(gv4['S']), gv4['portals'], [tuple(c) for c in gv4['clicks']], gv4['cap'], 200, 100, gv4['seed'] + 1)['sparse'] != o['sparse'], f"mismatch {mism}; mutant: seed + 1")
     # ---- hand vectors in S_E ----
     E = J['S_E']; sw = lambda s: [round(x, 9) for x in (s['dir'], s['len'], s['t'])]
     nA1 = SPlan(SWA, [100], CAP); nA1.click(100, 20.0)
@@ -1310,7 +1360,7 @@ def v39_branching(SIM):
     got = {k: (v['col'], v['cover_m']) for k, v in J['S_cover'].items()}
     L3 = keep50(dil2(cellset(J['E8']['levels']['3']['F']))); l3 = (5.0 * min(y for x, y in L3 if x == 120), 5.0 * min(y for x, y in L3 if x == 121))
     okf = lambda k, m_: (m_ <= 150.0 + 1e-9) or not k.startswith('L')
-    check("G5 cover cap: c_d and cover per world equal goldens_v41 S_cover (L1 110, L2 80, L3 155 at 121 / 150 at 120, L4 285 at 93, L5 170, L6 330, GV2 50, GV3 50, GV4 185); verdicts L3 to L6 rejected",
+    check("G5 cover cap: c_d and cover per world equal goldens_v42 S_cover (L1 110, L2 80, L3 155 at 121 / 150 at 120, L4 285 at 93, L5 170, L6 330, GV2 50, GV3 50, GV4 185); verdicts L3 to L6 rejected",
           mine == got and l3 == (150.0, 155.0) and {k: v['ok'] for k, v in J['S_cover'].items()} == {k: okf(k, mine[k][1]) for k in mine} and not okf('L3', 155.0),
           cover(keep50(dil2(cellset(J['E8']['levels']['3']['F']))))[0] == 121 != 120)
     # ---- mid-run scenario ----
@@ -1361,7 +1411,7 @@ if __name__ == "__main__":
 
     # ---------------- compare with the sim's printed goldens ----------------
     sys.path.insert(0, HERE); import step45_reference_sim_v3 as SIM
-    SIM.set_mode(SIM.MODE_TRUNK)       # the v3.6 and v3.7 blocks compare the trunk-mode anchor; the surface block reads goldens_v41.json
+    SIM.set_mode(SIM.MODE_TRUNK)       # the v3.6 and v3.7 blocks compare the trunk-mode anchor; the surface block reads goldens_v42.json
     simgold = SIM.GOLD; mism = []
     def cmp(k, field, mine):
         if field in ('endL', 'endR'): mine = round(mine, 3)

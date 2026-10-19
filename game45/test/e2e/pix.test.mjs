@@ -114,7 +114,8 @@ test('B-PIX render model = core state and I15 geometry at ticks 0, 960, 1919 and
     const LATE = Math.floor(Math.max(G.GV4.left.end_s, G.GV4.right.end_s) * 10) - 1;   // the last tick before the run ends (S_P.GV4: 238.4 s): every hole drilled, every radar pair drawn
     eq('stepToTick(1800)', await runToTick(D, LATE), LATE);
     const m1b = await D.model();
-    eq('tick 1800 rig finished: all holes drilled', m1b.holes.every((h) => h.drilledFrac === 1), true);
+    // v3.8.2: the rig (its own 2,000 m, up to 12 holes) ends the run, so its last hole completes at the run end: every hole is drilled but the last, which is within 1 percent
+    eq('tick 1800 rig finished: all holes drilled (the last one within 1 percent: the rig ends the run)', m1b.holes.every((h, i) => (i < m1b.holes.length - 1 ? h.drilledFrac === 1 : h.drilledFrac >= 0.99)), true);
     eq('tick 1800 hole depths = GV4.holes', m1b.holes.map((h) => [h.col, h.depth]).sort((a, b) => a[0] - b[0]), G.GV4.holes.flat().map((h) => [h[0], h[1]]).sort((a, b) => a[0] - b[0]));
 
     // ---- tick 1919: pixels ----

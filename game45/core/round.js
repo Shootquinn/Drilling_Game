@@ -1,13 +1,13 @@
 // One round (spec 6): planned network and Balrog plan, then add-hole (right) and re-aim (left) actions in time order.
 // Round holds F privately; F reaches no other module except through score().
-import { EMPTY, W_GRID, H_GRID, REAIM_LIMIT, ADD_LIMIT, ADD_MIN_SEP, ADD_MIN_RESERVE, START_MODE } from './consts.js';
+import { EMPTY, W_GRID, H_GRID, REAIM_LIMIT, ADD_LIMIT, ADD_MIN_SEP, ADD_MIN_RESERVE, START_MODE, MODE_SURFACE } from './consts.js';
 import { tickTime } from './arith.js';
 import { keySet, toKeys } from './grid.js';
 import { Network } from './growth.js';
 import { planCap } from './levels.js';
 import { levelRatio } from './level_table.js';
 import { speedModel } from './speed.js';
-import { budgets, planRig } from './balrog.js';
+import { budgets, planRig, rigPoolCells } from './balrog.js';
 import { leftSense, rigSense, rigTimeline, runEnd, score, frozenPairs } from './sense.js';
 import { addHoleDepth, reaimCap, reaimCheck, reaim, reaimPick, applyReaim, killSet, segFrac } from './reaim.js';
 
@@ -25,8 +25,10 @@ export class Round {
     this.reach = this.net.reach();
     this.clickResults = clicks.map(([p, D]) => this.net.nextGen(p, D));
     const bg = budgets(this.net, mut);
-    // defence for direct callers (v3.7.7, G63): a hand plan above the budget is not a legal round; the game's start() refuses it first
-    if (rig !== null && !mut.has('round_accepts_over') && sumDepth(rig) > bg.budget) throw new Error('rig plan above the budget');
+    // rigBudget (v3.8.2): surface mode = the level cap in whole cells (independent of the left length); legacy trunk mode = the left budget
+    this.rigBudget = mode === MODE_SURFACE ? rigPoolCells(this.net.cap, mut) : bg.budget;
+    // defence for direct callers (v3.7.7, G63): a hand plan above the rig budget is not a legal round; the game's start() refuses it first
+    if (rig !== null && !mut.has('round_accepts_over') && sumDepth(rig) > this.rigBudget) throw new Error('rig plan above the budget');
     this.budget = bg.budget; this.b = bg.b; this.reserve0 = bg.reserve; this.rcap = bg.reaimCap;
     const rp = planRig(this.net, this.b, rig, mut);
     this.holes = rp.holes; this.spent = rp.spent;

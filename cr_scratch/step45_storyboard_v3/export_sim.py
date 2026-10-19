@@ -12,7 +12,7 @@ import step45_reference_sim_v3 as r
 assert r.START_MODE == r.MODE_SURFACE, 'run with S45_START_MODE=surface (the shipped mode)'
 
 SEED_MAIN, SEED_PIPE, SEED_L1 = r.SEED_MAIN, r.SEED_PIPE, r.SEED_L1
-GOLD = json.load(open(os.path.join(HERE, '..', '..', 'game45', 'test', 'goldens_v41.json'), encoding='utf8'))
+GOLD = json.load(open(os.path.join(HERE, '..', '..', 'game45', 'test', 'goldens_v42.json'), encoding='utf8'))
 
 # =====================================================================================================================
 # GV4m (surface): STORYBOARD MID-RUN MOVES (panels 13 to 21). Round = r.surface_scenario(): GV4 world, one V3 portal, the policy clicks.

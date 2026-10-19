@@ -1,6 +1,6 @@
-// 45.10d / G1e (spec v3.8.1), core side: growth feedback (probe status), the note under the meter, one unspent definition, the exact rig budget,
+// 45.10d / G1e (spec v3.8.1, rig limit v3.8.2), core side: growth feedback (probe status), the note under the meter, one unspent definition, the rig limit (the cap),
 // playback pace and speeds, level select, Back to paint messages, the Undo target. Zero control: the real core. Known-bad: core switches
-// probe_ignored, note_max_always, budget_rounded and run_pace_off, plus the string-table checker run on the previous wording.
+// probe_ignored, note_max_always, rig_pool_left and run_pace_off, plus the string-table checker run on the previous wording.
 // The scenarios (a dead column, a cap stop, a left length that ends in half a cell) come from lib/g1e_scen.mjs, found on the core under test.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -68,7 +68,7 @@ test('G1E-U-GROW-STOP Grow to 12 that stops names the dead probe; the buttons st
   assert.equal(g.view().ui.message, '');
 });
 
-test('G1E-U-CAPNOTE the note: Next generation would exceed the limit while the total is below the cap; Max Length Exceeded only over a limit (rig over the borebot length); note_max_always is caught', async () => {
+test('G1E-U-CAPNOTE the note: Next generation would exceed the limit while the total is below the cap; a rig over 2,000 m names the rig and leaves the borebot note alone; note_max_always is caught', async () => {
   const S = await scenarios();
   const W = await onePortal(S.cap.col, S.cap.D);
   const g = W.g;
@@ -81,13 +81,16 @@ test('G1E-U-CAPNOTE the note: Next generation would exceed the limit while the t
   assert.equal(v.flags.canStart, true, 'a valid plan can start');
   assert.equal(g.nextGen().status, 'cap');
   assert.equal(g.view().ui.message, NEXT_CAP);
-  // holes of 100 cells until the rig passes the left length
+  // holes of 100 cells until the rig passes 2,000 m (B5: the rig overage is the rig's, the borebot note keeps its own state)
   const holes = Math.floor(g.view().plan.budget / 100) + 1;
   for (let i = 0; i < holes; i++) assert.equal(g.addRigHole(190 - 12 * i, 100).status, 'ok');
   const w = g.view();
   assert.equal(w.plan.over, true);
-  assert.equal(w.capNote, 'Max Length Exceeded');
+  assert.equal(w.plan.overNote, 'Rig: Max Length Exceeded');
+  assert.equal(w.capNote, NEXT_CAP, 'the borebot note does not carry the rig overage');
   assert.equal(w.flags.canStart, false);
+  const st = g.start();
+  assert.deepEqual([st.status, g.view().ui.message], ['rig_over', 'Rig: Max Length Exceeded']);
   const Wb = await onePortal(S.cap.col, S.cap.D, ['note_max_always']);
   growAll(Wb.g);
   assert.equal(Wb.g.view().capNote, 'Max Length Exceeded', 'note_max_always shows the v3.7.7 text for a next-generation stop');
@@ -104,7 +107,7 @@ function fillRig(g, cells) {
   }
 }
 
-test('G1E-U-BUDGET the rig budget is the left drilled length exactly (N.5 cells stay N.5, not N+1); a rig of floor(N.5) cells fits, one more is over; budget_rounded (half-up) is caught', async () => {
+test('G1E-U-BUDGET the rig limit is the level cap (400 cells = 2,000 m), apart from the left length: 400 cells fit, 401 are over; rig_pool_left (the v3.8.1 left-length budget) is caught', async () => {
   const S = await scenarios();
   const run = async (muts) => {
     const W = await onePortal(S.half.col, S.half.D, muts);
@@ -113,18 +116,22 @@ test('G1E-U-BUDGET the rig budget is the left drilled length exactly (N.5 cells 
   };
   const { g, v } = await run([]);
   assert.equal(v.meter.used_m, S.half.used, 'setup: the left length');
-  assert.equal(v.plan.budgetM, v.meter.used_m, 'budget equals the meter');
-  const whole = Math.floor(v.meter.used_m / 5);
-  fillRig(g, whole);
-  assert.equal(g.view().plan.spent, whole);
-  assert.equal(g.view().plan.over, false, `${whole} cells <= ${whole}.5`);
+  assert.ok(v.meter.used_m < 2000);
+  assert.equal(v.plan.budget, 400, 'rig limit in cells');
+  assert.equal(v.plan.budgetM, 2000, 'rig limit is 2,000 m whatever the left length');
+  fillRig(g, 400);
+  assert.equal(g.view().plan.spent, 400);
+  assert.equal(g.view().plan.over, false, '400 cells <= 400');
   assert.equal(g.view().flags.canStart, true);
-  fillRig(g, whole + 1);
-  assert.equal(g.view().plan.over, true, `${whole + 1} cells > ${whole}.5`);
+  assert.equal(g.view().plan.unspentM, 0);
+  fillRig(g, 401);
+  assert.equal(g.view().plan.over, true, '401 cells > 400');
   assert.equal(g.start().status, 'rig_over');
-  const bad = await run(['budget_rounded']);
-  assert.equal(bad.v.plan.budgetM, v.meter.used_m + 2.5, 'budget_rounded shows the half-up budget (the v3.8.0 bug)');
-  assert.notEqual(bad.v.plan.budgetM, bad.v.meter.used_m);
+  fillRig(g, 300);
+  assert.equal(g.view().plan.unspentM, 500, 'rig unspent = 2,000 m minus the rig total');
+  const bad = await run(['rig_pool_left']);
+  assert.equal(bad.v.plan.budgetM, v.meter.used_m, 'rig_pool_left ties the rig limit to the left length (the v3.8.1 rule)');
+  assert.notEqual(bad.v.plan.budgetM, 2000);
 });
 
 test('G1E-U-UNSPENT unspent = cap minus drilled for each side, from one field: the RUN view and the result agree at every tick and at the end', async () => {
@@ -144,7 +151,8 @@ test('G1E-U-UNSPENT unspent = cap minus drilled for each side, from one field: t
     for (const s of ['left', 'right']) assert.ok(Math.abs(u[s].drilledM + u[s].unspentM - 2000) < 1e-9, `${s}: ${u[s].drilledM} + ${u[s].unspentM}`);
     const r = g.view().run;
     assert.equal(r.left.unspentM, u.left.unspentM, 'the HUD field and the unspent field are one');
-    assert.equal(r.left.budgetM, planM, 'run budget = left length exactly');
+    assert.equal(r.left.budgetM, undefined, 'no budget B in the run lines (v3.8.2)');
+    assert.equal(r.right.budgetM, undefined);
     sawRun++;
   }
   assert.ok(sawRun >= 2);

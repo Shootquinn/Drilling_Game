@@ -1,5 +1,5 @@
 // 45.10d / G1e on the real built page (spec v3.8.1): the Cowork Level 4 findings B1 to B12 and the label list.
-// Zero control: the shipped page. Known-bad: init-script mutants (ui_no_settle, run_pace_off, budget_rounded) and the same assertions on the previous build
+// Zero control: the shipped page. Known-bad: init-script mutants (ui_no_settle, run_pace_off, rig_pool_left) and the same assertions on the previous build
 // (play_g1d.html: every row here is red on it).
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
@@ -164,7 +164,7 @@ test('G1E-E2c the formation-top label never sits on a depth-axis label ("200S to
   assert.ok(bad.bad.length >= 1, 'lay_off_stop not caught');
 });
 
-test('G1E-E4 the note under the meter: "Next generation would exceed the 2,000 m limit" when only the next generation does not fit (total below the cap); "Max Length Exceeded" only for a total over its limit; note_max_always (the v3.7.7 note) is caught', async () => {
+test('G1E-E4 the note under the meter: "Next generation would exceed the 2,000 m limit" when only the next generation does not fit (total below the cap); a rig over its own 2,000 m reads "Rig: Max Length Exceeded" in the rig line and leaves the borebot note alone (B5); note_max_always (the v3.7.7 note) is caught', async () => {
   needPlay();
   const S = await scenarios();
   assert.ok(S.cap !== null, 'setup: a cap stop below 2,000 m');
@@ -188,19 +188,21 @@ test('G1E-E4 the note under the meter: "Next generation would exceed the 2,000 m
     assert.equal(tx(await D.text('plan-note')), NEXT_CAP);
     assert.equal(await D.enabled('next-gen'), false);
     assert.equal(await D.enabled('start'), true, 'Start must stay enabled: the plan is valid');
-    // a rig over the borebot length is a total over its limit: Max Length Exceeded, Start blocked
+    // a rig over its own 2,000 m (v3.8.2): the rig line names the rig, the borebot note keeps its own state, Start blocked
     const g = await D.geo();
     const R = g.panels.right;
     const budget = (await D.model()).rig.budget;
-    const holes = Math.floor(budget / 100) + 1;               // holes of 100 cells (500 m) until the total passes the left length
+    assert.equal(budget, 400, 'the rig limit is the cap in cells, apart from the left length');
+    const holes = Math.floor(budget / 100) + 1;               // holes of 100 cells (500 m) until the total passes the limit
     for (let k = 0; k < holes; k++) {
       await D.tapXY(xs(g, 'right', 190 - 12 * k), R.y + 8 * g.cellPx);
       for (let i = 0; i < 100; i++) await D.page.keyboard.press('+');
     }
     assert.equal((await D.model()).rig.over, true);
-    assert.equal(tx(await D.text('cap-full')), MAX_LEN);
+    assert.equal(tx(await D.text('cap-full')), NEXT_CAP, 'B5: the borebot note does not carry the rig overage');
+    assert.match(tx(await D.text('rig-status')), /Rig: Max Length Exceeded/);
     assert.equal(await D.enabled('start'), false);
-    await D.page.keyboard.press('Delete');                    // the last hole goes: the total is back under the left length
+    await D.page.keyboard.press('Delete');                    // the last hole goes: the total is back under the limit
     assert.equal((await D.model()).rig.over, false);
     assert.equal(tx(await D.text('cap-full')), NEXT_CAP);
     assert.equal(D.log.pageerrors.length, 0);
@@ -270,7 +272,7 @@ test('G1E-E3b "S" and "SROI" are never shown: the string table and the page text
 });
 
 // ---------------------------------------------------------------- E5 (B7, B8)
-test('G1E-E5 one unspent everywhere (cap minus drilled, per side) and the rig budget equals the meter exactly (no half-up); budget_rounded is caught', async () => {
+test('G1E-E5 one unspent everywhere (cap minus drilled, per side), no budget B in the rig lines, and the rig limit is 2,000 m whatever the borebot meter reads; rig_pool_left is caught', async () => {
   needPlay();
   const S = await scenarios();
   assert.ok(S.half !== null, 'setup: a left length that ends in half a cell');
@@ -289,6 +291,7 @@ test('G1E-E5 one unspent everywhere (cap minus drilled, per side) and the rig bu
       const R = g.panels.right;
       await D.tapXY(xs(g, 'right', 190), R.y + 8 * g.cellPx);
       out.rigStatus2 = tx(await D.text('rig-status'));
+      out.rigBudget = (await D.model()).rig.budget;
       if (mut) return out;
       await startRun(D);
       await D.frames(1.5);
@@ -305,19 +308,21 @@ test('G1E-E5 one unspent everywhere (cap minus drilled, per side) and the rig bu
   const ok = await scenario(null);
   const used = num(/^([\d,.]+) of 2,000 m$/.exec(ok.meter)[1]);
   assert.ok(used % 5 === 2.5, `setup: the left length must end in .5 m to expose the rounding (meter ${ok.meter})`);
-  assert.match(ok.rigStatus, new RegExp(`budget ${ok.meter.split(' of')[0].replace('.', '\\.')} m$`), `rig budget differs from the meter: "${ok.rigStatus}" vs "${ok.meter}"`);
+  assert.doesNotMatch(ok.rigStatus + ok.rigStatus2, /budget/i, 'no budget B in the rig lines');
+  assert.equal(ok.rigBudget, 400, 'the rig limit is the cap in cells, not the meter');
   assert.equal(ok.caption, `unspent ${(2000 - used).toLocaleString('en-US')} m of 2,000 m`.replace('.0', ''));
-  assert.match(ok.rigStatus2, new RegExp(`of ${ok.meter.split(' of')[0].replace('.', '\\.')} m `), ok.rigStatus2);
+  assert.match(ok.rigStatus2, /^rig [\d,.]+ m \| 1 of 12 holes \| unspent [\d,.]+ m of 2,000 m$/, ok.rigStatus2);
   const side = (t) => ({ drilled: num(/drilled ([\d,.]+) m/.exec(t)[1]), unspent: num(/unspent ([\d,.]+) m of ([\d,.]+) m/.exec(t)[1]), cap: num(/unspent ([\d,.]+) m of ([\d,.]+) m/.exec(t)[2]) });
   for (const t of [ok.runL, ok.runR, ok.endL, ok.endR]) {
     const s = side(t);
     assert.equal(s.cap, 2000, t);
     assert.ok(Math.abs(s.drilled + s.unspent - 2000) < 0.11, `drilled + unspent != 2,000 in "${t}"`);
   }
-  assert.doesNotMatch(ok.runL + ok.runR, /reserve|re-aims|adds left/);
+  assert.doesNotMatch(ok.runL + ok.runR, /reserve|re-aims|adds left|budget/);
+  assert.match(ok.runR, /^drilled [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/, ok.runR);
   assert.ok(ok.endL.startsWith(`drilled ${ok.meter.split(' of')[0]} m |`), `the left drilled total of the result is the plan length: ${ok.endL}`);
-  const bad = await scenario(['budget_rounded']);
-  assert.doesNotMatch(bad.rigStatus, new RegExp(`budget ${bad.meter.split(' of')[0].replace('.', '\\.')} m$`), 'budget_rounded not caught');
+  const bad = await scenario(['rig_pool_left']);
+  assert.notEqual(bad.rigBudget, 400, 'rig_pool_left not caught: the rig limit followed the left length');
 });
 
 // ---------------------------------------------------------------- E6 (B10)

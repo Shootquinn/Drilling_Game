@@ -743,8 +743,8 @@ export function updateHud(dom, hud) {
   }
   // cap-reached feedback (rank 12)
   const capFull = !!hud.capFull;
-  // the note slot (v3.8.1): "Max Length Exceeded" only when a total is over its limit (rig over the borebot length, or total above the cap);
-  // "Next generation would exceed the 2,000 m limit" when only the next generation does not fit; else the Start hint
+  // the note slot (v3.8.1, v3.8.2): the borebot side only. "Max Length Exceeded" when the borebot total is above the cap; "Next generation would exceed
+  // the 2,000 m limit" when only the next generation does not fit; else the Start hint. A rig over its own 2,000 m reads "Rig: Max Length Exceeded" in the rig status line.
   const noteOn = !!hud.capNote;
   setTxt(dom.capNote, hud.capNote || '');
   setStyle(dom.capNote, 'color', hud.capNote && hud.capNote !== uiText('lbl_cap_full') ? SUB : '');   // red only for the Start-blocking note
@@ -755,15 +755,15 @@ export function updateHud(dom, hud) {
     const rl = hud.runInfo.left;
     const rr = hud.runInfo.right;
     setTxt(dom.runL, `${uiText('lbl_drilled')} ${m(rl.drilledM)} | ${unspentText(u.left.unspentM, u.capM)}`);
-    setTxt(dom.runR, `${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${uiText('lbl_budget')} ${m(rr.budgetM)} | ${unspentText(u.right.unspentM, u.capM)}`);
+    setTxt(dom.runR, `${uiText('lbl_drilled')} ${m(rr.drilledM)} | ${unspentText(u.right.unspentM, u.capM)}`);
   }
-  // rig sites (surface mode): the budget readout under the right panel and the placement help under both
+  // rig sites (surface mode): the rig readout under the right panel (its own 2,000 m, apart from the borebots) and the placement help under both
   const rg = hud.rig || null;
   const mm = (v) => `${meterNumText(v)} m`;
   if (rg) {
     const parts = rg.count === 0
-      ? [uiText('rig_auto'), `${uiText('lbl_budget')} ${mm(rg.budgetM)}`]
-      : [`${uiText('lbl_rig')} ${mm(rg.spentM)} ${uiText('sw_of')} ${mm(rg.budgetM)}`, rg.over ? uiText('lbl_cap_full') : '', `${rg.count} ${uiText('sw_of')} ${rg.cap} ${uiText('lbl_holes')}`, hud.meter && !rg.over ? unspentText(hud.meter.cap - rg.spentM, hud.meter.cap) : ''];
+      ? [uiText('rig_auto')]
+      : [rg.over ? `${uiText('lbl_rig')} ${mm(rg.spentM)} ${uiText('sw_of')} ${mm(rg.budgetM)}` : `${uiText('lbl_rig')} ${mm(rg.spentM)}`, rg.over ? uiText('lbl_rig_cap_full') : '', `${rg.count} ${uiText('sw_of')} ${rg.cap} ${uiText('lbl_holes')}`, hud.meter && !rg.over ? unspentText(hud.meter.cap - rg.spentM, hud.meter.cap) : ''];
     setTxt(dom.statusR, parts.filter((p) => p).join(' | '));
     setAttr(dom.statusR, 'data-n', String(rg.count));
     setAttr(dom.statusR, 'data-over', rg.over ? '1' : '0');

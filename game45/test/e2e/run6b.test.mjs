@@ -104,9 +104,10 @@ test('B-TEXT (v3.8.1) readout unspent line "unspent N m of 2,000 m" = cap minus 
     await D.page.evaluate((k) => globalThis.__s45.stepToTick(k), 600);
     const L = norm(await D.text('run-status-left')), R = norm(await D.text('run-status-right'));
     assert.match(L, /^drilled [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/, L);
-    assert.match(R, /^drilled [\d,.]+ m \| budget [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/, R);
+    assert.match(R, /^drilled [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/, R);      // v3.8.2: no budget B; both sides drill up to 2,000 m, apart from each other
     assert.doesNotMatch(L + R, /re-aims|adds left|reserve/);
-    assert.doesNotMatch('drilled 1 m | budget 2 m | unspent reserve 3 m | adds left 6', /^drilled [\d,.]+ m \| budget [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/);      // known-bad shape
+    assert.doesNotMatch('drilled 1 m | budget 2 m | unspent reserve 3 m | adds left 6', /^drilled [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/);      // known-bad shape
+    assert.doesNotMatch('drilled 1 m | budget 2 m | unspent 3 m of 2,000 m', /^drilled [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/);      // the v3.8.1 line with budget B
     await finishRun(D);
     const rows = await D.page.evaluate(() => ['left', 'right'].map((sd) => { const q = (k) => { const e = document.querySelector(`[data-s45="readout-${sd}"] [data-k="${k}"]`); return e ? e.textContent : null; }; return { budget: q('budget'), drilled: q('drilled') }; }));
     const num = (x) => Number(String(x).replace(/,/g, ''));

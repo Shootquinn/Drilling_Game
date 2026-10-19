@@ -74,7 +74,7 @@ export function createCore({ mut = new Set(), seed = 0, startMode = K.START_MODE
     newPlan: (o) => PL.newPlan({ ...o, mut: M, mode }), planClick: PL.planClick, planUndo: PL.planUndo, planAdd: PL.planAdd, planMove: PL.planMove,
     planRemove: PL.planRemove, planRepaint: PL.planRepaint, grow: PL.grow, counterData: PL.counterData,
     // balrog
-    budgets: (net) => BA.budgets(net, M), rigPlan: (Cs, pbc, b, o = {}) => BA.rigPlan(Cs, pbc, b, o, M), planRig: (net, b, rig = null) => BA.planRig(net, b, rig, M),
+    budgets: (net) => BA.budgets(net, M), rigPoolCells: (cap) => BA.rigPoolCells(cap, M), rigPlan: (Cs, pbc, b, o = {}) => BA.rigPlan(Cs, pbc, b, o, M), planRig: (net, b, rig = null) => BA.planRig(net, b, rig, M),
     // sensing
     pReveal: (r, r0) => SE.pReveal(r, r0 ?? SE.r0Of(M), M),
     sparse: (t2, t1, sd, W, H, opts = {}) => SE.sparse(t2, t1, sd, W, H, opts, M), imaged: SE.imaged,

@@ -177,7 +177,7 @@ function mnBoot() {
     return {
       phase: v.phase,
       message: v.ui.message,
-      meter: v.meter ? { used: v.meter.used_m, cap: v.meter.cap_m, over: !!(v.ghost && v.ghost.over_cap) || v.meter.used_m > v.meter.cap_m || (v.phase === 'PLAN' && !!v.capFull && v.capNote !== uiTextOf('lbl_cap_full')) } : null,
+      meter: v.meter ? { used: v.meter.used_m, cap: v.meter.cap_m, over: v.meter.used_m > v.meter.cap_m } : null,     // v3.8.2 (B12): red only for a total above the cap; a stop on the cap is a legal plan
       ghostM: v.ghostM,
       cellM: v.cellM,
       countdown: v.countdown,

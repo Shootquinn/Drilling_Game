@@ -73,11 +73,12 @@ test('B-PLACE portals and rig holes by mouse: ground and sky clicks, ghost, refu
     await D.dragXY({ x: m.x, y: m.y }, { x: x('left', 140), y: L.y + 60 });
     assert.deepEqual((await plan(D)).portals, [60, 140], 'drag moves the portal to the drop column');
 
-    // ---- rig holes are never refused for budget (v3.7.7): a hole at budget 0 is accepted and shows the over state; Delete removes it ----
+    // ---- rig holes are never refused for length (v3.7.7); the rig has its own 2,000 m, apart from the borebots (v3.8.2): one hole is well inside it; Delete removes it ----
     await click(D, x('right', 100), R.y + 40);
-    assert.deepEqual((await plan(D)).rig.map((h) => h[0]), [100], 'a rig hole is accepted while the budget is 0');
-    assert.equal((await D.model()).rig.over, true);
-    assert.match(await D.text('rig-status'), /Max Length Exceeded/);
+    assert.deepEqual((await plan(D)).rig.map((h) => h[0]), [100], 'a rig hole is accepted');
+    assert.equal((await D.model()).rig.over, false);
+    assert.match(await D.text('rig-status'), /unspent [\d,.]+ m of 2,000 m/);
+    assert.doesNotMatch(await D.text('rig-status'), /Max Length Exceeded/);
     await D.page.keyboard.press('Delete');
     assert.deepEqual((await plan(D)).rig, [], 'Delete removes the selected hole');
     for (const dm of [75, 50, 35, 25]) {
@@ -138,7 +139,7 @@ test('B-PLACE portals and rig holes by mouse: ground and sky clicks, ghost, refu
     }
     assert.ok(spent() <= budget, `total depth ${spent()} within the budget ${budget}`);
     const status = await D.text('rig-status');
-    assert.match(status, /rig [\d,.]+ m of [\d,.]+ m/, `status line "${status}"`);
+    assert.match(status, /^rig [\d,.]+ m \| 3 of 12 holes \| unspent [\d,.]+ m of 2,000 m$/, `status line "${status}"`);
 
     // ---- run ----
     const want = rig.map((h) => [h[0], h[1]]);

@@ -1,7 +1,7 @@
 // Rig sites (spec 4e, Option B, 45.10b-10; v3.7.7 / 45.10c): the player places every rig hole { col, depth }. Rules under test: at most 12 holes,
 // one per column, depth 1 to the grid height, drill order = placement order, zero holes = the auto rig plan (the goldens_v38 behaviour).
-// v3.7.7: the budget (half-up of the planned left length) never refuses a placement or an edit and never clips a hole; a total above it is the
-// over state and `start()` refuses `rig_over` (G63). Zero control: the real core. Known-bad: core mutant switches (rig_order_sorted,
+// v3.7.7: the rig limit never refuses a placement or an edit and never clips a hole; a total above it is the
+// over state and `start()` refuses `rig_over` (G63). v3.8.2: the rig limit is the level cap, 400 cells = 2,000 m, apart from the left length. Zero control: the real core. Known-bad: core mutant switches (rig_order_sorted,
 // budget_refuses_placement, start_allows_over, round_accepts_over, over_bound_lt, clip_returns, rig_dup_column, rig_depth_uncapped) and
 // synthetic bad lists for the invariant checker. Timing is cross-checked against an analytic schedule written here (cumulative depth / drill
 // speed plus travel), not against rigTimeline.
@@ -10,9 +10,8 @@ import assert from 'node:assert/strict';
 import { planWorld, finish } from '../lib/rigworld.mjs';
 import { getCore } from '../lib/mut.mjs';
 
-// the integer budget of a hand plan: the planned left length (cells) after the S_GV4 accepted clicks, exact (v3.8.1: no half-up), so an integer total is within it when at most its floor
-// (goldens_v41 S_GV4 length 166.5: floor 166; the Balrog auto plan and the Round keep the half-up 167)
-const budgetOf = (W) => Math.floor(W.G.S_GV4.length_cells);
+// the rig limit in cells (v3.8.2): the level cap, whatever the left length (goldens_v42 S_GV4 left length 166.5 cells)
+const budgetOf = () => 400;
 
 // ---- invariant checker (judge) ----
 // (v3.7.7: the budget is not a list invariant any more; `overBudget` is the Start-gate judge)
@@ -34,7 +33,7 @@ function refOver(rig, budget) {
   let cum = 0;
   return rig.map((h) => { cum += h[1]; return Math.max(0, Math.min(h[1], cum - budget)); });
 }
-const START_TEXT = 'Max Length Exceeded';
+const START_TEXT = 'Rig: Max Length Exceeded';
 
 const planRig = (W) => W.g.state().plan.rig;
 const add = (W, c, d) => (d === undefined ? W.g.addRigHole(c) : W.g.addRigHole(c, d));
@@ -44,7 +43,8 @@ test('R-ZERO zero holes: the run is the auto plan, equal to the golden S_GV4 rec
   const v = W.g.view();
   assert.equal(v.plan.auto, true);
   assert.equal(v.plan.count, 0);
-  assert.equal(v.plan.budget, W.G.S_GV4.length_cells);
+  assert.equal(v.plan.budget, 400);
+  assert.ok(v.holes.length <= 12);
   assert.deepEqual(v.holes.map((h) => [h.col, h.depth]), W.G.S_GV4.holes.flat().map((h) => [h[0], h[1]]));
   const st = finish(W);
   assert.deepEqual([st.readout.left.total, st.readout.right.total], Array.from(W.G.S_GV4.totals));
@@ -85,94 +85,92 @@ test('R-ORDER drill order = placement order: the schedule lists the holes as pla
   assert.notDeepEqual(planRig(Wm), placed, 'rig_order_sorted left the placement order');
 });
 
-test('R-TOTAL over budget is allowed: every add, move and depth edit returns ok at any total; the over state shows; Start is refused rig_over with the cap text; reducing depth clears it; the old refusal and the missing gate are caught', async () => {
+test('R-TOTAL over the 2,000 m limit is allowed while editing: every add, move and depth edit returns ok at any total; the over state shows; Start is refused rig_over with the rig text; reducing depth clears it; the old refusal and the missing gate are caught', async () => {
   const W = await planWorld();
   const g = W.g;
-  const B = budgetOf(W), Bx = W.G.S_GV4.length_cells;   // Bx: the exact plan budget that overCells is measured from
+  const B = budgetOf(W);
   assert.equal(add(W, 100, 100).status, 'ok');
-  assert.equal(add(W, 20, B - 100).status, 'ok');
-  assert.equal(g.view().plan.over, false, 'spent == budget is not over');
+  assert.equal(add(W, 20, 100).status, 'ok');
+  assert.equal(add(W, 60, 100).status, 'ok');
+  assert.equal(add(W, 150, B - 300).status, 'ok');
+  assert.equal(g.view().plan.over, false, 'spent == limit is not over');
   assert.equal(g.view().flags.canStart, true);
   const r = add(W, 30, 50);
-  assert.equal(r.status, 'ok', 'over-budget add');
+  assert.equal(r.status, 'ok', 'over-limit add');
   assert.equal(g.view().plan.spent, B + 50);
   assert.equal(g.view().plan.over, true);
-  assert.equal(g.view().plan.overCells, B + 50 - Bx);
-  assert.equal(g.view().plan.overM, 5 * (B + 50 - Bx));
-  assert.equal(add(W, 40).status, 'ok', 'default-depth add with the budget spent');
-  assert.equal(g.state().plan.rig.length, 4, 'the list keeps every hole');
+  assert.equal(g.view().plan.overCells, 50);
+  assert.equal(g.view().plan.overM, 250);
+  assert.equal(add(W, 40).status, 'ok', 'default-depth add with the limit spent');
+  assert.equal(g.state().plan.rig.length, 6, 'the list keeps every hole');
   assert.equal(g.view().flags.canStart, false, 'flags.canStart is false while over');
   const s0 = g.start();
   assert.deepEqual([s0.status, g.view().ui.message], ['rig_over', START_TEXT]);
   assert.equal(g.state().phase, 'PLAN');
-  // a depth edit up, a move and a remove are never refused for budget
+  // a depth edit up, a move and a remove are never refused for the limit
   assert.equal(g.setRigHoleDepth(30, 100).depth, 100, 'setDepth is not clamped to the room');
   assert.equal(g.moveRigHole(30, 31).status, 'ok');
   assert.deepEqual(rigErrors(planRig(W)), []);
-  // bring it under: remove the extras, push 60 one cell over, then back to the budget
+  // bring it under: remove the extras, push the total one cell over with a 1-cell hole, then back to the limit
   g.removeRigHole(31); g.removeRigHole(40);
   assert.equal(g.view().plan.spent, B);
-  assert.equal(g.setRigHoleDepth(20, B - 99).status, 'ok');
+  assert.equal(add(W, 180, 1).status, 'ok');
   assert.equal(g.view().plan.over, true);
   assert.equal(g.start().status, 'rig_over');
-  assert.equal(g.setRigHoleDepth(20, B - 100).status, 'ok');
+  assert.equal(g.removeRigHole(180).status, 'ok');
   assert.equal(g.view().plan.over, false);
   assert.equal(g.view().flags.canStart, true);
   assert.equal(g.start().status, 'ok');
-  // budget 0 (no clicks): the first hole is accepted and is over at once
+  // no left clicks: the limit is still the cap, the first hole is not over
   const W0 = await planWorld({ clicks: false });
-  assert.equal(W0.g.view().plan.budget, 0);
+  assert.equal(W0.g.view().plan.budget, 400);
   assert.equal(add(W0, 20, 5).status, 'ok');
-  assert.equal(W0.g.view().plan.over, true);
-  assert.equal(W0.g.view().plan.overCells, 5);
+  assert.equal(W0.g.view().plan.over, false);
+  assert.equal(W0.g.view().plan.overCells, 0);
   // known-bad 1: the v3.7.6 refusal returns
   const Wm = await planWorld({ muts: ['budget_refuses_placement'] });
-  add(Wm, 100, 100); add(Wm, 20, B - 100);
+  add(Wm, 100, 100); add(Wm, 20, 100); add(Wm, 60, 100); add(Wm, 150, 100);
   assert.equal(add(Wm, 30, 50).status, 'rig_budget', 'budget_refuses_placement refused nothing');
   // known-bad 2: no Start gate
   const Ws = await planWorld({ muts: ['start_allows_over'] });
-  add(Ws, 100, 100); add(Ws, 20, 100); add(Ws, 60, 100); add(Ws, 30, 50);   // 350 > the budget
+  add(Ws, 100, 100); add(Ws, 20, 100); add(Ws, 60, 100); add(Ws, 150, 100); add(Ws, 30, 50);   // 450 > the limit
   assert.equal(Ws.g.view().plan.over, true);
   let res;
   try { res = Ws.g.start().status; } catch { res = 'threw'; }     // no gate: the Round guard (G63) is the only thing left and it throws
   assert.notEqual(res, 'rig_over', 'start_allows_over still refused');
 });
 
-test('R-GATE-EXACT the boundary: total == budget starts, total == budget + 1 is refused (kills < for <=); over_bound_lt is caught', async () => {
+test('R-GATE-EXACT the boundary: total == limit starts, total == limit + 1 is refused (kills < for <=); over_bound_lt is caught', async () => {
   const W = await planWorld();
   const B = budgetOf(W);
-  add(W, 100, 100); add(W, 20, B - 100);
+  for (const c of [100, 20, 60, 150]) add(W, c, 100);
   assert.equal(W.g.view().plan.spent, B);
   assert.equal(W.g.view().plan.over, false);
-  assert.equal(W.g.start().status, 'ok', 'spent == budget');
+  assert.equal(W.g.start().status, 'ok', 'spent == limit');
   const W1 = await planWorld();
-  add(W1, 100, 100); add(W1, 20, B - 99);
+  for (const c of [100, 20, 60, 150]) add(W1, c, 100);
+  add(W1, 180, 1);
   assert.equal(W1.g.view().plan.spent, B + 1);
   assert.equal(W1.g.view().plan.over, true);
-  assert.equal(W1.g.view().plan.overCells, B + 1 - W1.G.S_GV4.length_cells);
-  assert.equal(W1.g.start().status, 'rig_over', 'spent == budget + 1');
-  // the strict-versus-inclusive bound needs an integer budget: the first two S_GV4 clicks give exactly 30
-  const prefix = async (muts) => { const Wq = await planWorld({ muts, clicks: false }); for (const [p, D] of Wq.world.clicks.slice(0, 2)) { Wq.g.selectPortal(p); Wq.g.setDBranch(D); Wq.g.nextGen(); } return Wq; };
-  const Wz = await prefix([]);
-  add(Wz, 100, 20); add(Wz, 20, 10);
-  assert.equal(Wz.g.view().plan.budget, 30);
-  assert.equal(Wz.g.view().plan.over, false, 'integer budget, spent == budget');
-  const Wm = await prefix(['over_bound_lt']);
-  add(Wm, 100, 20); add(Wm, 20, 10);
-  assert.equal(Wm.g.view().plan.over, true, 'over_bound_lt calls spent == budget over: the real-core assertion above (over false at the boundary) fails on it');
+  assert.equal(W1.g.view().plan.overCells, 1);
+  assert.equal(W1.g.start().status, 'rig_over', 'spent == limit + 1');
+  // the strict-versus-inclusive bound: over_bound_lt calls spent == limit over
+  const Wm = await planWorld({ muts: ['over_bound_lt'] });
+  for (const c of [100, 20, 60, 150]) add(Wm, c, 100);
+  assert.equal(Wm.g.view().plan.over, true, 'over_bound_lt calls spent == limit over: the real-core assertion above (over false at the boundary) fails on it');
 });
 
-test('R-OVERCELLS holes[i].overCells = max(0, min(depth, cumulative - budget)) in placement order and sums to overCells; the status line state is data-driven by over', async () => {
+test('R-OVERCELLS holes[i].overCells = max(0, min(depth, cumulative - limit)) in placement order and sums to overCells; the status line state is data-driven by over', async () => {
   const W = await planWorld();
-  const B = W.G.S_GV4.length_cells;   // overCells is measured from the exact budget
-  add(W, 20, 100); add(W, 60, 100); add(W, 120, 100); add(W, 150, 30);
+  const B = 400;
+  add(W, 20, 100); add(W, 60, 100); add(W, 120, 100); add(W, 150, 80); add(W, 180, 60);
   const v = W.g.view().plan;
   const want = refOver(planRig(W), B);
   assert.deepEqual(v.holes.map((h) => h.overCells), want);
   assert.equal(want.reduce((a, b) => a + b, 0), v.overCells);
-  assert.ok(want.some((c) => c > 0 && c < 100), 'one hole is cut by the budget line');
+  assert.ok(want.some((c) => c > 0 && c < 100), 'one hole is cut by the limit line');
   assert.equal(v.overCells, v.spent - B);
-  // under budget: all zero
+  // under the limit: all zero
   const W2 = await planWorld();
   add(W2, 20, 10);
   assert.deepEqual(W2.g.view().plan.holes.map((h) => h.overCells), [0]);
@@ -210,7 +208,7 @@ test('R-DEPTH depth 1 to 100 cells: setDepth clamps at both ends only; default d
   assert.deepEqual(g.setRigHoleDepth(100, 0), { status: 'ok', depth: 1, clamped: true });
   assert.equal(g.setRigHoleDepth(100, 33.6).depth, 34);
   assert.equal(g.setRigHoleDepth(99, 5).status, 'no_hole');
-  // budget 0: the default depth is the column default, not 1
+  // no left clicks: the default depth is the column default, not 1
   const W0 = await planWorld({ clicks: false });
   assert.equal(add(W0, 100).depth, W0.C.colExtent(Int32Array.from(W0.world.S)).get(100)[1]);
   const Wm = await planWorld({ muts: ['rig_depth_uncapped'] });
@@ -243,33 +241,31 @@ test('R-EDIT move keeps order and depth; a held column refuses; remove closes th
   assert.deepEqual(g.view().holes.map((h) => [h.col, h.depth]), W.G.S_GV4.holes.flat().map((h) => [h[0], h[1]]));
 });
 
-test('R-LEFT-SHRINK the budget falls under the plan (Undo click): the list is byte-equal at every step, over follows spent > budget, no clipping notice; clip_returns is caught', async () => {
+test('R-LEFT-EDIT left edits (Undo click, Back to paint with an erase) leave the rig list and the rig limit alone: the list is byte-equal at every step, the limit stays 400 cells, over follows spent > 400, no clipping notice; clip_returns is caught', async () => {
   const W = await planWorld();
   const g = W.g;
   const B = budgetOf(W);
-  add(W, 20, 100); add(W, 60, B - 100);
-  assert.equal(g.view().plan.spent, B);
+  const big = [[20, 100], [60, 100], [100, 100], [140, 100], [170, 50]];      // 450 cells: over
+  for (const [c, d] of big) add(W, c, d);
+  assert.equal(g.view().plan.spent, 450);
   const orig = JSON.stringify(planRig(W));
   let steps = 0;
-  let sawOver = false;
   while (g.state().plan.clicks.length > 0) {
     g.undoClick();
     steps++;
     const budget = g.view().plan.budget;
+    assert.equal(budget, B, 'the rig limit followed the left length after undo ' + steps);
     assert.equal(JSON.stringify(planRig(W)), orig, 'after undo ' + steps);
     assert.equal(g.view().plan.over, overBudget(planRig(W), budget), 'over after undo ' + steps);
     assert.doesNotMatch(g.view().ui.message, /shortened|clip/);
-    if (budget < B) sawOver = true;
   }
-  assert.ok(sawOver, 'no undo lowered the budget');
-  assert.equal(g.view().plan.budget, 0);
-  assert.equal(JSON.stringify(planRig(W)), orig, 'budget 0 keeps every hole');
+  assert.ok(steps > 0);
   assert.equal(g.view().plan.over, true);
-  assert.equal(add(W, 150, 5).status, 'ok');
+  assert.equal(add(W, 190, 5).status, 'ok');
   assert.equal(g.view().ui.message, '');
-  // Back to paint keeps the list; erase so a click drops; Done: list unchanged, over true, Start refused
+  // Back to paint keeps the list; erase so a click drops; Done: list unchanged, limit unchanged, Start follows the clicks left
   const W2 = await planWorld();
-  add(W2, 20, 100); add(W2, 60, W2.g.view().plan.budget - 100);
+  for (const [c, d] of [[20, 100], [60, 100], [100, 100], [140, 100]]) add(W2, c, d);
   const before = JSON.stringify(planRig(W2));
   assert.equal(W2.g.backToPaint().status, 'ok');
   const S = Array.from(W2.g.state().paint.S);
@@ -277,28 +273,26 @@ test('R-LEFT-SHRINK the budget falls under the plan (Undo click): the list is by
   W2.g.loadPainting(cut);
   assert.equal(W2.g.done().status, 'ok');
   assert.equal(JSON.stringify(planRig(W2)), before, 'Back to paint and Done changed the rig list');
-  const b2 = W2.g.view().plan.budget;
-  assert.equal(W2.g.view().plan.over, overBudget(planRig(W2), b2));
-  assert.ok(b2 < B, 'the erase did not lower the budget (test setup): ' + b2);
-  assert.equal(W2.g.view().plan.over, true);
-  assert.equal(W2.g.start().status, W2.g.state().plan.clicks.length ? 'rig_over' : 'blocked');
+  assert.equal(W2.g.view().plan.budget, B);
+  assert.equal(W2.g.view().plan.over, false);
+  assert.equal(W2.g.start().status, W2.g.state().plan.clicks.length ? 'ok' : 'blocked');
   // known-bad: clipping returns
   const Wm = await planWorld({ muts: ['clip_returns'] });
-  add(Wm, 20, 100); add(Wm, 60, B - 100);
+  for (const [c, d] of big) add(Wm, c, d);
   while (Wm.g.state().plan.clicks.length > 2) Wm.g.undoClick();
   assert.notEqual(JSON.stringify(planRig(Wm)), orig, 'clip_returns left the list alone');
 });
 
-test('R-ROUND a Round built on a hand plan above the budget throws; at the budget it builds; round_accepts_over is caught', async () => {
+test('R-ROUND a Round built on a hand plan above the rig limit throws; at the limit it builds; round_accepts_over is caught', async () => {
   const W = await planWorld();
   const C = W.C;
   const w = W.world;
-  const B = W.G.S_GV4.budget;   // the Round keeps the half-up integer budget
   const mk = (Cx, rig) => new Cx.Round(Cx.publicLevel(w.level), Int32Array.from(w.F), Int32Array.from(w.S), [...w.portals], w.clicks.map((c) => [...c]), w.level.seed, rig);
-  assert.doesNotThrow(() => mk(C, [[[20, 100], [60, B - 100]]]));
-  assert.throws(() => mk(C, [[[20, 100], [60, B - 99]]]), /budget/i);
+  const at = [[20, 100], [60, 100], [100, 100], [140, 100]];       // 400 cells: the cap
+  assert.doesNotThrow(() => mk(C, [at]));
+  assert.throws(() => mk(C, [[...at, [170, 1]]]), /budget/i);
   const Cm = await getCore('round_accepts_over', { startMode: 'surface' });
-  assert.doesNotThrow(() => mk(Cm, [[[20, 100], [60, B - 99]]]), 'round_accepts_over must build (it is the known-bad)');
+  assert.doesNotThrow(() => mk(Cm, [[...at, [170, 1]]]), 'round_accepts_over must build (it is the known-bad)');
 });
 
 test('R-PHASE rig intents are refused outside PLAN and change nothing', async () => {

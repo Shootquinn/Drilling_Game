@@ -276,7 +276,8 @@ test('N1-CONTRAST dark mode: every visible DOM text clears WCAG AA against its p
 });
 
 // ---- light mode unchanged ----
-const BASE = process.env.S45_LIGHT_BASE ?? path.resolve(GAME45, '..', '..', 'review', 'play_g1e.html');
+// Opt-in: the row compares against a named earlier build (the g1e build for the N1 check). Later builds change light-mode pixels on purpose (g1f rig line), so there is no default path.
+const BASE = process.env.S45_LIGHT_BASE ?? '';
 async function lightFrames(file, mask) {
   const world = gvWorld(getGoldens(), 'GV4');
   const out = {};
@@ -305,7 +306,7 @@ function diffCount(a, b, mask) {
 }
 
 test('N1-LIGHT light mode is pixel-identical to g1e outside the toggle button (zero control: g1e vs g1e; known-bad: light vs dark)', async (t) => {
-  if (!fs.existsSync(BASE)) { t.skip(`no g1e build at ${BASE} (set S45_LIGHT_BASE)`); return; }
+  if (!BASE || !fs.existsSync(BASE)) { t.skip('set S45_LIGHT_BASE to an earlier build to compare light-mode pixels'); return; }
   assert.ok(fs.existsSync(PLAY));
   const base = await lightFrames(BASE, false);
   const base2 = await lightFrames(BASE, false);

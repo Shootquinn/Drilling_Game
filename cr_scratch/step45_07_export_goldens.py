@@ -610,7 +610,7 @@ if START == SU:
 
 with open(os.path.join(HERE, "step45_reference_sim_v3.py"), "rb") as f: sh = hashlib.sha256(f.read()).hexdigest()
 with open(__file__, "rb") as f: exh = hashlib.sha256(f.read()).hexdigest()
-G['_meta'] = dict(sim_file="step45_reference_sim_v3.py", sim_sha256=sh, exporter_sha256=exh, spec_version="3.8.0", mutated=MUT, cell_m=sim.CELL_M, r0_cells=sim.R0_FULL,
+G['_meta'] = dict(sim_file="step45_reference_sim_v3.py", sim_sha256=sh, exporter_sha256=exh, spec_version="3.8.2", mutated=MUT, cell_m=sim.CELL_M, r0_cells=sim.R0_FULL,
                   export_flag=True, counts={k: len(G[k]) for k in ('E3', 'E3b', 'E8', 'E9', 'E10', 'E11')})
 if START == SU: G['_meta']['start_mode'] = SU
 with open(OUT, "w") as f: json.dump(G, f, separators=(',', ':'))

@@ -1,5 +1,5 @@
 // Balrog planner (spec 4d): equal-length budget, split by component, reserve, and the hole plan.
-import { EMPTY, RESERVE_FRAC, REAIM_FRAC, HOLE_SPACING_R, MODE_SURFACE } from './consts.js';
+import { EMPTY, RESERVE_FRAC, REAIM_FRAC, HOLE_SPACING_R, MODE_SURFACE, MAX_RIG_HOLES } from './consts.js';
 import { rhu, roundHalfEven } from './arith.js';
 
 // budget = half-up(left length); b_k = half-up(l_k); the last component takes the remainder
@@ -18,9 +18,17 @@ export function budgets(net, mut = EMPTY) {
   return { budget, b, reserve, reaimCap: mut.has('reaim_cap_inf') ? 1e9 : Math.floor(REAIM_FRAC * reserve) };
 }
 
+// The surface rig pool (v3.8.2, spec 4d): the level cap in whole cells, never above the cap (B7). The rig no longer draws on the left length.
+// Mutants: rig_pool_half_up (half-up of the cap: a half-cell cap overdrills).
+export function rigPoolCells(capCells, mut = EMPTY) {
+  return mut.has('rig_pool_half_up') ? rhu(capCells) : Math.floor(Number(capCells.toFixed(6)));
+}
+
 // Pass 0 at every portal column; spacing 10, then halving 5, 2, 1; the last hole takes the remainder.
+// pool / maxHoles (v3.8.2, surface mode): one pool shared by every component and at most maxHoles holes; the plan closes at the first hole that
+// exhausts the pool or meets the limit (b is then unused). pool null = the per-component budgets b (legacy trunk mode).
 // snap (surface mode): pass 0 puts the hole at the S column of the served component nearest the portal (ties lower); two portals that resolve to one column place one hole.
-export function rigPlan(Cs, portalsByComp, b, { holeSpacing = HOLE_SPACING_R, floor = 1, snap = false } = {}, mut = EMPTY) {
+export function rigPlan(Cs, portalsByComp, b, { holeSpacing = HOLE_SPACING_R, floor = 1, snap = false, pool = null, maxHoles = null } = {}, mut = EMPTY) {
   const n = Cs.length;
   const holes = Array.from({ length: n }, () => []);
   const spent = new Array(n).fill(0);
@@ -38,10 +46,18 @@ export function rigPlan(Cs, portalsByComp, b, { holeSpacing = HOLE_SPACING_R, fl
     cols.sort((a, c) => (dist(a) - dist(c)) || (a - c));
     info.push({ deep, cols, ps });
   }
+  const shared = pool !== null;
+  const closeAll = () => closed.fill(true);
   const tryAdd = (i, col) => {
-    const need = info[i].deep.get(col) ?? 0, rem = b[i] - spent[i];
+    const need = info[i].deep.get(col) ?? 0;
+    let rem;
+    if (shared) {
+      if (maxHoles !== null && holes.reduce((a, h) => a + h.length, 0) >= maxHoles) { closeAll(); return false; }
+      rem = pool - spent.reduce((a, v) => a + v, 0);
+    } else rem = b[i] - spent[i];
     if (need <= rem) { holes[i].push([col, need]); spent[i] += need; return true; }
     if (rem > 0) { holes[i].push([col, rem]); spent[i] += rem; }
+    if (shared) closeAll();
     closed[i] = true;
     return false;
   };
@@ -75,5 +91,7 @@ export function rigPlan(Cs, portalsByComp, b, { holeSpacing = HOLE_SPACING_R, fl
 // Balrog plan. rig null = the auto plan (rigPlan); a list of per-component hole lists (col, depth) is a hand plan used verbatim (the 45.10b seam, spec 4e).
 export function planRig(net, b, rig = null, mut = EMPTY) {
   if (rig !== null) return { holes: rig.map((hs) => hs.map((h) => [...h])), spent: rig.map((hs) => hs.reduce((a, h) => a + h[1], 0)) };
+  // surface mode (v3.8.2): one pool = the level cap, at most MAX_RIG_HOLES holes, independent of the left length; mutant rig_pool_left = the v3.8.1 budgets
+  if (net.mode === MODE_SURFACE && !mut.has('rig_pool_left')) return rigPlan(net.Cs, net.pbc(), b, { snap: true, pool: rigPoolCells(net.cap, mut), maxHoles: mut.has('rig_max_off') ? null : MAX_RIG_HOLES }, mut);
   return rigPlan(net.Cs, net.pbc(), b, { snap: net.mode === MODE_SURFACE }, mut);
 }

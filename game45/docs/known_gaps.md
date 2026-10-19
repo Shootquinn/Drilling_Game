@@ -1,6 +1,6 @@
 # Step 45 playable (G1e build): what is in it and what is not
 
-Open `play_g1f.html` (or `game45/dist/play.html`) in Chrome (double-click works). It runs from the file, with no network. Spec v3.8.1. Smallest supported window: 960 x 540; below it the page asks for a larger one.
+Open `play_g1g.html` (or `game45/dist/play.html`) in Chrome (double-click works). It runs from the file, with no network. Spec v3.8.2. Smallest supported window: 960 x 540; below it the page asks for a larger one.
 
 ## What you can play
 
@@ -16,7 +16,7 @@ The ground is a 1,000 m by 500 m section, drawn twice: the left panel is the bor
    - The meter shows metres used of the 2,000 m cap and "unspent N m of 2,000 m". When the next generation would pass the cap the note under the meter reads "Next generation would exceed the 2,000 m limit" and Start stays available.
 5. Plan, right panel (rig).
    - Click the right panel to place a rig hole (12 at most, one per column, drilled in the order placed). Drag a hole to move it, drag its square handle or use the wheel or + and - to set its depth (1 to 100 cells), Delete removes the selected hole. With no holes placed, Balrog plans the rig.
-   - Placement is never refused for length. The rig may total more than the borebot length while you edit. The cells past the borebot length draw in red, the status line and the note under the meter read "Max Length Exceeded", and Start is blocked until the rig total is at or under the borebot length. The rig budget is the left drilled length exactly (the meter's number, one decimal); a rig of 394 cells fits a left length of 394.5.
+   - Placement is never refused for length. The rig has its own 2,000 m, apart from the borebots (spec v3.8.2): both sides can each drill 2,000 m. A rig total above 2,000 m draws its past-the-limit cells in red, the status line reads "Rig: Max Length Exceeded", and Start is blocked until the rig total is at or under 2,000 m. The line "unspent N m of 2,000 m" is 2,000 m minus the rig total. With no holes placed, Balrog plans up to 12 holes within 2,000 m. A new hole is as deep as the formation in its column plus one cell (a body that reaches the grid floor gives 100 cells), else 10 cells.
 6. Start. The run begins at 4x; the controls are Pause, 1x, 2x, 4x, 8x, 16x and Skip to end. A run at 16x lasts at least 6.5 seconds. Pause holds at every speed.
 7. The formation fades in with what you hit (solid), what radar imaged (lighter) and what you missed (unmarked), then the readout shows percent intersected, imaged and total for each side, the metres drilled and "unspent N m of 2,000 m" (cap minus drilled, the same wording as the plan and the run).
 

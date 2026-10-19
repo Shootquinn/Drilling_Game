@@ -37,11 +37,11 @@ test('C3-GREP no "drill string" or "drill cap reached" wording in core/, ui/ or 
   for (const k of ['rig_clipped', 'rig_clamped', 'refuse_rig_budget', 'refuse_rig_nobudget']) assert.equal(Object.prototype.hasOwnProperty.call(strings, k), false, `${k} still in strings`);
 });
 
-test('C3-HELP plan_help_left names x, Remove portal, Delete and right-click; plan_help_right says depth beyond the borebot length shows in red and blocks Start; btn_remove_portal and refuse_no_portal exist', () => {
+test('C3-HELP plan_help_left names x, Remove portal, Delete and right-click; plan_help_right says depth beyond the drill limit shows in red and blocks Start; btn_remove_portal and refuse_no_portal exist', () => {
   const h = strings.plan_help_left;
   for (const w of [/\bx\b/, /Remove portal/, /Delete/, /right-click/i]) assert.match(h, w, `plan_help_left lacks ${w}`);
-  assert.match(strings.plan_help_right, /Total depth beyond the borebot length shows in red and blocks Start/);
-  assert.doesNotMatch(strings.plan_help_right, /capped by the borebot length/);
+  assert.match(strings.plan_help_right, /Total depth beyond the drill limit shows in red and blocks Start/);
+  assert.doesNotMatch(strings.plan_help_right, /borebot length/);
   assert.equal(strings.btn_remove_portal, 'Remove portal');
   assert.equal(strings.refuse_no_portal, 'select a portal first');
   assert.equal(strings.clicks_dropped, 'clicks dropped');

@@ -27,19 +27,20 @@ export function prepareLevel(id, variant = 0, { levels = LEVELS_V39, mut } = {})
   return { level: publicLevel({ ...L, F: g.F, F0: g.F0 }), F: g.F, variant: g.variant, seed: g.seed };
 }
 
-// Budget line (A5). budget: half-up left length (balrog.budgets().budget). Left spent = drilled part of the layout at the snapshot tick;
-// right spent = depth of holes placed. unspent = budget - spent on each side, so spent + unspent closes at the budget. rigUnplaced = the part
-// of the budget no hole carries (planned holes sum below the budget when the formation is shallower than the budget).
-export function budgetLine(snapshot, budget, mut = new Set()) {
+// Budget line (A5). budget: half-up left length (balrog.budgets().budget), the left side's figure. rigBudget (v3.8.2, default budget): the right side's own
+// limit, the level cap in whole cells in surface mode. Left spent = drilled part of the layout at the snapshot tick; right spent = depth of holes placed.
+// unspent = limit - spent on each side, so spent + unspent closes at that side's limit. rigUnplaced = the part of the rig limit no hole carries.
+export function budgetLine(snapshot, budget, mut = new Set(), rigBudget = budget) {
   let drilled = 0;
   for (const q of snapshot.layout) drilled += mut.has('planned_as_spent') ? q[2] : q[2] * q[6];
   let placed = 0;
   for (const hs of snapshot.holes) for (const h of hs) placed += h[1];
-  const spentL = Math.min(budget, rhu(drilled)), spentR = Math.min(budget, placed);
+  const spentL = Math.min(budget, rhu(drilled)), spentR = Math.min(rigBudget, placed);
   return {
     budget,
+    rigBudget,
     left: { spent: spentL, unspent: budget - spentL },
-    right: { spent: spentR, unspent: budget - spentR },
-    rigUnplaced: budget - spentR,
+    right: { spent: spentR, unspent: rigBudget - spentR },
+    rigUnplaced: rigBudget - spentR,
   };
 }

@@ -7,7 +7,7 @@ import { comps } from './grid.js';
 import { Painter, donePainting } from './paint.js';
 import { defaultPortal, defaultPortalSurface, startOk } from './portals.js';
 import { newPlan, planClick, planUndo, planAdd, planMove, planRemove, planRepaint, grow, planRigView, rigAddHole, rigMoveHole, rigRemoveHole, rigSetDepth, rigClipMutant, rigSpent, rigOver, rigOverCells, colExtent, probePortal } from './plan.js';
-import { budgets } from './balrog.js';
+import { rigPoolCells } from './balrog.js';
 import { startCampaign, advance as campaignAdvance, prepareLevel, budgetLine, LEVEL_IDS } from './campaign.js';
 import { planCap, publicLevel } from './levels.js';
 import { previewPlan } from './preview.js';
@@ -141,7 +141,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   }
 
   // per-side status numbers and rig position for the RUN screen (metres). One definition of unspent everywhere (v3.8.1): cap minus drilled, per side.
-  // budgetM is the rig budget: the planned left drilled length, exactly (no rounding).
+  // Both sides drill up to the level cap, independent of each other (v3.8.2): the RUN lines read drilled and unspent only.
   const capM = () => level.drill_cap_m;
   function runInfoOf(rv) {
     const sn = round.snapshot();
@@ -154,10 +154,9 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
       dr += h.depth * h.drilledFrac;
       if (rigIdx === rv.holes.length - 1 && h.drilledFrac < 1) rigIdx = i;
     }
-    const budgetM = plan ? plan.net.length() * CELL_M : round.budget * CELL_M;
     return {
-      left: { drilledM: dl * CELL_M, budgetM, unspentM: capM() - dl * CELL_M, reserveM: sn.resL * CELL_M, movesLeft: REAIM_LIMIT - sn.nre },
-      right: { drilledM: dr * CELL_M, budgetM, unspentM: capM() - dr * CELL_M, reserveM: sn.resR * CELL_M, movesLeft: ADD_LIMIT - sn.nadd },
+      left: { drilledM: dl * CELL_M, unspentM: capM() - dl * CELL_M, reserveM: sn.resL * CELL_M, movesLeft: REAIM_LIMIT - sn.nre },
+      right: { drilledM: dr * CELL_M, unspentM: capM() - dr * CELL_M, reserveM: sn.resR * CELL_M, movesLeft: ADD_LIMIT - sn.nadd },
       rigCol: rigIdx >= 0 ? rv.holes[rigIdx].col : null,
       rigIdx,
     };
@@ -172,9 +171,9 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     if (M.has('s_inplace') && inplace && painter) inplace.splice(0, inplace.length, ...Array.from(painter.cells()));
   }
 
-  // rig budget in cells: the planned left drilled length exactly (v3.8.1; no half-up). The auto Balrog plan and the Round keep their half-up integer
-  // budget; a hand plan whose integer total is at most this length is at most that budget too.
-  const rigBudget = () => (plan ? (M.has('budget_rounded') ? budgets(plan.net, M).budget : plan.net.length()) : 0);
+  // rig limit in cells (v3.8.2): surface mode = the level cap in whole cells (400 = 2,000 m), independent of the left length; the auto Balrog plan, the Round and a
+  // hand plan share it. Legacy trunk mode keeps the planned left length. Mutant rig_pool_left: the v3.8.1 left-length budget.
+  const rigBudget = () => (!plan ? 0 : surface && !M.has('rig_pool_left') ? rigPoolCells(plan.net.cap, M) : plan.net.length());
 
   // the rig total exceeds the budget (v3.7.7): Start is refused, no edit is
   const rigIsOver = () => !!plan && plan.rigHoles.length > 0 && rigOver(plan.rigHoles, rigBudget(), M);
@@ -598,7 +597,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   function start() {
     if (!guard('PLAN') || !plan) return illegal();
     if (!startOk(plan.net.Cs, plan.S, plan.portals, plan.clicks.length, M, mode)) return refuse('blocked', surface ? strings.start_blocked_surface : strings.start_blocked);
-    if (!startOk(plan.net.Cs, plan.S, plan.portals, plan.clicks.length, M, mode, rigIsOver())) return refuse('rig_over', strings.lbl_cap_full);
+    if (!startOk(plan.net.Cs, plan.S, plan.portals, plan.clicks.length, M, mode, rigIsOver())) return refuse('rig_over', strings.lbl_rig_cap_full);
     const hand = plan.rigHoles.length ? [plan.rigHoles.map((h) => [h[0], h[1]])] : plan.rig;
     round = new Round(publicLevel(level), F, plan.S, [...plan.portals], plan.clicks.map((c) => [c[0], c[1]]), level.seed, M, mode, hand);
     sched = buildSchedule(round, M);
@@ -747,6 +746,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
       unspentM: hand ? (budget - spent) * CELL_M : 0,
       selected: rigSel,
       over,
+      overNote: over ? strings.lbl_rig_cap_full : '',
       overCells: overTotal,
       overM: overTotal * CELL_M,
       depthMin: RIG_DEPTH_MIN,
@@ -783,7 +783,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
           const gst = sel !== null && pv.ghost ? pv.ghost.status : null;
           b.growth = growthOf(gst);
           const totalOver = plan.net.length() * CELL_M > level.drill_cap_m + 1e-9;
-          b.capNote = totalOver || rigIsOver() ? strings.lbl_cap_full : gst === 'cap' ? (M.has('note_max_always') ? strings.lbl_cap_full : capText()) : '';
+          b.capNote = totalOver ? strings.lbl_cap_full : gst === 'cap' ? (M.has('note_max_always') ? strings.lbl_cap_full : capText()) : '';
           const lastClick = plan.clicks.length ? plan.clicks[plan.clicks.length - 1] : null;
           b.undoTarget = lastClick ? { portal: lastClick[0], gen: plan.net.gens[lastClick[0]] } : null;
         }
@@ -818,7 +818,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
         }
         if (phase !== 'RUN') b.F = Farr;
         if (surface) {
-          b.budgetLine = budgetLine(round.snapshot(), round.budget, M);
+          b.budgetLine = budgetLine(round.snapshot(), round.budget, M, round.rigBudget);
           b.meter = { used_m: plan.net.length() * CELL_M, cap_m: level.drill_cap_m };
           b.plan = plan ? rigViewOf() : planRigView(null);
         }

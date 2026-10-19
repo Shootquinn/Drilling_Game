@@ -55,7 +55,7 @@ const keyRow = (x, y, items) => { let g = '', cx = x; for (const [sw, lab] of it
 // ---------------- checks: drawn vs sim ----------------
 const CHECKS = [];
 function check(name, ok) { if (!ok) throw new Error('drawn number disagrees with the sim: ' + name); CHECKS.push(name); }
-const GOLD = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'game45', 'test', 'goldens_v41.json'), 'utf8'));
+const GOLD = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'game45', 'test', 'goldens_v42.json'), 'utf8'));
 check('clock text = sim clock_str on the exported samples', K.clock_samples.every(([t, s]) => clockTxt(t) === s));
 check('sim mode surface, TIME_COMP 2.5, R 3.4', K.START_MODE === 'surface' && K.TIME_COMP === 2.5 && K.RIG_SPEED_RATIO === 3.4);
 
@@ -486,7 +486,7 @@ check('final left score', pL.cf === w.L1.score[0] && pL.ci === w.L1.score[1]);
 check('final right score', pR.cf === w.R1.score[0] && pR.ci === w.R1.score[1]);
 for (const [k, st] of Object.entries(PL_)) {
   check(`plan ${k} meter = sum of drawn segments`, Math.abs(sumLen(st.segs) - st.length) < 1e-9);
-  check(`plan ${k} Balrog plan placed <= budget`, st.spent.reduce((a, v) => a + v, 0) <= st.budget);
+  check(`plan ${k} Balrog plan placed <= cap and <= 12 holes (v3.8.2)`, st.spent.reduce((a, v) => a + v, 0) <= CAP && w.planHoles(st).length <= 12);
   if (st.ghost) check(`plan ${k} ghost meters`, Math.abs(sumLen(st.ghost) - st.ghost_len) < 1e-9);
   if (st.red) check(`plan ${k} red ghost exceeds the cap`, st.length + sumLen(st.red) > CAP + 1e-9 && Math.abs(CAP - st.length - st.room) < 1e-9);
 }
@@ -495,7 +495,7 @@ check('locked plan drawn = segs0', Math.abs(sumLen(segs0) - PL_.p10.length) < 1e
 const spentL = drilledL(finL.sl, finL.fr), spentR = drilledR(finR.drilled);
 const baseLenL = sumLen(segs0), placedR = holes0.reduce((a, h) => a + h.depth, 0);
 check('left meters close', Math.abs(spentL + (budget - baseLenL) + (reserve - ra.cost) - (budget + reserve)) < 1e-6);
-check('right meters close', Math.abs(spentR + (budget - placedR) + (reserve - ADD_DEPTH) - (budget + reserve)) < 1e-6);
+check('right meters close', Math.abs(spentR + (CAP - placedR) + (reserve - ADD_DEPTH) - (CAP + reserve)) < 1e-6);
 check('re-aim under the cap', ra.cost <= w.reaim_cap + 1e-9);
 
 function campaignL(t, extra = {}) { const s = Ls(t); return { tier: s.tier, segs: s.sl, fr: s.fr, S: w.S, sroiOp: 0.2, ...extra }; }
@@ -573,7 +573,7 @@ function planDraw(st, o = {}) {
 }
 const planL = (st, extra = {}) => ({ S: w.S, sroiOp: 0.26, segs: st.segs, plan: true, ...extra });
 const planR = (st, extra = {}) => ({ S: w.S, sroiOp: 0.26, planHoles: w.planHoles(st), ...extra });
-const planStatusR = st => `Balrog re-plans live: ${w.planHoles(st).length} holes, ${M(st.spent.reduce((a, v) => a + v, 0))} of budget ${M(st.budget)}`;
+const planStatusR = st => `Balrog re-plans live: ${w.planHoles(st).length} holes, ${M(st.spent.reduce((a, v) => a + v, 0))} of the ${M(CAP)} limit`;
 const genTxt = st => st.portals.map(p => `gen ${st.gens[String(p)]}`).join(', ');
 // bounding window of a set of segments, for the close-ups
 function windowOf(segs, nc, nr, padTop = 1) {
@@ -723,7 +723,7 @@ add('09', splitPanel({
     line(XL, BOT + 80, `Portal at the centre of the painted columns; the S-top label gives cover depth.`, 14) +
     keyRow(XL, BOT + 112, [[`<rect x="0" y="2" width="22" height="6" fill="${C.sroi}"/>`, 'shadow band (a hint over painted columns; refuses nothing)'], [`<g transform="translate(11,16)">${headframe(0, 0)}</g>`, 'portal']]) + placeholderSlot(XL, BOT + 130, PW - 10, 94),
   botR: line(XR + 10, BOT + 58, `Message pattern: "Removed n small speck(s)."  Here n = ${nSpeck}.`, 15, { fill: C.ink }) +
-    line(XR + 10, BOT + 78, `Click the right panel to place a rig hole at any time; the budget is the network length`, 14) + line(XR + 10, BOT + 96, `and only blocks Start. None placed: Balrog plans the rig, ghosted.`, 14) +
+    line(XR + 10, BOT + 78, `Click the right panel to place a rig hole at any time; the rig limit is ${M(CAP)}, apart from the network`, 14) + line(XR + 10, BOT + 96, `and only blocks Start. None placed: Balrog plans the rig, ghosted.`, 14) +
     keyRow(XR + 10, BOT + 126, [[`<g transform="translate(11,18)">${firstHoleMark(0, 0)}</g>`, 'rig hole'], ...keyHoles.slice(1)]) + placeholderSlot(XR + 10, BOT + 142, PW - 10, 82),
 }));
 
@@ -824,7 +824,7 @@ add('09c', splitPanel({
     return clickStrip(XL, BOT + 26) + cu.svg + `<g transform="translate(${XL + 448 + 14},0)">` + keyRow(0, BOT + 160, [[`<line x1="0" y1="8" x2="22" y2="8" stroke="${C.Lghost}" stroke-width="5"/>`, 'just landed']]) + keyRow(0, BOT + 184, [[`<g><line x1="0" y1="8" x2="22" y2="8" stroke="#555" stroke-width="2.2" stroke-dasharray="2,2.5"/></g>`, 'dropped (X)']]) +
       line(0, BOT + 210, 'R4 ray misses S, or tip too', 12) + line(0, BOT + 225, 'close to a kept end: not grown.', 12) + '</g>';
   })(),
-  botR: line(XR + 10, BOT + 58, `${M(st9c.length)} of network becomes ${M(st9c.budget)} of holes`, 14, { fill: C.ink }) + line(XR + 10, BOT + 80, `(half up to whole ${M(1)} cells).`, 14) + placeholderSlot(XR + 10, BOT + 98, PW - 10, 126),
+  botR: line(XR + 10, BOT + 58, `${M(st9c.length)} of network; the rig has its own ${M(CAP)}`, 14, { fill: C.ink }) + line(XR + 10, BOT + 80, `(Balrog places 12 holes at most).`, 14) + placeholderSlot(XR + 10, BOT + 98, PW - 10, 126),
 }));
 
 // ===== 09d: Grow to 12 hits the drill cap =====
@@ -877,21 +877,21 @@ const nBand = holes0.filter(h => h.comp === 0).length, nLens = holes0.filter(h =
 check('panel 10 holes = plan', holes0.length === w.planHoles(st10).length);
 const bpc = mm => (100 * mm / (CELL_M * 1000)).toFixed(1);
 add('10', splitPanel({
-  n: '10', caption: `Start: the plan locks and plays at 1x; both sides get ${M(budget)}`, phase: PH.B + '  START', clock: clockTxt(0),
+  n: '10', caption: `Start: the plan locks and plays at 1x; both sides get ${M(CAP)}`, phase: PH.B + '  START', clock: clockTxt(0),
   L: { S: w.S, sroiOp: 0.26, segs: segs0, fr: segs0.map(() => 0) }, R: { S: w.S, sroiOp: 0.26, holes: holes0, drilled: holes0.map(() => 0) },
   spine: () => spineRun({ speed: '1x' }),
-  statusL: `${segs0.length} segments, no trunk  |  ${genTxt(st10)}  |  ${M(sumLen(segs0))}`, statusR: `${holes0.length} holes  |  ${M(w.b[0])} body A + ${M(w.b[1])} body B = ${M(budget)}`,
+  statusL: `${segs0.length} segments, no trunk  |  ${genTxt(st10)}  |  ${M(sumLen(segs0))}`, statusR: `${holes0.length} holes  |  ${M(st10.spent.reduce((a, v) => a + v, 0))} of ${M(CAP)}`,
   draw: ctx => {
     w.portals.forEach(p => ctx.b.push(headframe(ctx.PL.px(p + 0.5), SURF)));
     tagsFor(st10, null)(ctx);
     ctx.b.push(rig(ctx.PR.px(holes0[0].col + 0.5), SURF, 0.85, 0));
     holes0.forEach((h, i) => ctx.b.push(T(ctx.PR.px(h.col + 0.5), SURF + h.depth * CS + 16, String(i + 1), 13, { anchor: 'middle', weight: 700, fill: C.R })));
   },
-  botL: T(XL, BOT + 58, `The plan is ${st10.clicks.length} clicks. Equal length: ${budget} cells of ${M(1)} = ${M(budget)}.`, 14, { italic: true }) +
+  botL: T(XL, BOT + 58, `The plan is ${st10.clicks.length} clicks: ${M(sumLen(segs0))} of ${M(CAP)}.`, 14, { italic: true }) +
     T(XL, BOT + 80, `Reserve ${M(reserve)} for mid-run moves; one re-aim may cost at most ${M(w.reaim_cap)}.`, 14, { fill: C.sub }) + keyRow(XL, BOT + 110, keyPlanned) +
     T(XL, BOT + 138, `Bore: borebot ${fm(K.BORE_BOT_MM)} mm = ${bpc(K.BORE_BOT_MM)} percent of a cell.`, 13, { italic: true, fill: C.sub }) +
     T(XL, BOT + 156, `The ${fm(K.ANTFARM_MM)} mm of the ant-farm animation is not a game value.`, 13, { italic: true, fill: C.sub }) + placeholderSlot(XL, BOT + 170, PW - 10, 54),
-  botR: T(XR + 10, BOT + 58, `Budget split by the left network per body: ${nBand} holes on body A, ${nLens} on body B.`, 14, { italic: true }) +
+  botR: T(XR + 10, BOT + 58, `Rig limit ${M(CAP)}, 12 holes at most: ${nBand} holes on body A, ${nLens} on body B.`, 14, { italic: true }) +
     T(XR + 10, BOT + 80, 'Numbers = drill order. The last hole takes whatever length remains.', 14, { fill: C.sub }) + keyRow(XR + 10, BOT + 110, keyHoles) +
     T(XR + 10, BOT + 138, `Bore: rig ${fm(K.BORE_RIG_MM)} mm (Durin prototype) = ${bpc(K.BORE_RIG_MM)} percent of a cell.`, 13, { italic: true, fill: C.sub }) + T(XR + 10, BOT + 156, 'Both bores are drawn at one exaggerated width.', 13, { italic: true, fill: C.sub }) + placeholderSlot(XR + 10, BOT + 170, PW - 10, 54),
 }));
@@ -1064,8 +1064,8 @@ add('19', runPanel('19', 'Run ends when both sides have spent their length', run
   speed: 'pause', Lx: { noBots: true },
   botL: T(XL, BOT + 56, `Budget ${M(budget)} = network ${M(baseLenL)} + rounding ${M(budget - baseLenL)}`, 14) + T(XL, BOT + 76, `Reserve ${M(reserve)} = re-aim ${M(ra.cost)} + unspent ${M(reserve - ra.cost)}`, 14) +
     T(XL, BOT + 98, `Spent ${M(spentL)} + unspent ${M(budget - baseLenL + reserve - ra.cost)} = ${M(budget + reserve)}.  Finish ${hrs(w.L1.end)}.`, 14, { weight: 700 }) + placeholderSlot(XL, BOT + 116, PW - 10, 108),
-  botR: T(XR + 10, BOT + 56, `Budget ${M(budget)} = holes placed ${M(placedR)} + unplaced ${M(budget - placedR)}`, 14) + T(XR + 10, BOT + 76, `Reserve ${M(reserve)} = added hole ${M(ADD_DEPTH)} + unspent ${M(reserve - ADD_DEPTH)}`, 14) +
-    T(XR + 10, BOT + 98, `Spent ${M(spentR)} + unspent ${M(budget - placedR + reserve - ADD_DEPTH)} = ${M(budget + reserve)}.  Finish ${hrs(w.R1.end)}.`, 14, { weight: 700 }) + placeholderSlot(XR + 10, BOT + 116, PW - 10, 108),
+  botR: T(XR + 10, BOT + 56, `Limit ${M(CAP)} = holes placed ${M(placedR)} + unplaced ${M(CAP - placedR)}`, 14) + T(XR + 10, BOT + 76, `Reserve ${M(reserve)} = added hole ${M(ADD_DEPTH)} + unspent ${M(reserve - ADD_DEPTH)}`, 14) +
+    T(XR + 10, BOT + 98, `Spent ${M(spentR)} + unspent ${M(CAP - placedR + reserve - ADD_DEPTH)} = ${M(CAP + reserve)}.  Finish ${hrs(w.R1.end)}.`, 14, { weight: 700 }) + placeholderSlot(XR + 10, BOT + 116, PW - 10, 108),
 }));
 const slotAfter = x => keyRow(x, BOT + 62, [[`<rect width="22" height="16" fill="url(#pMiss)" stroke="${C.truth}" stroke-width="2.5"/>`, 'true outline; hatched = never sensed']]) + `<rect x="${x}" y="${BOT + 80}" width="${PW - 10}" height="144" rx="8" fill="none" stroke="#a49a86" stroke-width="1.5" stroke-dasharray="6,5"/>` + T(x + (PW - 10) / 2, BOT + 157, 'percent prospected appears after the reveal', 13, { anchor: 'middle', fill: '#857b68' });
 add('20', splitPanel({
@@ -1122,7 +1122,7 @@ add('21', splitPanel({
   ], 95, [0, 1.5, 6.5, 8.5, 47.5, planEnd]);
   marks.forEach(([n, t], i) => { b.push(`<path d="M${sx2(t)},${255 + 58} l-6,10 h12 z" fill="${C.ink}"/>`); b.push(T(sx2(t), 255 + 84 + (i % 2) * 14, n, 12, { anchor: 'middle', weight: 700 })); });
   b.push(T(x0 - 10, 255 + 84, 'panel', 12, { anchor: 'end', fill: C.sub }));
-  // RUN, elapsed hours at R 3.4 (TIME_COMP 2.5 real h per game s). Every end time is the sim's, equal to goldens_v41.
+  // RUN, elapsed hours at R 3.4 (TIME_COMP 2.5 real h per game s). Every end time is the sim's, equal to goldens_v42.
   const rows = [
     ['Level 1 worked round (S_GV1)', SB.l1.endL, SB.l1.endR],
     ['This round, Level 4 (panels 10-21, with both moves)', w.L1.end, w.R1.end],
@@ -1181,21 +1181,21 @@ add('23', pipePanel('23', 'Second level: a narrow kimberlite pipe, painted from 
 const pDs = P.clicks.map(c => fm(c[1])).join(', ');
 const pTheta = Object.values(pp.theta)[0];
 const pCut = pSegs.filter(s => s.trunc && s.len > 0).length;
-add('24', pipePanel('24', `Same ${M(pp.budget)}: the fan stays inside the pipe, ${pHoles.length} holes run its axis`, 'SECOND LEVEL  RUN', `${clockTxt(Math.max(P.L0.end, P.R0.end))}, run complete`, {
+add('24', pipePanel('24', `Same ${M(CAP)} limit: the fan stays inside the pipe, ${pHoles.length} holes run its axis`, 'SECOND LEVEL  RUN', `${clockTxt(Math.max(P.L0.end, P.R0.end))}, run complete`, {
   L: { tier: pL_.tier, segs: pSegs, fr: pSegs.map(() => 1), noBots: true }, R: { tier: pR_.tier, holes: pHoles, drilled: pHoles.map(h => h.depth) },
   spine: () => spinePlayback(96, 'pause') + sroiThumb(236, P.S),
   statusL: `${pp.clicks.length} clicks: ${pDs} m  |  ${pSegs.length} segments`, statusR: `holes at ${pHoles.map(h => colM(h.col)).join(', ')}`,
   draw: pProps,
   botL: note(XL, BOT + 58, `theta ${f1(pTheta)} deg; ${pCut} branches cut at the painted edge.`) + note(XL, BOT + 78, `borebot radar: ${P.L0.sch} pairs scheduled, ${P.L0.skp} skipped.`) +
     note(XL, BOT + 98, `left finishes ${hrs(P.L0.end)} (radar queue); right ${hrs(P.R0.end)}.`) + placeholderSlot(XL, BOT + 116, PW - 10, 108),
-  botR: note(XR + 10, BOT + 58, `depths ${pHoles.map(h => M(h.depth)).join(', ')}; the last hole takes the remainder.`) + note(XR + 10, BOT + 78, `${P.R0.sch} cross-hole pairs; budget ${M(pp.budget)}, reserve ${M(pp.reserve)}.`) + placeholderSlot(XR + 10, BOT + 96, PW - 10, 128),
+  botR: note(XR + 10, BOT + 58, `depths ${pHoles.map(h => M(h.depth)).join(', ')}; the last hole takes the remainder (12 holes at most).`) + note(XR + 10, BOT + 78, `${P.R0.sch} cross-hole pairs; limit ${M(CAP)}, reserve ${M(pp.reserve)}.`) + placeholderSlot(XR + 10, BOT + 96, PW - 10, 128),
 }));
-add('25', pipePanel('25', `Pipe readout: the straight-hole case, same ${M(pp.budget)}`, 'SECOND LEVEL  READOUT', clockTxt(Math.max(P.L0.end, P.R0.end)), {
+add('25', pipePanel('25', `Pipe readout: the straight-hole case, same ${M(CAP)} limit`, 'SECOND LEVEL  READOUT', clockTxt(Math.max(P.L0.end, P.R0.end)), {
   L: { tier: pL_.tier, segs: pSegs, fr: pSegs.map(() => 1), outline: true, sroiOp: 0.14, noBots: true }, R: { tier: pR_.tier, holes: pHoles, drilled: pHoles.map(h => h.depth), outline: true, sroiOp: 0.14 },
   spine: () => spinePlayback(96, 'pause') + sroiThumb(236, P.S),
   statusL: `drilled ${M(sumLen(pSegs))}  |  unspent reserve ${M(pp.reserve)}`, statusR: `drilled ${M(pHoles.reduce((a, h) => a + h.depth, 0))}  |  unspent reserve ${M(pp.reserve)}`,
   draw: pProps,
-  botL: readout(XL, BOT + 62, ppL, C.L, 'UNLEASHED ROBOTICS') + note(XL, BOT + 222, `budget ${M(pp.budget)} = network ${M(pp.length)} + rounding ${M(pp.budget - pp.length)}.`, 13) + note(XL, BOT + 206, `${ppL.cf} + ${ppL.ci} of ${grp(String(ppL.nF))} formation cells`, 13),
+  botL: readout(XL, BOT + 62, ppL, C.L, 'UNLEASHED ROBOTICS') + note(XL, BOT + 222, `network ${M(pp.length)} of ${M(CAP)}.`, 13) + note(XL, BOT + 206, `${ppL.cf} + ${ppL.ci} of ${grp(String(ppL.nF))} formation cells`, 13),
   botR: readout(XR + 10, BOT + 62, ppR, C.R, 'BALROG') + note(XR + 10, BOT + 206, `${ppR.cf} + ${ppR.ci} of ${grp(String(ppR.nF))} formation cells`, 13),
 }));
 // ===== 26 next level =====
@@ -1218,13 +1218,13 @@ add('26', splitPanel({
 }));
 
 const GT = 6e-4;
-check('timing: GV4 base finish = goldens_v41 S_P.GV4', Math.abs(w.L0.end - GOLD.S_P.GV4.left.end_s) < GT && Math.abs(w.R0.end - GOLD.S_P.GV4.right.end_s) < GT);
-check('timing: left finish with the re-aim = goldens_v41 S_MID', Math.abs(w.L1.end - GOLD.S_MID.result.endL) < GT);
-check('timing: pipe finish = goldens_v41 S_GV2', Math.abs(P.L0.end - GOLD.S_GV2.left.end_s) < GT && Math.abs(P.R0.end - GOLD.S_GV2.right.end_s) < GT);
-check('timing: L1 worked round = goldens_v41 S_GV1', Math.abs(SB.l1.endL - GOLD.S_GV1.left.end_s) < GT && Math.abs(SB.l1.endR - GOLD.S_GV1.right.end_s) < GT);
-check('re-aim = goldens_v41 S_MID.reaim', ra.seg === GOLD.S_MID.reaim.seg && Math.abs(ra.cost - GOLD.S_MID.reaim.cost) < 1e-5 && Math.abs(ra.wantedCost - GOLD.S_MID.reaim.wantedCost) < 1e-5);
-check('locked plan clicks = goldens_v41 S_MID.clicks', JSON.stringify(st10.clicks) === JSON.stringify(GOLD.S_MID.clicks));
-check('budget, reserve, re-aim cap = goldens_v41 S_P.GV4', budget === GOLD.S_P.GV4.budget && reserve === GOLD.S_P.GV4.reserve && w.reaim_cap === GOLD.S_P.GV4.reaim_cap);
+check('timing: GV4 base finish = goldens_v42 S_P.GV4', Math.abs(w.L0.end - GOLD.S_P.GV4.left.end_s) < GT && Math.abs(w.R0.end - GOLD.S_P.GV4.right.end_s) < GT);
+check('timing: left finish with the re-aim = goldens_v42 S_MID', Math.abs(w.L1.end - GOLD.S_MID.result.endL) < GT);
+check('timing: pipe finish = goldens_v42 S_GV2', Math.abs(P.L0.end - GOLD.S_GV2.left.end_s) < GT && Math.abs(P.R0.end - GOLD.S_GV2.right.end_s) < GT);
+check('timing: L1 worked round = goldens_v42 S_GV1', Math.abs(SB.l1.endL - GOLD.S_GV1.left.end_s) < GT && Math.abs(SB.l1.endR - GOLD.S_GV1.right.end_s) < GT);
+check('re-aim = goldens_v42 S_MID.reaim', ra.seg === GOLD.S_MID.reaim.seg && Math.abs(ra.cost - GOLD.S_MID.reaim.cost) < 1e-5 && Math.abs(ra.wantedCost - GOLD.S_MID.reaim.wantedCost) < 1e-5);
+check('locked plan clicks = goldens_v42 S_MID.clicks', JSON.stringify(st10.clicks) === JSON.stringify(GOLD.S_MID.clicks));
+check('budget, reserve, re-aim cap = goldens_v42 S_P.GV4', budget === GOLD.S_P.GV4.budget && reserve === GOLD.S_P.GV4.reserve && w.reaim_cap === GOLD.S_P.GV4.reaim_cap);
 check('no panel text says level clock', panels.every(p => !/level clock/i.test(p[1].replace('no level clock on screen', ''))));
 check('no panel text says press play', panels.every(p => !/press\s*play/i.test(p[1])));
 check('no panel text says a trunk joins or counts', panels.every(p => !/trunks? (drill|joins|count)/i.test(p[1])));

@@ -300,39 +300,46 @@ export const ug52 = {
   ],
 };
 
-// ---------------------------------------------------------------- UG53 equal length, pass 0
+// ---------------------------------------------------------------- UG53 pass 0 and the independent rig cap (v3.8.2, G53 / G65)
 export const ug53 = {
-  id: 'UG53', title: 'G53 equal length and pass 0: SW-A left 4.0 = budget 4 = spent 4; pass 0 at a free portal snaps to the nearest S column (50, 89 to 90; 91 stays; 100 stays); one hole per column', mode: 'surface',
+  id: 'UG53', title: 'G53 / G65 pass 0 and the rig cap: SW-A left 4.0 = left budget 4, the surface auto plan spends the cap (400 cells, 10 holes), 12 holes at most (cap 1000 gives 12), never above a half-cell cap (375.5 gives 375); pass 0 at a free portal snaps to the nearest S column (50, 89 to 90; 91 stays; 100 stays); one hole per column', mode: 'surface',
   observe: async (C, G) => {
     const n = clickNet(C, SWA, [20]).n;
     const bg = C.budgets(n);
     const Cs = n.Cs;
     const rp = (ports, b, mutSnap = true) => C.rigPlan(Cs, { 0: ports }, b, { snap: mutSnap });
     const first = Object.fromEntries([50, 89, 91, 100].map((c) => [c, rp([c], [8]).holes[0][0]]));
-    const spent = rp([100], bg.b).spent;
     const dup = rp([40, 50], [100]).holes[0].filter((h) => h[0] === 90).length;
     const two = rp([40, 100], [100]).holes[0].filter((h) => h[0] === 90 || h[0] === 100).length;
-    // the 15 surface records satisfy the equal-length invariant (golden data read through the core budgets is covered by P-GVu)
-    const recs = [...['S_GV1', 'S_GV1b', 'S_GV2', 'S_GV3', 'S_GV3b', 'S_GV4'].map((k) => G[k]), ...POLICY_WORLDS.map((k) => G.S_P[k])];
-    const inv = recs.map((g) => Math.abs(g.length_cells - g.spent.reduce((a, b) => a + b, 0)) <= 0.5 + 1e-9 && g.b.reduce((a, b) => a + b, 0) === g.budget);
-    return { length: n.length(), budget: bg.budget, b: arr(bg.b), spentSum: arr(spent).reduce((a, b) => a + b, 0), first, dup, two, inv };
+    const auto = (cap) => { const q = clickNet(C, SWA, [20], { cap }).n; const r = C.planRig(q, C.budgets(q).b); return { total: r.spent.reduce((a, b) => a + b, 0), count: r.holes.reduce((a, h) => a + h.length, 0), cols: r.holes.flat().map((h) => h[0]) }; };
+    const a400 = auto(400), a1000 = auto(1000), aHalf = auto(375.5);
+    // the 15 surface records: rig total at most the cap, at most 12 holes, one per column (golden data read through the core is covered by P-GVu)
+    const recs = [...['S_GV1', 'S_GV1b', 'S_GV2', 'S_GV3', 'S_GV3b', 'S_GV4'].map((k) => [k, G[k]]), ...POLICY_WORLDS.map((k) => [k, G.S_P[k]])];
+    const inv = recs.map(([k, g]) => { const hs = g.holes.flat(); return hs.length <= 12 && new Set(hs.map((h) => h[0])).size === hs.length && g.spent.reduce((a, b) => a + b, 0) <= (k === 'S_GV3b' ? 800 : 400); });
+    return { length: n.length(), budget: bg.budget, b: arr(bg.b), a400: [a400.total, a400.count, new Set(a400.cols).size === a400.cols.length], a1000: [a1000.total, a1000.count], aHalf: aHalf.total, first, dup, two, inv };
   },
   judge: (o, G) => {
     const e = [];
-    cmpNum(e, 'left length', o.length, 4.0, 1e-12); cmp(e, 'budget', o.budget, 4); cmp(e, 'b', o.b, [4]); cmp(e, 'spent', o.spentSum, 4);
+    cmpNum(e, 'left length', o.length, 4.0, 1e-12); cmp(e, 'left budget', o.budget, 4); cmp(e, 'b', o.b, [4]);
+    cmp(e, 'auto plan, cap 400: total, holes, one per column', o.a400, [400, 10, true]);
+    cmp(e, 'auto plan, cap 1000: total, holes (12 at most)', o.a1000, [480, 12]);
+    cmp(e, 'auto plan, cap 375.5 cells: total never above the cap', o.aHalf, 375);
     const f = E(G).pass0.first_hole;
     for (const c of ['50', '89', '91', '100']) cmp(e, `pass 0 first hole at portal ${c}`, o.first?.[c], f[c]);
     cmp(e, 'pass 0 hand columns', [50, 89, 91, 100].map((c) => o.first?.[c]?.[0]), [90, 90, 91, 100]);
     cmp(e, 'portals 40 and 50 place one hole at column 90', o.dup, 1); cmp(e, 'portals 40 and 100 place two', o.two, 2);
-    check(e, '15 surface records satisfy |length - spent| <= 0.5 and sum(b) = budget', o.inv?.length === 15 && o.inv.every(Boolean), JSON.stringify(o.inv));
+    check(e, '15 surface records: rig total at most the cap, at most 12 holes, one per column', o.inv?.length === 15 && o.inv.every(Boolean), JSON.stringify(o.inv));
     return e;
   },
-  good: (G) => ({ length: 4, budget: 4, b: [4], spentSum: 4, first: E(G).pass0.first_hole, dup: 1, two: 2, inv: Array(15).fill(true) }),
-  bad: [{ mut: ['budget_excl_ob'] }, { mut: ['pass0_no_snap'] }, { mut: ['pass0_dup'] }],
+  good: (G) => ({ length: 4, budget: 4, b: [4], a400: [400, 10, true], a1000: [480, 12], aHalf: 375, first: E(G).pass0.first_hole, dup: 1, two: 2, inv: Array(15).fill(true) }),
+  bad: [{ mut: ['budget_excl_ob'] }, { mut: ['pass0_no_snap'] }, { mut: ['pass0_dup'] }, { mut: ['rig_pool_left'] }, { mut: ['rig_max_off'] }, { mut: ['rig_pool_half_up'] }],
   synth: [
     { name: 'budget_excl_ob (budget 0)', obs: (G) => { const o = ug53.good(G); o.budget = 0; o.b = [0]; return o; } },
     { name: 'pass0_no_snap (hole at the portal column)', obs: (G) => { const o = ug53.good(G); o.first = { ...E(G).pass0.no_snap, 91: [91, 8], 100: [100, 8] }; return o; } },
     { name: 'pass0_dup (2 holes at column 90)', obs: (G) => { const o = ug53.good(G); o.dup = 2; return o; } },
+    { name: 'rig_pool_left (the rig spends the left length, 4 cells)', obs: (G) => { const o = ug53.good(G); o.a400 = [4, 1, true]; return o; } },
+    { name: 'rig_max_off (20 holes at cap 1000)', obs: (G) => { const o = ug53.good(G); o.a1000 = [800, 20]; return o; } },
+    { name: 'rig_pool_half_up (376 cells at cap 375.5)', obs: (G) => { const o = ug53.good(G); o.aHalf = 376; return o; } },
   ],
 };
 

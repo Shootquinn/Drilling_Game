@@ -7,7 +7,7 @@ import path from 'node:path';
 import { PATHS, ROOT, SPEC_VERSION_PREFIX, MIN, E9_GATES, shapeErrors, staleErrors, loadGoldens, readRaw, sha256File } from '../lib/goldens.mjs';
 import { withTmp } from '../lib/tmpfs.mjs';
 
-test('P-SHAPE goldens_v41.json shape: required keys, minimum counts, E9 21 gates, E11 6 levels + 3 test levels, G9/G11/G17/G23 reads', () => {
+test('P-SHAPE goldens_v42.json shape: required keys, minimum counts, E9 21 gates, E11 6 levels + 3 test levels, G9/G11/G17/G23 reads', () => {
   const raw = readRaw();
   assert.deepEqual(shapeErrors(raw), []);
   assert.equal(Object.keys(raw.E9).length, MIN.E9_gates);
@@ -89,9 +89,10 @@ const HIST = {
   v37: { file: PATHS.goldens37, sim: path.join(CR, 'step45_reference_sim_v37_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v37_frozen.py') },
   v38: { file: PATHS.goldens38, sim: path.join(CR, 'step45_reference_sim_v38_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v38_frozen.py') },
   v39: { file: PATHS.goldens39, sim: path.join(CR, 'step45_reference_sim_v39_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v39_frozen.py') },
+  v41: { file: PATHS.goldens41, sim: path.join(CR, 'step45_reference_sim_v41_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v41_frozen.py') },
 };
 
-test('P-STALE-HIST goldens_v36, v37, v38 and v39 match their frozen sim and exporter; v41 matches the live pair; crossed pairs are flagged', () => {
+test('P-STALE-HIST goldens_v36, v37, v38, v39 and v41 match their frozen sim and exporter; v42 matches the live pair; crossed pairs are flagged', () => {
   for (const [v, h] of Object.entries(HIST)) {
     const raw = readRaw(h.file);
     assert.deepEqual(staleErrors(raw, { sim: h.sim, exporter: h.ex }).errors, [], `${v} against its frozen pair`);
@@ -104,6 +105,8 @@ test('P-STALE-HIST goldens_v36, v37, v38 and v39 match their frozen sim and expo
   assert.ok(staleErrors(readRaw(HIST.v37.file)).errors.length >= 1, 'v37 goldens accepted against the live sim');
   assert.ok(staleErrors(readRaw(HIST.v38.file)).errors.length >= 1, 'v38 goldens accepted against the live sim');
   assert.ok(staleErrors(readRaw(HIST.v39.file)).errors.length >= 1, 'v39 goldens accepted against the live sim');
+  assert.ok(staleErrors(readRaw(HIST.v41.file)).errors.length >= 1, 'v41 goldens accepted against the live sim');
+  assert.ok(staleErrors(r38, { sim: HIST.v41.sim, exporter: HIST.v41.ex }).errors.length >= 2, 'v42 goldens accepted against the frozen v41 pair');
   assert.ok(staleErrors(r38, { sim: HIST.v37.sim, exporter: HIST.v37.ex }).errors.length >= 2, 'v39 goldens accepted against the frozen v37 pair');
   assert.ok(staleErrors(r38, { sim: HIST.v38.sim, exporter: HIST.v38.ex }).errors.length >= 2, 'v41 goldens accepted against the frozen v38 pair');
   assert.ok(staleErrors(r38, { sim: HIST.v39.sim, exporter: HIST.v39.ex }).errors.length >= 2, 'v41 goldens accepted against the frozen v39 pair');
@@ -131,4 +134,46 @@ test('P-ANCHOR goldens_v41 holds every goldens_v37 key unchanged (modulo _meta);
   const r36 = readRaw(PATHS.goldens36);
   assert.notEqual(r36.GV2.right.end_s, r38.GV2.right.end_s);
   assert.equal(JSON.stringify(r36.GV2.left), JSON.stringify(r38.GV2.left));
+});
+
+// P-V42 (v3.8.2): goldens_v42 differs from goldens_v41 only on the rig side of the S_* records (holes, spent, right, totals, S_MID right result). Every legacy key, every left
+// key, the budget, the reserve and the re-aim cap are byte-equal; the rig total of every S_* record is at most the cap and its hole list holds at most 12 holes.
+const RIG_SIDE = new Set(['holes', 'spent', 'right', 'totals']);
+function v42Moves(a, b) {
+  const moved = [], same = [];
+  for (const k of Object.keys(a).filter((q) => q !== '_meta')) {
+    if (JSON.stringify(a[k]) === JSON.stringify(b[k])) { same.push(k); continue; }
+    if (!k.startsWith('S_')) { moved.push(k); continue; }
+    const walk = (x, y, p) => {
+      if (x && y && typeof x === 'object' && typeof y === 'object' && !Array.isArray(x)) {
+        for (const f of new Set([...Object.keys(x), ...Object.keys(y)])) walk(x[f], y[f], `${p}.${f}`);
+      } else if (JSON.stringify(x) !== JSON.stringify(y)) {
+        const leaf = p.split('.').filter((q) => q);
+        const rig = leaf.some((q) => RIG_SIDE.has(q)) || (leaf[0] === 'S_MID' && /(^|\.)(R|drilledR|endR|pairsR)$/.test(p));
+        if (!rig) moved.push(p);
+      }
+    };
+    walk(a[k], b[k], k);
+  }
+  return moved;
+}
+test('P-V42 goldens_v42 moves only the rig side of the S_* records; legacy and left keys equal goldens_v41; rig totals <= cap, holes <= 12', () => {
+  const r41 = readRaw(PATHS.goldens41), r42 = readRaw();
+  assert.deepEqual(v42Moves(r41, r42), []);
+  assert.ok(JSON.stringify(r41.S_P.L1.right) !== JSON.stringify(r42.S_P.L1.right), 'the rig side did not move on L1');
+  const cap = 400;
+  const recs = [...['S_GV1', 'S_GV1b', 'S_GV2', 'S_GV3', 'S_GV3b', 'S_GV4'].map((k) => [k, r42[k]]), ...Object.entries(r42.S_P).map(([k, v]) => [`S_P.${k}`, v])];
+  for (const [name, rec] of recs) {
+    const holes = rec.holes.flat();
+    assert.ok(holes.length <= 12, `${name}: ${holes.length} holes`);
+    const total = holes.reduce((a, h) => a + h[1], 0);
+    assert.ok(total <= (name === 'S_GV3b' ? 800 : cap), `${name}: rig total ${total} cells above the cap`);
+  }
+  // known-bad: a left leaf moved, a legacy leaf moved, a 13th hole
+  const a = JSON.parse(JSON.stringify(r42)); a.S_GV2.left.end_s += 1e-6;
+  assert.deepEqual(v42Moves(r41, a), ['S_GV2.left.end_s']);
+  const b = JSON.parse(JSON.stringify(r42)); b.GV2.right.end_s += 1e-6;
+  assert.deepEqual(v42Moves(r41, b), ['GV2']);
+  // zero control: a file against itself moves nothing
+  assert.deepEqual(v42Moves(r42, r42), []);
 });

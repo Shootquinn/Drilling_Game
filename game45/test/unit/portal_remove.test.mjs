@@ -78,7 +78,7 @@ test('P-REMOVE-CLICKS removal drops that portal\'s clicks and frees its length; 
   const after = g.state().plan.clicks;
   assert.ok(after.every(([p]) => p === 146), 'clicks of the removed portal remain');
   assert.ok(g.state().plan.meter.used_m < used0, 'length not freed');
-  assert.equal(g.view().plan.budget < 299, true, 'the budget fell with the left length');
+  assert.equal(g.view().plan.budget, 400, 'the rig limit is the cap and does not follow the left length (v3.8.2)');
   const Wm = await planWorld({ muts: ['remove_keeps_clicks'] });
   Wm.g.removePortal(60);
   assert.ok(Wm.g.state().plan.clicks.some(([p]) => p === 60), 'remove_keeps_clicks must keep them (the real core drops them)');

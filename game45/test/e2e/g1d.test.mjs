@@ -17,6 +17,7 @@ after(async () => { await browser?.close(); });
 const needPlay = () => assert.ok(fs.existsSync(PLAY), `${PLAY} does not exist`);
 
 const CAP_TEXT = 'Max Length Exceeded';
+const RIG_TEXT = 'Rig: Max Length Exceeded';
 const plan = async (D) => (await D.state()).plan;
 const portalsOf = async (D) => (await plan(D)).portals;
 const xs = (g, side, col) => g.panels[side].x + (col + 0.5) * g.cellPx;
@@ -231,7 +232,7 @@ test('G1D-HOVER removing a portal while the pointer rests on its marker leaves a
   } finally { await D.close(); }
 });
 
-test('G1D-RIG rig holes are never refused for budget: three holes at budget 0, over state shown (status line, cap-full note), Start blocked with the text, bring the plan under the budget with clicks, Start allowed; Undo brings the over state back and the holes stay', async () => {
+test('G1D-RIG the rig has its own 2,000 m (v3.8.2): holes are never refused for length; five holes of 100 cells show the over state (status line "Rig: Max Length Exceeded", the borebot note stays clear), Start is blocked with the rig text; taking the fifth hole off allows Start; Undo and Back to paint leave the holes and the limit alone', async () => {
   needPlay();
   const G = getGoldens();
   const { D, world: w } = await toPlan(browser, G, 'GV4', { startMode: 'surface', rec: G.S_GV4, pointerPortals: true });
@@ -239,49 +240,52 @@ test('G1D-RIG rig holes are never refused for budget: three holes at budget 0, o
     const g = await D.geo();
     const R = g.panels.right;
     const cs = g.cellPx;
-    // zero left length
-    assert.equal((await D.model()).rig.budget, 0);
-    for (const c of [125, 185, 195]) await click(D, xs(g, 'right', c), R.y + 8 * cs);
-    assert.deepEqual((await plan(D)).rig.map((h) => h[0]), [125, 185, 195], 'three holes accepted with zero left length');
-    const rg = (await D.model()).rig;
+    // zero left length: the rig limit is still 400 cells = 2,000 m
+    assert.equal((await D.model()).rig.budget, 400);
+    const deepen = async (c) => {
+      const d = (await plan(D)).rig.find((h) => h[0] === c)[1];
+      await D.dragXY({ x: xs(g, 'right', c), y: R.y + d * cs }, { x: xs(g, 'right', c), y: R.y + 100 * cs - 0.5 });
+    };
+    for (const c of [20, 60, 100, 140]) { await click(D, xs(g, 'right', c), R.y + 8 * cs); await deepen(c); }
+    assert.deepEqual((await plan(D)).rig, [[20, 100], [60, 100], [100, 100], [140, 100]], 'four holes of 100 cells');
+    let rg = (await D.model()).rig;
+    assert.equal(rg.over, false, '400 cells = 2,000 m is not over');
+    assert.equal(rg.spent, 400);
+    assert.doesNotMatch(await D.text('rig-status'), /Max Length/);
+    await click(D, xs(g, 'right', 180), R.y + 8 * cs);
+    assert.deepEqual((await plan(D)).rig.map((h) => h[0]), [20, 60, 100, 140, 180], 'a fifth hole is accepted: no edit is refused for length');
+    rg = (await D.model()).rig;
     assert.equal(rg.over, true);
-    assert.equal(rg.count, 3);
+    assert.equal(rg.count, 5);
     const status = await D.text('rig-status');
-    assert.match(status, /rig [\d,.]+ m of [\d,.]+ m/);
-    assert.match(status, new RegExp(CAP_TEXT));
+    assert.match(status, /^rig [\d,.]+ m of 2,000 m \| Rig: Max Length Exceeded \| 5 of 12 holes$/, status);
     assert.equal(await D.attr('rig-status', 'data-over'), '1');
-    assert.equal((await D.text('cap-full')).trim(), CAP_TEXT, 'the Start note reads the cap text while the rig is over');
-    // one click: the budget is small, still over, Start blocked; a programmatic press leaves PLAN
+    assert.doesNotMatch(await D.text('cap-full'), /Max Length/, 'the borebot note does not carry the rig overage');
+    // one left click, then Start is blocked by the rig; a programmatic press leaves PLAN
     await clickStack(D, w.clicks.slice(0, 1));
     assert.equal((await D.model()).rig.over, true);
     assert.equal(await D.enabled('start'), false);
     await D.press('start');
-    assert.equal(await D.phase(), 'PLAN', 'Start accepted an over-budget rig');
-    assert.equal((await D.state()).ui.message, CAP_TEXT);
-    // more golden clicks until the budget covers the rig
-    let k = 1;
-    while ((await D.model()).rig.over && k < w.clicks.length) { await clickStack(D, w.clicks.slice(k, k + 1)); k++; }
-    const m2 = (await D.model()).rig;
-    assert.equal(m2.over, false, `still over after ${k} clicks (budget ${m2.budget}, spent ${m2.spent})`);
-    assert.doesNotMatch(await D.text('rig-status'), new RegExp(CAP_TEXT));
-    assert.equal(await D.attr('rig-status', 'data-over'), '0');
-    assert.equal(await D.enabled('start'), true);
-    // Undo the last click: the budget falls, the three holes stay, the line turns red again
+    assert.equal(await D.phase(), 'PLAN', 'Start accepted an over-limit rig');
+    assert.equal((await D.state()).ui.message, RIG_TEXT);
+    // left edits leave the holes and the limit alone
     const holes = JSON.stringify((await plan(D)).rig);
     await D.click('plan-undo');
-    while (!(await D.model()).rig.over && (await plan(D)).clicks.length > 1) await D.click('plan-undo');
     assert.equal(JSON.stringify((await plan(D)).rig), holes, 'Undo changed the rig list');
-    assert.equal((await D.model()).rig.over, true);
-    assert.equal(await D.enabled('start'), false);
-    // Back to paint keeps the holes and the over state
+    assert.equal((await D.model()).rig.budget, 400);
     await D.click('back-to-paint');
     await D.click('done-painting');
     assert.equal(JSON.stringify((await plan(D)).rig), holes, 'Back to paint changed the rig list');
     assert.equal((await D.model()).rig.over, true);
-    // bring it under again and run
-    k = (await plan(D)).clicks.length;
-    while ((await D.model()).rig.over && k < w.clicks.length) { await clickStack(D, w.clicks.slice(k, k + 1)); k++; }
+    await clickStack(D, w.clicks.slice(0, 1));
+    // take the fifth hole off: the plan is under the limit and Start is allowed
+    await click(D, xs(g, 'right', 180), R.y + 1 * cs);
+    await D.page.keyboard.press('Delete');
+    assert.deepEqual((await plan(D)).rig.map((h) => h[0]), [20, 60, 100, 140]);
     assert.equal((await D.model()).rig.over, false);
+    assert.doesNotMatch(await D.text('rig-status'), new RegExp(CAP_TEXT));
+    assert.equal(await D.attr('rig-status', 'data-over'), '0');
+    assert.equal(await D.enabled('start'), true);
     await startRun(D);
     await finishRun(D);
     assert.equal((await D.state()).phase, 'READOUT');
@@ -289,7 +293,7 @@ test('G1D-RIG rig holes are never refused for budget: three holes at budget 0, o
   } finally { await D.close(); }
 });
 
-test('G1D-OVERPIX the over cells of a hole draw in the warning colour and the cells inside the budget do not; an under-budget hole has no warning pixels', async () => {
+test('G1D-OVERPIX the over cells of a hole draw in the warning colour and the cells inside the limit do not; an under-limit hole has no warning pixels', async () => {
   needPlay();
   const { PNG } = loadDeps();
   const G = getGoldens();
@@ -300,30 +304,35 @@ test('G1D-OVERPIX the over cells of a hole draw in the warning colour and the ce
     const R = g.panels.right;
     const cs = g.cellPx;
     const budget = (await D.model()).rig.budget;
-    assert.ok(budget >= 4 && budget < 60, `setup: budget ${budget}`);
-    // one hole in a column with no formation below, deepened to budget + 20 cells: the first `budget` cells are inside, the last 20 are over
+    assert.equal(budget, 400, 'the rig limit is the cap in cells');
+    // four holes of 100 cells fill the limit; a fifth hole in a column with no formation below, deepened to 20 cells, lies wholly in the over cells
+    const deepen = async (c, to) => {
+      const d = (await plan(D)).rig.find((h) => h[0] === c)[1];
+      await D.dragXY({ x: xs(g, 'right', c), y: R.y + d * cs }, { x: xs(g, 'right', c), y: R.y + to * cs - (to === 100 ? 0.5 : 0) });
+    };
+    for (const c of [20, 60, 100, 140]) { await click(D, xs(g, 'right', c), R.y + 8 * cs); await deepen(c, 100); }
+    await D.page.mouse.move(g.offPanel.x, g.offPanel.y);
+    assert.equal((await D.model()).rig.over, false);
+    const under = PNG.sync.read(await D.page.screenshot({ type: 'png' }));
     await click(D, xs(g, 'right', 190), R.y + 8 * cs);
-    const hole = (await plan(D)).rig[0];
-    assert.equal(hole[0], 190);
-    for (let i = hole[1]; i < budget + 20; i++) await D.page.keyboard.press('+');
+    await deepen(190, 20);
     await D.page.mouse.move(g.offPanel.x, g.offPanel.y);
     const need = (await D.model()).rig;
-    assert.equal(need.holes[0].depth, budget + 20);
-    assert.equal(need.holes[0].overCells, 20, 'overCells');
-    const warn = [200, 30, 30];
+    assert.equal(need.holes[4].depth, 20);
+    assert.equal(need.holes[4].overCells, 20, 'the fifth hole lies wholly over the limit');
+    assert.deepEqual(need.holes.slice(0, 4).map((h) => h.overCells), [0, 0, 0, 0]);
     const shot = PNG.sync.read(await D.page.screenshot({ type: 'png' }));
-    const px = (x, y) => { const i = (Math.round(y) * shot.width + Math.round(x)) * 4; return [shot.data[i], shot.data[i + 1], shot.data[i + 2]]; };
+    const px = (img, x, y) => { const i = (Math.round(y) * img.width + Math.round(x)) * 4; return [img.data[i], img.data[i + 1], img.data[i + 2]]; };
     const warnish = (c) => c[0] >= 195 && c[1] >= 30 && c[1] < 80 && c[2] >= 30 && c[2] < 80;     // the over fill; the hole outline (179,38,30) is excluded
-    const cx = xs(g, 'right', 190);
-    const rows = (a, b) => { let n = 0; for (let y = Math.round(R.y + a * cs); y < R.y + b * cs; y++) if (warnish(px(cx, y))) n++; return n; };
-    const inside = rows(1, budget - 1);
-    const over = rows(budget + 1, budget + 18);
+    const rows = (img, col, a, b) => { const cx = xs(g, 'right', col); let n = 0; for (let y = Math.round(R.y + a * cs); y < R.y + b * cs; y++) if (warnish(px(img, cx, y))) n++; return n; };
+    const over = rows(shot, 190, 2, 19);
     assert.ok(over >= 0.6 * 17 * cs, `warning pixels in the over cells: ${over} of about ${Math.round(17 * cs)}`);
-    assert.ok(inside <= 0.1 * Math.max(1, (budget - 2) * cs), `warning pixels inside the budget: ${inside}`);
+    for (const c of [20, 60, 100, 140]) assert.ok(rows(shot, c, 2, 98) <= 0.1 * 96 * cs, `warning pixels inside the limit, column ${c}: ${rows(shot, c, 2, 98)}`);
+    for (const c of [20, 60, 100, 140]) assert.ok(rows(under, c, 2, 98) <= 0.1 * 96 * cs, `warning pixels under the limit, column ${c}`);
   } finally { await D.close(); }
 });
 
-test('G1D-CAP (v3.8.1) the note under the meter reads "Next generation would exceed the 2,000 m limit" when only the next generation does not fit; the refusal text is the same string and shows once; the meter turns red; lbl_cap_full stays "Max Length Exceeded" for a real over', async () => {
+test('G1D-CAP (v3.8.1) the note under the meter reads "Next generation would exceed the 2,000 m limit" when only the next generation does not fit; the refusal text is the same string and shows once; the meter total stays plain (B12: a stop on the cap is a legal plan); lbl_cap_full stays "Max Length Exceeded" for a real over', async () => {
   needPlay();
   const G = getGoldens();
   const { D } = await toPlan(browser, G, 'GV4', { startMode: 'surface', rec: G.S_GV4, pointerPortals: false });
@@ -337,7 +346,7 @@ test('G1D-CAP (v3.8.1) the note under the meter reads "Next generation would exc
     assert.equal(capFull, true, 'the cap was not reached');
     const NEXT_TEXT = 'Next generation would exceed the 2,000 m limit';
     assert.equal((await D.text('cap-full')).trim(), NEXT_TEXT);
-    assert.equal(await D.attr('meter', 'data-over'), '1');
+    assert.equal(await D.attr('meter', 'data-over'), '0', 'B12: the meter total is not red while the plan is legal');
     await D.press('next-gen');
     assert.equal((await D.state()).ui.message, NEXT_TEXT, 'the refusal text is the same string');
     assert.equal((await D.text('message')).trim(), '', 'the duplicate message is suppressed');
