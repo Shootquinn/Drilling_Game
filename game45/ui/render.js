@@ -2,7 +2,7 @@
 // Cell layers are W x H ImageData blitted with smoothing off. Segments, portals, holes and the ghost are vector paths.
 // Cell keys in the model are the goldens' keys; they are decoded here with / 100 and % 100 and never built.
 // This file reads no status field: an empty ghost segment list draws nothing.
-import { PALETTE, rgbCss, packAbgr } from './palette.js';
+import { PALETTE, rgbCss, packAbgr, themeRevision } from './palette.js';
 import { boreWidthPx, SBG } from './geom.js';
 import { key } from '../core/arith.js';
 import { tagUps, tagHeight, portalXHandle, uiText } from './layout.js';
@@ -234,20 +234,20 @@ function rdDropped(ctx, model, panel, cs) {
     const x1 = panel.x + (d.x + 0.5) * cs;
     const y1 = panel.y + (d.y + 0.5) * cs;
     ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(255,255,255,0.85)';
+    ctx.strokeStyle = rgbCss(PALETTE.surface, 0.85);
     ctx.lineWidth = 4.5;
     ctx.beginPath();
     ctx.moveTo(x0, y0);
     ctx.lineTo(x1, y1);
     ctx.stroke();
     ctx.setLineDash([3, 4]);
-    ctx.strokeStyle = '#555555';
+    ctx.strokeStyle = rgbCss(PALETTE.dropDash, 1);
     ctx.lineWidth = 2.2;
     ctx.stroke();
     ctx.setLineDash([]);
-    ctx.strokeStyle = 'rgba(107,107,107,0.9)';
+    ctx.strokeStyle = rgbCss(PALETTE.dropEdge, 0.9);
     ctx.lineWidth = 1.6;
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.fillStyle = rgbCss(PALETTE.surface, 0.9);
     ctx.beginPath();
     ctx.arc(x1, y1, q * 1.7, 0, Math.PI * 2);
     ctx.fill();
@@ -407,7 +407,6 @@ function rdOreSet(model, side) {
   }
   return null;
 }
-const RD_CORE_BARREN = [133, 125, 112];
 
 // last drawn depth-label box of the selected rig hole (viewport px), read by uiGeometry for the layout tests
 export const HOLE_LABEL = { rect: null };
@@ -470,7 +469,7 @@ function rdHoles(ctx, model, panel, cs, bw, lay) {
         while (r2 < nRows && (!!ore && ore.has(key(h.col, r2))) === isOre) r2++;
         const y0 = panel.y + r * cs;
         const y1 = Math.min(panel.y + r2 * cs, panel.y + hf);
-        ctx.fillStyle = rgbCss(isOre ? PALETTE.cored : RD_CORE_BARREN, 1);
+        ctx.fillStyle = rgbCss(isOre ? PALETTE.cored : PALETTE.coreBarren, 1);
         if (y1 > y0) ctx.fillRect(x, y0, bw, y1 - y0);
         r = r2;
       }
@@ -521,7 +520,7 @@ function rdHoleHandle(ctx, model, panel, cs, lay, h, isSel) {
   }
   ctx.strokeStyle = rgbCss(PALETTE.hole, 1);
   const hs = Math.max(8, 9 * s);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = rgbCss(PALETTE.surface, 1);
   const yh = Math.min(yb, panel.y + panel.h - hs / 2 - 2);   // a full-depth hole's handle sits inside the frame
   ctx.fillRect(cx - hs / 2, yh - hs / 2, hs, hs);
   ctx.lineWidth = 2;
@@ -633,7 +632,7 @@ function rdPlanHover(ctx, model, view, lay) {
   }
   ctx.beginPath();
   ctx.roundRect(tx, ty, tw, th, 4);
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = rgbCss(PALETTE.surface, 1);
   ctx.fill();
   ctx.lineWidth = 1.5;
   ctx.strokeStyle = rgbCss(base, 1);
@@ -690,12 +689,12 @@ function rdPortals(ctx, model, panel, cs, lay) {
     const c2 = amber ? PALETTE.amber : PALETTE.line;
     ctx.beginPath();
     ctx.roundRect(tx, ty, tw, th, 5);
-    ctx.fillStyle = isSel ? rgbCss(PALETTE.line, 1) : '#fff';
+    ctx.fillStyle = isSel ? rgbCss(PALETTE.line, 1) : rgbCss(PALETTE.surface, 1);
     ctx.fill();
     ctx.lineWidth = 2;
     ctx.strokeStyle = rgbCss(c2, 1);
     ctx.stroke();
-    ctx.fillStyle = isSel ? '#fff' : rgbCss(c2, 1);
+    ctx.fillStyle = isSel ? rgbCss(PALETTE.onFill, 1) : rgbCss(c2, 1);
     ctx.textAlign = 'center';
     ctx.fillText(label, x, ty + th - 5 * s);
   }
@@ -705,7 +704,7 @@ function rdPortals(ctx, model, panel, cs, lay) {
     if (h) {
       ctx.beginPath();
       ctx.arc(h.x, h.y, h.r, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
+      ctx.fillStyle = rgbCss(PALETTE.surface, 1);
       ctx.fill();
       ctx.lineWidth = 2;
       ctx.strokeStyle = rgbCss(PALETTE.red, 1);
@@ -931,7 +930,7 @@ function rdReadoutBars(ctx, model, lay) {
     const h = Math.max(8, Math.round(r.h));
     const wi = (w * d.intersected) / 100;
     const wm = (w * d.imaged) / 100;
-    ctx.fillStyle = rgbCss([255, 255, 255], 1);
+    ctx.fillStyle = rgbCss(PALETTE.surface, 1);
     ctx.fillRect(x, y, w, h);
     ctx.fillStyle = rgbCss(PALETTE.cored, 1);
     ctx.fillRect(x, y, wi, h);
@@ -1017,8 +1016,8 @@ function rdRing(ctx, lay, model) {
   const cy = gy(lay, 136);
   const r = 26 * s;
   ctx.lineWidth = Math.max(4, 7 * s);
-  ctx.strokeStyle = 'rgb(207,198,178)';
-  ctx.fillStyle = '#fff';
+  ctx.strokeStyle = rgbCss(PALETTE.ringTrack, 1);
+  ctx.fillStyle = rgbCss(PALETTE.surface, 1);
   ctx.beginPath();
   ctx.arc(cx, cy, r, 0, Math.PI * 2);
   ctx.fill();
@@ -1033,7 +1032,7 @@ function rdRing(ctx, lay, model) {
 }
 
 function rdGaugeBox(ctx, x, y, w, h) {
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = rgbCss(PALETTE.surface, 1);
   ctx.fillRect(x, y, w, h);
 }
 
@@ -1154,7 +1153,7 @@ function rdRigTruck(ctx, model, panel, cs, lay) {
   ctx.rect(x - bw / 2, y - bh - 5 * s, bw, bh);
   ctx.fill();
   ctx.stroke();
-  ctx.fillStyle = '#fff';
+  ctx.fillStyle = rgbCss(PALETTE.surface, 1);
   ctx.beginPath();
   ctx.rect(x + bw / 2 - 9 * s, y - bh - 3 * s, 8 * s, 6 * s);
   ctx.fill();
@@ -1202,7 +1201,7 @@ function rdBots(ctx, model, panel, cs, lay) {
     ctx.rotate(Math.atan2(ln.y1 - ln.y0, ln.x1 - ln.x0));
     ctx.beginPath();
     ctx.roundRect(-8 * s, -3.6 * s, 16 * s, 7.2 * s, 3.6 * s);
-    ctx.fillStyle = '#fff';
+    ctx.fillStyle = rgbCss(PALETTE.surface, 1);
     ctx.fill();
     ctx.strokeStyle = rgbCss(PALETTE.line, 1);
     ctx.stroke();
@@ -1218,7 +1217,7 @@ function rdSroiThumb(ctx, lay, model, vcache) {
   const by = Math.round(gy(lay, 222));
   const bw = Math.round(80 * s);
   const bh = Math.max(8, Math.round((80 * s * lay.H) / lay.W));
-  const sig = `${rdSig(model.S)}:${lay.W}x${lay.H}`;
+  const sig = `${rdSig(model.S)}:${lay.W}x${lay.H}:${themeRevision()}`;
   if (!vcache.thumb || vcache.thumb.sig !== sig) {
     const cv = ctx.canvas.ownerDocument.createElement('canvas');
     cv.width = lay.W;
@@ -1284,7 +1283,7 @@ export function createRenderer(canvas, mut) {
     const sig = rdSig(F);
     if (vc.F.sig !== sig || !vc.F.path) vc.F = { sig, path: rdEdgePath(F) };
     const t = rdSide(model, side);
-    const hk = `${side}:${sig}:${t.cored.length}:${t.imaged.length}:${t.speckle.length}:${cs}`;
+    const hk = `${side}:${sig}:${t.cored.length}:${t.imaged.length}:${t.speckle.length}:${cs}:${themeRevision()}`;
     let h = vc.hatch[side];
     if (!h || h.key !== hk) {
       const sensed = rdKeySet([...t.cored, ...t.imaged, ...t.speckle]);
@@ -1302,7 +1301,7 @@ export function createRenderer(canvas, mut) {
       oc.scale(off.width / lay0.W, off.height / lay0.H);
       oc.clip(path);
       oc.setTransform(1, 0, 0, 1, 0, 0);
-      if (!vc.pattern) vc.pattern = oc.createPattern(rdHatchPattern(doc, rgbCss(PALETTE.truth, 0.85)), 'repeat');
+      if (!vc.pattern || vc.patternRev !== themeRevision()) { vc.pattern = oc.createPattern(rdHatchPattern(doc, rgbCss(PALETTE.truth, 0.85)), 'repeat'); vc.patternRev = themeRevision(); }
       oc.fillStyle = vc.pattern;
       oc.fillRect(0, 0, off.width, off.height);
       oc.restore();

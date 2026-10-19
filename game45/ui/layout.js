@@ -3,7 +3,7 @@
 // 1440 x 790), placed inside their zone element at x * s, y * s.
 import { strings } from '../core/strings.js';
 import { panelRects, offPanelPoint, SBG } from './geom.js';
-import { PALETTE } from './palette.js';
+import { themeVars } from './palette.js';
 
 let lyTable = strings;
 
@@ -198,14 +198,16 @@ export function drilledText(m) {
 // phase to top-right tag key
 const TAG_KEY = { LEVEL_START: 'tag_memory', REVEAL: 'tag_memory', FADE: 'tag_memory', PAINT: 'tag_paint', PLAN: 'tag_plan', RUN: 'tag_run', END_REVEAL: 'tag_result', READOUT: 'tag_result' };
 
-const rgbS = (c) => `rgb(${c[0]},${c[1]},${c[2]})`;
-const NAVY = rgbS(PALETTE.line);
-const NAVY_DK = rgbS(PALETTE.ghost);
-const GREEN = rgbS(PALETTE.green);
-const TEAL = rgbS(PALETTE.sroiLine);
-const REDC = rgbS(PALETTE.red);
-const INK = rgbS(PALETTE.ink);
-const SUB = rgbS(PALETTE.sub);
+// Colours are CSS custom properties set from the live palette (applyTheme): --c-<key> is rgb(), --r-<key> the bare triplet for rgba().
+const V = (k) => `var(--c-${k})`;
+const VA = (k, a) => `rgba(var(--r-${k}),${a})`;
+const NAVY = V('line');
+const NAVY_DK = V('ghost');
+const GREEN = V('green');
+const TEAL = V('sroiLine');
+const REDC = V('red');
+const INK = V('ink');
+const SUB = V('sub');
 
 // Type scale (grid px, multiplied by s): 26 title, 22 brand head, 13 bold uppercase button, 12 caption, 48 readout headline.
 // Floors are capped at 9 px so that the 960 x 540 minimum window keeps the design proportions (v3.8.1); at and above 1366 x 768 the scaled size wins anyway.
@@ -214,7 +216,7 @@ const fz = (n, floor) => `max(${Math.min(floor, FONT_FLOOR)}px,calc(var(--s)*${n
 
 // ---- DOM ----
 export const PAGE_CSS = [
-  `html,body{margin:0;padding:0;background:rgb(251,248,241);color:${INK};font:13px "Segoe UI",Arial,Helvetica,sans-serif;overflow:hidden}`,
+  `html,body{margin:0;padding:0;background:var(--c-page);color:${INK};font:13px "Segoe UI",Arial,Helvetica,sans-serif;overflow:hidden}`,
   '#app{position:relative;width:100vw;height:100vh;overflow:hidden;--s:1}',
   '#stage{position:absolute;left:0;top:0}',
   '#cv{display:block;touch-action:none}',
@@ -237,63 +239,66 @@ export const PAGE_CSS = [
   `.t.mtr{font-size:${fz(13, 11)};font-weight:700}`,
   `.t.status{font-size:${fz(14, 12)};white-space:nowrap}`,
   '.t.status[data-s45="status-left"]{white-space:normal}.ctr[data-s45="counters"]{display:contents}',   // three portal counters plus S top wrap to a second line inside the left column
-  `.t.msg{color:rgb(179,38,30);font-weight:700;font-size:${fz(11, 11)}}`,
-  `.t.red{color:rgb(179,38,30);font-weight:700;font-size:${fz(11, 11)}}`,
-  '[data-s45="meter"][data-over="1"],[data-s45="rig-status"][data-over="1"]{color:rgb(200,30,30);font-weight:700}',
+  `.t.msg{color:var(--c-red);font-weight:700;font-size:${fz(11, 11)}}`,
+  `.t.red{color:var(--c-red);font-weight:700;font-size:${fz(11, 11)}}`,
+  '[data-s45="meter"][data-over="1"],[data-s45="rig-status"][data-over="1"]{color:var(--c-warn);font-weight:700}',
   `[data-s45="meter-ghost"]{color:${NAVY_DK};font-size:${fz(11, 11)};white-space:nowrap}`,
-  '[data-s45="meter-ghost"]::before{content:attr(data-label) " ";font-weight:400;color:rgb(74,74,74)}',
+  '[data-s45="meter-ghost"]::before{content:attr(data-label) " ";font-weight:400;color:var(--c-sub)}',
   '[data-s45="meter-ghost"]:empty::before{content:none}',
   '.btn{position:absolute;box-sizing:border-box;margin:0;padding:0 2px;display:flex;align-items:center;justify-content:center;text-align:center;',
-  `font:inherit;font-weight:700;text-transform:uppercase;line-height:1.1;border:2px solid ${INK};border-radius:8px;background:#fff;color:${INK};cursor:pointer;overflow:hidden}`,
+  `font:inherit;font-weight:700;text-transform:uppercase;line-height:1.1;border:2px solid ${INK};border-radius:8px;background:var(--c-surface);color:${INK};cursor:pointer;overflow:hidden}`,
   '.btn,input[data-s45="dbranch"]{pointer-events:auto}',
   '.btn[data-enabled="0"]{opacity:0.4;cursor:default}',
   '@media (pointer:coarse){.btn[data-s45="remove-portal"]{min-height:44px;min-width:88px;margin-top:-11px}}',
-  `.btn[data-v="tool"][data-active="1"]{background:${TEAL};border-color:${TEAL};color:#fff}`,
+  `.btn[data-v="tool"][data-active="1"]{background:${TEAL};border-color:${TEAL};color:var(--c-onFill)}`,
   '.btn[data-v="brush"]{border-radius:6px;border-width:1.5px}',
   '.btn[data-v="undo"]{text-transform:none;line-height:1.05;padding:0 3px}',
-  `.btn[data-v="brush"][data-active="1"],.btn[data-v="speed"][data-active="1"],.btn[data-v="pause"][data-active="1"]{background:${INK};color:#fff}`,
+  `.btn[data-v="brush"][data-active="1"],.btn[data-v="speed"][data-active="1"],.btn[data-v="pause"][data-active="1"]{background:${INK};color:var(--c-onFill)}`,
   `.btn[data-v="navy"]{border-color:${NAVY};color:${NAVY}}`,
-  `.btn[data-v="navy"][data-enabled="1"]{background:${NAVY};color:#fff}`,
+  `.btn[data-v="navy"][data-enabled="1"]{background:${NAVY};color:var(--c-onFill)}`,
   `.btn[data-v="navy2"]{border-color:${NAVY};color:${NAVY}}`,
   `.btn[data-v="green"]{border-color:${GREEN};color:${GREEN}}`,
-  `.btn[data-v="green"][data-enabled="1"]{background:${GREEN};color:#fff}`,
-  '.btn[data-v="plain"][data-red="1"]{border-color:rgb(179,38,30);color:rgb(179,38,30);border-width:3.5px}',
-  '.btn[data-v="link"]{border:none;background:none;border-radius:0;text-transform:none;font-weight:400;text-decoration:underline;color:rgb(74,74,74)}',
+  `.btn[data-v="green"][data-enabled="1"]{background:${GREEN};color:var(--c-onFill)}`,
+  '.btn[data-v="plain"][data-red="1"]{border-color:var(--c-red);color:var(--c-red);border-width:3.5px}',
+  '.btn[data-v="link"]{border:none;background:none;border-radius:0;text-transform:none;font-weight:400;text-decoration:underline;color:var(--c-sub)}',
   '.btn[data-v="pause"]{font-size:0}',
   '.btn[data-v="pause"]::before{content:"";display:block;width:calc(var(--s)*5px);height:calc(var(--s)*14px);background:currentColor;box-shadow:calc(var(--s)*9px) 0 currentColor;margin-right:calc(var(--s)*9px)}',
   'input[data-s45="dbranch"]{position:absolute;margin:0;padding:0;transform:rotate(-90deg);transform-origin:50% 50%;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}',
   `input[data-s45="dbranch"]::-webkit-slider-runnable-track{height:4px;background:${INK};border-radius:2px}`,
   `input[data-s45="dbranch"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:${NAVY};border:2px solid ${INK}}`,
-  'input[data-s45="dbranch"][data-red="1"]::-webkit-slider-thumb{background:rgb(179,38,30)}',
+  'input[data-s45="dbranch"][data-red="1"]::-webkit-slider-thumb{background:var(--c-red)}',
   `.tk{position:absolute;font-size:${fz(11, 11)};color:${SUB};line-height:1}`,
   '.ctr{white-space:nowrap;display:inline-flex;gap:6px;align-items:baseline;margin-right:18px}',
-  '.ctr [data-amber="1"]{color:rgb(201,138,0);font-weight:700}',
-  '.keyrow{display:flex;flex-wrap:wrap;gap:2px 18px;align-items:center;color:rgb(74,74,74)}',
+  '.ctr [data-amber="1"]{color:var(--c-amber);font-weight:700}',
+  '.keyrow{display:flex;flex-wrap:wrap;gap:2px 18px;align-items:center;color:var(--c-sub)}',
   `.keyrow>div{white-space:nowrap;font-size:${fz(12, 12)}}`,
-  '.sw{display:inline-block;width:calc(var(--s)*22px);height:calc(var(--s)*12px);margin-right:6px;border:1px solid rgb(74,74,74);vertical-align:middle;box-sizing:border-box}',
+  '.sw{display:inline-block;width:calc(var(--s)*22px);height:calc(var(--s)*12px);margin-right:6px;border:1px solid var(--c-sub);vertical-align:middle;box-sizing:border-box}',
   '.rd{position:absolute;white-space:nowrap;pointer-events:none}',
   '.rd>*{position:absolute;margin:0}',
   `.rd .rh{left:0;top:0;font-size:${fz(14, 12)};font-weight:800;letter-spacing:1.2px}`,
   `.rd .rs{left:0;top:calc(var(--s)*20px);font-size:${fz(13, 12)};color:${SUB}}`,
   '.rd [data-k="total"]{left:0;top:calc(var(--s)*36px);font-size:calc(var(--s)*48px);font-weight:700;line-height:1;font-variant-numeric:tabular-nums}',
   `.rd [data-k="intersected"],.rd [data-k="imaged"]{left:calc(var(--s)*186px);font-size:${fz(15, 12)};font-weight:700;font-variant-numeric:tabular-nums}`,
-  '.rd [data-k="intersected"]{top:calc(var(--s)*46px);color:rgb(169,99,10)}',
-  '.rd [data-k="imaged"]{top:calc(var(--s)*70px);color:rgb(138,90,16)}',
-  '.rd [data-k]::after{content:" " attr(data-label);font-weight:400;color:rgb(27,27,27)}',
+  '.rd [data-k="intersected"]{top:calc(var(--s)*46px);color:var(--c-txtCored)}',
+  '.rd [data-k="imaged"]{top:calc(var(--s)*70px);color:var(--c-txtImaged)}',
+  '.rd [data-k]::after{content:" " attr(data-label);font-weight:400;color:var(--c-ink)}',
   '.rd [data-k="total"]::after{content:none}',
   `.rd [data-k="drilled"]{left:0;top:calc(var(--s)*132px);font-size:${fz(14, 12)};font-weight:700}`,
   `.rd [data-k="budget"]{left:0;top:calc(var(--s)*152px);font-size:${fz(13, 12)};color:${SUB};white-space:nowrap}`,
   '.rd [data-k="budget"]::after{content:none}',
   '.rd [data-k="drilled"]::after{content:none}',
-  '.rd [data-k="drilled"]::before{content:attr(data-label) " ";font-weight:400;color:rgb(74,74,74)}',
+  '.rd [data-k="drilled"]::before{content:attr(data-label) " ";font-weight:400;color:var(--c-sub)}',
   '.rd [data-k]:empty{display:none}',
   '.rd .rph{display:none}',
-  `.rd[data-end="1"] .rph{display:flex;align-items:center;justify-content:center;left:0;top:calc(var(--s)*44px);width:calc(var(--s)*320px);height:calc(var(--s)*62px);box-sizing:border-box;border:1.5px dashed rgb(164,154,134);border-radius:8px;color:rgb(133,123,104);font-size:${fz(13, 12)};white-space:normal;text-align:center;padding:0 8px}`,
+  `.rd[data-end="1"] .rph{display:flex;align-items:center;justify-content:center;left:0;top:calc(var(--s)*44px);width:calc(var(--s)*320px);height:calc(var(--s)*62px);box-sizing:border-box;border:1.5px dashed var(--c-phBorder);border-radius:8px;color:var(--c-phText);font-size:${fz(13, 12)};white-space:normal;text-align:center;padding:0 8px}`,
   '.rd[data-end="1"] .rb,.rd[data-end="1"] .re{display:none}',
   `.rd .rk{left:calc(var(--s)*338px);top:calc(var(--s)*22px);font-size:${fz(12, 12)};color:${SUB};line-height:calc(var(--s)*18px)}`,
   `.rd .re{left:calc(var(--s)*600px);top:calc(var(--s)*112px);transform:translateX(-100%);font-size:${fz(12, 12)};color:${SUB}}`,
   `.rd .rb{left:0;top:calc(var(--s)*112px);font-size:${fz(12, 12)};color:${SUB}}`,
-  '#shellbar{position:relative;padding:4px 28px;display:flex;flex-wrap:wrap;gap:4px;font-size:11px;border-top:1px dashed rgb(160,160,160)}',
+  `.tt{position:absolute;box-sizing:border-box;margin:0;height:44px;min-height:44px;padding:0 14px 0 12px;display:flex;align-items:center;gap:8px;font:inherit;font-size:16px;font-weight:700;line-height:1;white-space:nowrap;cursor:pointer;pointer-events:auto;border:2px solid ${INK};border-radius:8px;background:${V('surface')};color:${INK};z-index:5}`,
+  '.tt:focus-visible{outline:3px solid var(--c-line);outline-offset:2px}',
+  '.tt [data-icon]{display:flex;width:22px;height:22px}.tt svg{width:22px;height:22px}',
+  '#shellbar{position:relative;padding:4px 28px;display:flex;flex-wrap:wrap;gap:4px;font-size:11px;border-top:1px dashed var(--c-dashLine)}',
   '#shellbar button{font:inherit;padding:2px 6px}',
 ].join('\n');
 
@@ -321,19 +326,19 @@ function txt(dom, zone, cls, id, g, phases, text, gp) {
 
 function swatchStyle(kind, side) {
   switch (kind) {
-    case 'planned': return side === 'right' ? `background:rgba(179,38,30,0.3);border-color:${REDC}` : `background:rgba(31,78,154,0.28);border-color:${NAVY}`;
-    case 'ghost': return `background:#fff;border:2px dashed ${NAVY_DK}`;
-    case 'drilled': return `background:rgb(133,125,112);border:2px solid ${side === 'right' ? REDC : NAVY}`;
-    case 'shadow': return `background:${rgbS(PALETTE.sroi)};height:4px;border:none`;
+    case 'planned': return side === 'right' ? `background:${VA('red', 0.3)};border-color:${REDC}` : `background:${VA('line', 0.28)};border-color:${NAVY}`;
+    case 'ghost': return `background:${V('surface')};border:2px dashed ${NAVY_DK}`;
+    case 'drilled': return `background:${V('coreBarren')};border:2px solid ${side === 'right' ? REDC : NAVY}`;
+    case 'shadow': return `background:${V('sroi')};height:4px;border:none`;
     case 'portal': return `background:${NAVY};border:none;width:calc(var(--s)*14px);clip-path:polygon(50% 0,0 100%,100% 100%)`;
     case 'hole': return `background:${REDC};border:none;width:calc(var(--s)*14px);clip-path:polygon(0 0,100% 0,50% 100%)`;
-    case 'outline': return `background:repeating-linear-gradient(45deg,rgba(192,23,125,0.85) 0 1px,transparent 1px 4px);border:2px solid ${rgbS(PALETTE.truth)}`;
-    case 'stake': return `background:${rgbS(PALETTE.flag)};border:none;width:calc(var(--s)*12px);clip-path:polygon(0 0,100% 30%,0 60%)`;
-    case 'dropped': return `background:#fff;border:1.5px dotted rgb(107,107,107);border-radius:50%;width:calc(var(--s)*12px)`;
-    case 'barren': return `background:rgb(250,247,240);border:1.5px solid ${rgbS(PALETTE.landmark)};width:calc(var(--s)*12px)`;
-    case 'cored': return `background:${rgbS(PALETTE.cored)}`;
-    case 'imaged': return `background:${rgbS(PALETTE.imaged)}`;
-    default: return `background:${rgbS(PALETTE.ground)}`;
+    case 'stake': return `background:${V('flag')};border:none;width:calc(var(--s)*12px);clip-path:polygon(0 0,100% 30%,0 60%)`;
+    case 'dropped': return `background:${V('surface')};border:1.5px dotted ${V('dropEdge')};border-radius:50%;width:calc(var(--s)*12px)`;
+    case 'barren': return `background:${V('barrenFill')};border:1.5px solid ${V('landmark')};width:calc(var(--s)*12px)`;
+    case 'cored': return `background:${V('cored')}`;
+    case 'imaged': return `background:${V('imaged')}`;
+    case 'outline': return `background:repeating-linear-gradient(45deg,${VA('truth', 0.85)} 0 1px,transparent 1px 4px);border:2px solid ${V('truth')}`;
+    default: return `background:${V('ground')}`;
   }
 }
 
@@ -430,7 +435,7 @@ export function mountPage(doc, host, mut) {
   dom.mirror = txt(dom, SP, 'small c', 'mirror-tag', [679, 146, 82, 34], ['PAINT'], uiText('lbl_mirror'));
   dom.mirror.style.border = `2px solid ${TEAL}`;
   dom.mirror.style.borderRadius = '5px';
-  dom.mirror.style.background = '#fff';
+  dom.mirror.style.background = V('surface');
   dom.mirror.style.color = TEAL;
   dom.mirror.style.letterSpacing = '1px';
   dom.mirror.appendChild(mkEl(doc, 'div', { style: 'font-weight:400;letter-spacing:0' }, uiText('lbl_mirror_sub')));
@@ -507,6 +512,13 @@ export function mountPage(doc, host, mut) {
   addItem(dom, INF, dom.readout.left, [30, 584, 630, 156], ['END_REVEAL', 'READOUT']);
   addItem(dom, INF, dom.readout.right, [780, 584, 630, 156], ['END_REVEAL', 'READOUT']);
 
+  // theme toggle (N1): a real button in the top right of the frame; applyTheme sets its icon and word, applyLayout its position
+  dom.themeBtn = mkEl(doc, 'button', { type: 'button', class: 'tt', 'data-s45': 'theme-toggle' });
+  dom.themeIcon = mkEl(doc, 'span', { 'data-icon': '1' });
+  dom.themeWord = mkEl(doc, 'span', { 'data-word': '1' });
+  dom.themeBtn.appendChild(dom.themeIcon);
+  dom.themeBtn.appendChild(dom.themeWord);
+  app.appendChild(dom.themeBtn);
   host.appendChild(app);
   return dom;
 }
@@ -551,6 +563,27 @@ function gridOfItem(it, phase) {
   return it.gp && it.gp[phase] ? it.gp[phase] : it.g;
 }
 
+const ICON_SUN = '<svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5" stroke="none"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>';
+const ICON_MOON = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.8 8.8 0 0 1 9.4 3.5a9 9 0 1 0 11.1 11.1z"/></svg>';
+
+// Theme (N1): custom properties on the root, data-theme for tests and CSS, and the toggle's icon and word. The button names the mode a click switches to.
+export function applyTheme(dom, name) {
+  const root = dom.doc.documentElement;
+  const vars = themeVars(name);
+  for (const k of Object.keys(vars)) root.style.setProperty(k, vars[k]);
+  root.style.colorScheme = name;
+  root.setAttribute('data-theme', name);
+  const toDark = name !== 'dark';
+  dom.themeIcon.innerHTML = toDark ? ICON_MOON : ICON_SUN;
+  setTxt(dom.themeWord, uiText(toDark ? 'btn_theme_dark' : 'btn_theme_light'));
+  const label = uiText(toDark ? 'aria_theme_dark' : 'aria_theme_light');
+  dom.themeBtn.setAttribute('aria-label', label);
+  dom.themeBtn.setAttribute('title', label);
+}
+
+// right edge of the toggle on the 1440 grid: it sits left of the phase tag and clock, which keep their light-mode positions
+const THEME_RIGHT_G = 1130;
+
 // sizes the canvas backing store (dpr) and positions the zones and every item from the layout
 export function applyLayout(dom, lay, dpr) {
   const c = lay.rects.canvas;
@@ -575,6 +608,9 @@ export function applyLayout(dom, lay, dpr) {
   place(dom.zones['zone-spine'], R.spine);
   place(dom.zones['zone-info'], R.info);
   for (const it of dom.items) placeItem(it, lay.s, gridOfItem(it, dom.phaseNow));
+  // 44 px tall at every size; vertically centred in the title bar when the bar is taller than that
+  dom.themeBtn.style.right = `${Math.max(8, lay.vw - (R.ox + THEME_RIGHT_G * lay.s))}px`;
+  dom.themeBtn.style.top = `${Math.max(2, Math.round((R.title.h - 44) / 2))}px`;
   dom.fitDirty = true;
 }
 
@@ -660,7 +696,7 @@ export function updateHud(dom, hud) {
   setAttr(dom.planNote, 'data-msg', hud.message ? '1' : '0');
   // state widget
   setTxt(dom.swTitle, ph === 'REVEAL' ? uiText('sw_reveal') : ph === 'FADE' ? uiText('sw_fade') : ph === 'PAINT' ? uiText('sw_gone') : ph === 'PLAN' ? uiText('tag_plan') : '');
-  setStyle(dom.swTitle, 'color', ph === 'REVEAL' || ph === 'FADE' ? rgbS(PALETTE.formation) : ph === 'PLAN' ? INK : SUB);
+  setStyle(dom.swTitle, 'color', ph === 'REVEAL' || ph === 'FADE' ? V('formation') : ph === 'PLAN' ? INK : SUB);
   if (ph === 'REVEAL') {
     const dur = hud.phaseS || 0;
     const elapsed = hud.countdown != null ? dur * (1 - hud.countdown) : 0;

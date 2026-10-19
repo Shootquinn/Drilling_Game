@@ -54,8 +54,8 @@ export function serveDir(dir) {
 // ---- context, listeners, request log ----
 // Every request that is not the document or an origin-local request is aborted and counted (B-NET). file:// sub-resources do not pass through
 // Playwright routing; the static scan (H-NET) carries that part.
-export async function newPage(browser, { width = 1280, height = 720, init = [], allowOrigin = null } = {}) {
-  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, serviceWorkers: 'block' });
+export async function newPage(browser, { width = 1280, height = 720, init = [], allowOrigin = null, colorScheme = 'light' } = {}) {
+  const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: 1, serviceWorkers: 'block', colorScheme });
   const log = { pageerrors: [], consoleErrors: [], requestfailed: [], requests: [], blocked: [] };
   await context.route(/^https?:/i, (route) => {
     const u = route.request().url();

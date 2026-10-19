@@ -1,6 +1,6 @@
 # Step 45 playable (G1e build): what is in it and what is not
 
-Open `play_g1e.html` (or `game45/dist/play.html`) in Chrome (double-click works). It runs from the file, with no network. Spec v3.8.1. Smallest supported window: 960 x 540; below it the page asks for a larger one.
+Open `play_g1f.html` (or `game45/dist/play.html`) in Chrome (double-click works). It runs from the file, with no network. Spec v3.8.1. Smallest supported window: 960 x 540; below it the page asks for a larger one.
 
 ## What you can play
 

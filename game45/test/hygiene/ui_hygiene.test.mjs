@@ -14,7 +14,7 @@ import { mkTmp } from '../lib/tmpfs.mjs';
 
 const ROOT = path.resolve(GAME45, '..');
 // exchange files the review folder may hold besides the published build: Cowork briefs and findings (.md, .zip) and play-test bundles
-const EXCHANGE_RE = /^(cowork_[A-Za-z0-9_.-]+\.(md|zip)|L[0-9]+_playtest\.zip|[A-Za-z0-9_-]+_playtest\.zip)$/;
+const EXCHANGE_RE = /^(cowork_[A-Za-z0-9_.-]+\.(md|zip)|L[0-9]+_playtest\.zip|[A-Za-z0-9_-]+_playtest\.zip|Carlos [A-Za-z0-9 _.-]+\.zip)$/;
 const sha256 = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 
 test('H-NET static scan: the clean page and the SVG namespace give 0 hits; each of the 11 patterns is caught; the real play.html has 0 hits', () => {

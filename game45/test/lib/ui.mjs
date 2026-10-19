@@ -128,14 +128,14 @@ export class Driver {
 
 // open a page on the shipped file (or url) in manual-clock mode
 // level: 'gv4' (default) loads the fixed GV4 formation after boot (the rows written before v3.8.1 pin it); 'boot' leaves the page as it boots (Level 1); an object is loaded as given
-export async function openGame(browser, { url = process.env.S45_URL ?? fileUrl(PLAY), mut = null, startMode = null, slow = 0, width = 1280, height = 720, manual = true, allowOrigin = null, init = [], level = 'gv4' } = {}) {
+export async function openGame(browser, { url = process.env.S45_URL ?? fileUrl(PLAY), mut = null, startMode = null, slow = 0, width = 1280, height = 720, manual = true, allowOrigin = null, init = [], level = 'gv4', colorScheme = 'light' } = {}) {
   // S45_URL is a kit self-check override (a conformance stub served over HTTP); unset in every closing run
   if (process.env.S45_URL && !allowOrigin) allowOrigin = new URL(process.env.S45_URL).origin;
   const scripts = [...init];
   if (mut) scripts.unshift(initMut(mut));
   if (slow) scripts.unshift(initSlow(slow));
   if (startMode) scripts.unshift(initStartMode(startMode));
-  const { page, context, log } = await newPage(browser, { width, height, init: scripts, allowOrigin });
+  const { page, context, log } = await newPage(browser, { width, height, init: scripts, allowOrigin, colorScheme });
   const D = new Driver(page, log, context);
   await D.goto(url);
   if (manual) await D.manual();

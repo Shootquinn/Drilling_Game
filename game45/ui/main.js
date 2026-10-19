@@ -3,9 +3,9 @@
 import { createCore } from '../core/index.js';
 import { MODE_TRUNK, MODE_SURFACE } from '../core/consts.js';
 import { strings } from '../core/strings.js';
-import { computeLayout, mountPage, applyLayout, updateHud, uiGeometryOf, setTextTable } from './layout.js';
+import { computeLayout, mountPage, applyLayout, applyTheme, updateHud, uiGeometryOf, setTextTable } from './layout.js';
 import { createRenderer, HOLE_LABEL, LAYOUT_BOXES } from './render.js';
-import { modelPalette } from './palette.js';
+import { modelPalette, setTheme, getTheme, pickTheme } from './palette.js';
 import { createPerf } from './perf.js';
 import { createLoop } from './loop.js';
 import { bindInput } from './input.js';
@@ -14,6 +14,18 @@ const MN_SHAKE_PX = 5;
 // minimum supported viewport (spec 3a, v3.8.1): below it an overlay asks for a larger window
 const MN_MIN_W = 960;
 const MN_MIN_H = 540;
+const MN_THEME_KEY = 'g45_theme';
+
+// theme storage and the OS preference: every access can throw (blocked storage, private windows, sandboxed frames), so each is its own try/catch
+function mnStoredTheme(g) {
+  try { return g.localStorage.getItem(MN_THEME_KEY); } catch (e) { return null; }
+}
+function mnStoreTheme(g, name) {
+  try { g.localStorage.setItem(MN_THEME_KEY, name); } catch (e) { /* storage blocked: the choice lasts for this page view */ }
+}
+function mnOsDark(g) {
+  try { return !!g.matchMedia('(prefers-color-scheme: dark)').matches; } catch (e) { return false; }
+}
 
 function mnBoot() {
   const g = globalThis;
@@ -30,8 +42,14 @@ function mnBoot() {
   const perf = createPerf(slow);
   const dom = mountPage(document, document.body, mut);
   const renderer = createRenderer(dom.canvas, mut);
+  applyTheme(dom, setTheme(pickTheme(mnStoredTheme(g), mnOsDark(g))));
+  dom.themeBtn.addEventListener('click', () => {
+    const next = getTheme() === 'dark' ? 'light' : 'dark';
+    applyTheme(dom, setTheme(next));
+    mnStoreTheme(g, next);
+    draw();
+  });
   const dprNow = () => window.devicePixelRatio || 1;
-  const palette = modelPalette();
   let layout = null;
   let hover = null;
   let strokeView = null;
@@ -75,7 +93,7 @@ function mnBoot() {
       holes: v.holes,
       tiers: v.tiers,
       pairs: v.pairs,
-      palette,
+      palette: modelPalette(),
       brush: v.brush,
       readout: v.phase === 'READOUT' ? readoutNumbers(v.readout) : null,
       phaseS: v.phaseS,
@@ -296,7 +314,7 @@ function mnBoot() {
   const tooSmall = document.createElement('div');
   tooSmall.setAttribute('data-s45', 'too-small');
   tooSmall.setAttribute('role', 'alert');
-  tooSmall.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:50;display:none;align-items:center;justify-content:center;text-align:center;padding:16px;box-sizing:border-box;background:rgb(251,248,241);color:rgb(27,27,27);font:700 20px "Segoe UI",Arial,sans-serif';
+  tooSmall.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:50;display:none;align-items:center;justify-content:center;text-align:center;padding:16px;box-sizing:border-box;background:var(--c-page);color:var(--c-ink);font:700 20px "Segoe UI",Arial,sans-serif';
   tooSmall.textContent = uiTextOf('too_small');
   document.body.appendChild(tooSmall);
   const checkSize = () => { tooSmall.style.display = window.innerWidth < MN_MIN_W || window.innerHeight < MN_MIN_H ? 'flex' : 'none'; };
