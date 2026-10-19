@@ -4,7 +4,11 @@ A prospecting game. A hidden underground formation is shown briefly, then fades.
 
 ## Play
 
-Open `game45/dist/play.html` in Chrome. It is a single file with no network access.
+Play in the browser: https://shootquinn.github.io/Drilling_Game/
+
+Or open `game45/dist/play.html` locally in Chrome. It is a single file with no network access.
+
+`index.html` at the repo root is a copy of `game45/dist/play.html` for GitHub Pages; recopy it after each build.
 
 Phases: memorize, paint, plan, run, result. Six levels (the current build starts at Level 4 and runs through Level 6). Known gaps are in `game45/docs/known_gaps.md`.
 
