@@ -65,10 +65,11 @@ export function bindInput(env) {
     },
     pause: () => g.pause(),
     skip: () => g.skip(),
-    // READOUT button: NEXT advances the campaign (surface mode); after the last level, and in trunk mode, it plays the level again
+    // READOUT button: NEXT advances the campaign (surface mode); after the last level it ends the campaign and the button reads Play again, which restarts at Level 1 (B10);
+    // trunk mode (no campaign) plays the level again
     'play-again': () => {
       const c = core.view().campaign;
-      return c && !c.ended ? g.nextLevel() : g.playAgain();
+      return !c ? g.playAgain() : c.ended ? g.restartCampaign() : g.nextLevel();
     },
   };
   for (const r of [2, 5, 8, 12, 20]) BUTTON_ACTIONS[`brush-${r}`] = () => g.brush(r);
@@ -317,8 +318,31 @@ export function bindInput(env) {
     return true;
   }
 
+  // Space or Enter on the level start card starts the round (B9); Space toggles Pause while the run is on (B13). The key never also clicks the focused button.
+  const keyAction = (view) => (view.phase === 'LEVEL_START' ? () => g.showFormation() : view.phase === 'RUN' ? () => g.pause() : null);
+  // a focused button of another purpose (theme toggle, a speed, Skip) keeps its own Space and Enter; the level buttons, Show formation and Pause take the key as the round action
+  const keyOwner = (ev) => {
+    const b = ev.target && ev.target.closest ? ev.target.closest('button') : null;
+    if (!b) return false;
+    const id = b.getAttribute('data-s45') || '';
+    return !(id === 'show-formation' || id === 'pause' || /^level-\d$/.test(id));
+  };
+  const isSpaceKey = (ev) => ev.key === ' ' || ev.key === 'Spacebar' || ev.code === 'Space';
+  window.addEventListener('keyup', (ev) => {
+    if (ev.ctrlKey || ev.metaKey || ev.altKey || keyOwner(ev)) return;
+    const view = core.view();
+    if ((isSpaceKey(ev) || (ev.key === 'Enter' && view.phase === 'LEVEL_START')) && keyAction(view)) ev.preventDefault();
+  });
   window.addEventListener('keydown', (ev) => {
     const view = core.view();
+    if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && !keyOwner(ev) && (isSpaceKey(ev) || (ev.key === 'Enter' && view.phase === 'LEVEL_START'))) {
+      const fn = keyAction(view);
+      if (fn) {
+        ev.preventDefault();
+        if (!ev.repeat) env.act(fn, false);
+        return;
+      }
+    }
     if (undoKey(ev, view)) return;
     if (view.phase !== 'PLAN' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (ev.key === 'Delete' || ev.key === 'Backspace') {

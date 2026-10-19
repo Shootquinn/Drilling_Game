@@ -33,7 +33,7 @@ export function expectedRects(vw, vh, W = 200, H = 100, sb = SB) {
   const ph = sb.PW * H / W;
   return {
     s, cellPx: sb.PW / W * s,
-    'zone-title': R(0, 0, sb.WD, sb.TITLE_H),
+    'zone-title': R(0, 0, sb.WD, Math.max(sb.TITLE_H, 48 / s)),   // v3.8.3 (D1): the header is at least 48 px tall
     'zone-heading': R(sb.XL, sb.SKY, sb.XR + sb.PW - sb.XL, sb.SURF - sb.SKY),
     'panel-left': R(sb.XL, sb.SURF, sb.PW, ph),
     'panel-right': R(sb.XR, sb.SURF, sb.PW, ph),

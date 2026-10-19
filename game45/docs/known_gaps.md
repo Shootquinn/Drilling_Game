@@ -1,12 +1,12 @@
 # Step 45 playable (G1e build): what is in it and what is not
 
-Open `play_g1g.html` (or `game45/dist/play.html`) in Chrome (double-click works). It runs from the file, with no network. Spec v3.8.2. Smallest supported window: 960 x 540; below it the page asks for a larger one.
+Open `play_g1h.html` (or `game45/dist/play.html`) in Chrome (double-click works). It runs from the file, with no network. Spec v3.8.3. Smallest supported window: 960 x 540; below it the page asks for a larger one.
 
 ## What you can play
 
 The ground is a 1,000 m by 500 m section, drawn twice: the left panel is the borebots, the right panel is the rig. Both panels show the same painting.
 
-1. The page opens at Level 1. The card has six level buttons (1 to 6) under "level select"; any level can be picked in any order. Next after a result goes to the next level; after Level 6 the campaign ends and the button reads Play again.
+1. The page opens at Level 1. The card has six level buttons (1 to 6) under "level select"; any level can be picked in any order. Next after a result goes to the next level; after Level 6 the next press shows the end-of-campaign card (both sides' scores for each level) and the button reads Play again, which restarts at Level 1. The start card waits for you: Show formation, Space or Enter starts the round.
 2. Show formation (reveal and fade times come from the level: Level 1 shows for 8 seconds, Level 4 for 5, each then fades over 2).
 3. Paint where you remember it. Brush sizes 2, 5, 8, 12, 20 cells, Erase, Fill, Undo (last 20 strokes, Ctrl+Z), Clear all. The paint cap is a fraction of the 20,000 cells set by the level (Level 4: 4,000 cells). At most 3 bodies. Small stray patches under 50 cells dissolve when you press Done painting. Peeks: set by the level (Levels 1 to 3 have some). Back to paint keeps the plan; the Undo history is cleared at Done painting by design, and the page says so.
 4. Plan, left panel (borebots).
@@ -17,7 +17,7 @@ The ground is a 1,000 m by 500 m section, drawn twice: the left panel is the bor
 5. Plan, right panel (rig).
    - Click the right panel to place a rig hole (12 at most, one per column, drilled in the order placed). Drag a hole to move it, drag its square handle or use the wheel or + and - to set its depth (1 to 100 cells), Delete removes the selected hole. With no holes placed, Balrog plans the rig.
    - Placement is never refused for length. The rig has its own 2,000 m, apart from the borebots (spec v3.8.2): both sides can each drill 2,000 m. A rig total above 2,000 m draws its past-the-limit cells in red, the status line reads "Rig: Max Length Exceeded", and Start is blocked until the rig total is at or under 2,000 m. The line "unspent N m of 2,000 m" is 2,000 m minus the rig total. With no holes placed, Balrog plans up to 12 holes within 2,000 m. A new hole is as deep as the formation in its column plus one cell (a body that reaches the grid floor gives 100 cells), else 10 cells.
-6. Start. The run begins at 4x; the controls are Pause, 1x, 2x, 4x, 8x, 16x and Skip to end. A run at 16x lasts at least 6.5 seconds. Pause holds at every speed.
+6. Start. The run begins at 4x; the controls are Pause (Space also pauses and resumes), 1x, 2x, 4x, 8x, 16x and Skip to end. A run at 16x lasts at least 6.5 seconds. Pause holds at every speed.
 7. The formation fades in with what you hit (solid), what radar imaged (lighter) and what you missed (unmarked), then the readout shows percent intersected, imaged and total for each side, the metres drilled and "unspent N m of 2,000 m" (cap minus drilled, the same wording as the plan and the run).
 
 ## What is in the code but not on the page
@@ -37,7 +37,7 @@ The ground is a 1,000 m by 500 m section, drawn twice: the left panel is the bor
 ## Behaviour the playtest asked about
 
 - After Back to paint the network can change even though you only added paint: each portal's target set is recomputed from the new painting (spec 4b item 11), so clicks that no longer reach it drop. The message names the portal and the count.
-- "formation top N m" is the depth of the shallowest painted cell the selected portal serves. The painting is one region shared by all portals; a portal's number changes when the painting does.
+- "formation top N m" is the depth of the shallowest painted cell in the selected portal's own column (the nearest painted column when its column has none). The painting is one region shared by all portals; a portal's number changes when the painting or the portal moves.
 - The gold flags along the surface are distance flags every 250 m (0, 250, 500, 750 m), not a game object.
 
 ## Placeholder numbers (change them after you play)

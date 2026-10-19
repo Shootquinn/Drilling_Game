@@ -43,11 +43,11 @@ test('G1E-U-GROWTH a dead portal: growth.status dead with the plain reason, canC
   g.removePortal(S.dead); g.addPortal(S.live); g.selectPortal(S.live);
   v = g.view();
   assert.deepEqual([v.growth.status, v.growth.reason, v.flags.canClick], ['ok', '', true]);
-  // no portal selected: not ok, the reason says select one
+  // no portal at all (v3.8.3, B16): not ok, the reason says to place one
   g.removePortal(S.live);
   v = g.view();
   assert.equal(v.flags.canClick, false);
-  assert.equal(v.growth.reason, 'select a portal first');
+  assert.equal(v.growth.reason, strings.refuse_none_placed);
   // known-bad: probe_ignored leaves a dead portal pressable
   const Wb = await onePortal(S.dead, 50, ['probe_ignored']);
   assert.equal(Wb.g.view().flags.canClick, true, 'probe_ignored must keep Next generation pressable on a dead portal');
@@ -60,7 +60,7 @@ test('G1E-U-GROW-STOP Grow to 12 that stops names the dead probe; the buttons st
   const r = g.growTo12();
   assert.equal(r.status, 'dead');
   assert.ok(g.state().plan.gens[S.stop.col] >= 1 && g.state().plan.gens[S.stop.col] < 12);
-  assert.equal(g.view().ui.message, DEAD);
+  assert.equal(g.view().ui.message, strings.refuse_dead_end, 'v3.8.3 (B1): a stop after the network reached the formation says so (the g1g text is for a portal that never reached it)');
   assert.equal(g.view().flags.canClick, false);
   assert.equal(g.growTo12().status, 'dead', 'a pressed Grow to 12 asks the core and gets the same answer');
   // moving the slider clears the message

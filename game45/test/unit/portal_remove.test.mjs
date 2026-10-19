@@ -3,6 +3,7 @@
 // real core. Known-bad: remove_blocked_last, remove_keeps_clicks, sel_undefined, delete_wrong_kind (core switches).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { strings } from '../../core/strings.js';
 import { planWorld } from '../lib/rigworld.mjs';
 
 const START_BLOCKED = 'place a portal and click Next generation at least once';
@@ -48,7 +49,7 @@ test('P-REMOVE-ALL remove every portal: portals [], selected null, Start refused
   let r;
   assert.doesNotThrow(() => { r = g.nextGen(); });
   assert.equal(r.status, 'no_portal');
-  assert.equal(g.view().ui.message, 'select a portal first');
+  assert.equal(g.view().ui.message, strings.refuse_none_placed, 'v3.8.3 (B16): with no portal the text says to place one');
   assert.equal(g.growTo12 ? g.growTo12().status : 'no_portal', 'no_portal');
   // a portal can be added again and works
   assert.equal(g.addPortal(70).status, 'ok');

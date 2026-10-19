@@ -18,7 +18,7 @@ Phases: memorize, paint, plan, run, result. Six levels: the page opens at Level 
 - `game45/ui/` canvas 2D rendering and input
 - `game45/build.mjs` concatenates everything into `dist/play.html` (whitespace-minified; `--no-minify` keeps the source layout)
 - `game45/test/` unit, parity, hygiene, end-to-end and performance tests
-- `cr_scratch/step45_toymaker_spec_v3.md` the design spec (v3.8.2)
+- `cr_scratch/step45_toymaker_spec_v3.md` the design spec (v3.8.3)
 - `cr_scratch/step45_reference_sim_v3.py` the Python reference simulation the JavaScript core is checked against (golden files in `game45/test/`)
 
 ## Build and test

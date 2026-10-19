@@ -320,6 +320,11 @@ export class Network {
     if (!this.mut.has('no_cap') && this.capLen(this.segs) + this.capLen(kept) > this.cap + 1e-9) return { status: 'cap', kept };
     return { status: 'ok', kept };
   }
+  // why a dead probe of portal p is dead (spec 4c, v3.8.3): 'bottom' = a branch of p already entered the S margin, so the network reached the painted formation and cannot extend inside it;
+  // 'nofit' = no branch of p has reached it. Trunk mode has no entry flag and always reads 'nofit'.
+  deadKind(p) {
+    return this.mode === MODE_SURFACE && this.segs.some((q) => q.portal === p && q.ent === true) ? 'bottom' : 'nofit';
+  }
   nextGen(p, D_m) {
     const { status, kept } = this.probe(p, D_m);
     if (status !== 'ok') return status;

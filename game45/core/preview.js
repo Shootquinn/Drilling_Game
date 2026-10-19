@@ -32,10 +32,21 @@ export function previewPlan(levelPublic, S, portals, clicks, mut = EMPTY, mode =
   const bg = budgets(net, mut);
   const rp = planRig(net, bg.b, null, mut);
   // S-top depth (spec 4a): 5 m x the shallowest S row of the components each portal serves (T)
+  // v3.8.3 (B2, B18): the top of the formation under the portal = the shallowest painted cell in the portal's own column, else in the nearest painted column of the cells it serves
+  // (ties to the lower column). Mutant stop_top_comp: the v3.8.2 rule, the shallowest row of the whole served body.
   const sTop = {};
   for (const p of net.portals) {
+    const T = net.targetCells(p);
     let m = Infinity;
-    for (const k of net.targetCells(p)) m = Math.min(m, k % 100);
+    if (mut.has('stop_top_comp')) {
+      for (const k of T) m = Math.min(m, k % 100);
+    } else {
+      const top = new Map();
+      for (const k of T) { const c = Math.floor(k / 100); top.set(c, Math.min(top.has(c) ? top.get(c) : Infinity, k % 100)); }
+      let bc = null;
+      for (const c of top.keys()) if (bc === null || Math.abs(c - p) < Math.abs(bc - p) || (Math.abs(c - p) === Math.abs(bc - p) && c < bc)) bc = c;
+      if (bc !== null) m = top.get(bc);
+    }
     sTop[p] = Number.isFinite(m) ? m * CELL_M : null;
   }
   const meters = { used: net.length(), cap };

@@ -28,6 +28,8 @@ export const SBG = Object.freeze({
   WD: 1440, HT: 790, TITLE_H: 58, SKY: 72, SURF: 192, XL: 30, XR: 770, PW: 640, SP0: 670, SP1: 770, SP_Y0: 64, SP_Y1: 774, BOT: 548, INFO_Y1: 775, FRAME_PX: 3,
 });
 
+export const TITLE_MIN_PX = 48;
+
 export function gridScale(vw, vh) {
   const s = Math.min(vw / SBG.WD, vh / SBG.HT);
   return { s, ox: (vw - SBG.WD * s) / 2, oy: (vh - SBG.HT * s) / 2 };
@@ -50,7 +52,8 @@ export function panelRects(vw, vh, W, H) {
   const left = rectOf(lx, py, pwPx, phPx);
   const right = rectOf(rx, py, pwPx, phPx);
   const spine = G(SBG.SP0, SBG.SP_Y0, SBG.SP1 - SBG.SP0, SBG.SP_Y1 - SBG.SP_Y0);
-  const title = G(0, 0, SBG.WD, SBG.TITLE_H);
+  // the header is at least 48 px tall (D1): at 960 x 540 the 44 px theme toggle sits inside it
+  const title = rectOf(ox, oy, SBG.WD * s, Math.max(SBG.TITLE_H * s, TITLE_MIN_PX));
   const heading = G(SBG.XL, SBG.SKY, SBG.XR + SBG.PW - SBG.XL, SBG.SURF - SBG.SKY);
   const info = G(SBG.XL, SBG.BOT, SBG.XR + SBG.PW - SBG.XL, SBG.INFO_Y1 - SBG.BOT);
   // readout block per side inside the info zone (below the status and key rows)

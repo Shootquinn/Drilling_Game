@@ -16,6 +16,7 @@ after(async () => { await browser?.close(); });
 const needPlay = () => assert.ok(fs.existsSync(PLAY), `${PLAY} does not exist`);
 
 const DEAD = 'No branch from this portal reaches the painted formation at this dBranch. Move the portal or change dBranch.';
+const DEAD_END = 'Growth stopped: the branches reached the painted formation and cannot extend inside it (its bottom, its edge or the grid floor).';
 const NEXT_CAP = 'Next generation would exceed the 2,000 m limit';
 const MAX_LEN = 'Max Length Exceeded';
 const num = (s) => Number(String(s).replace(/,/g, ''));
@@ -126,8 +127,8 @@ test('G1E-E2b Grow to 12 that stops says why and the buttons go grey with the re
     await D.click('grow-12');
     const st = await D.state();
     assert.ok(st.plan.gens[S.stop.col] < 12 && st.plan.gens[S.stop.col] >= 1, `gens ${st.plan.gens[S.stop.col]}`);
-    assert.equal(st.ui.message, DEAD);
-    assert.equal(tx(await D.text('plan-note')), DEAD);
+    assert.equal(st.ui.message, DEAD_END, 'v3.8.3 (B1): a stop after the network reached the formation says so');
+    assert.equal(tx(await D.text('plan-note')), DEAD_END);
     assert.equal(await D.enabled('next-gen'), false);
     assert.equal(await D.enabled('grow-12'), false);
     const other = [20, 60, 100, 146, 180].find((c) => Math.abs(c - S.stop.col) >= 5);
@@ -154,6 +155,13 @@ test('G1E-E2c the formation-top label never sits on a depth-axis label ("200S to
           if (await D.enabled('next-gen')) await D.click('next-gen'); else break;
         }
       }
+      // v3.8.3: a painting whose top is on the 100 m axis line, a portal at column 2: the label stands beside the drop at the axis label's depth
+      await D.click('back-to-paint');
+      await D.page.evaluate(() => { const S = []; for (let x = 0; x < 30; x++) for (let y = 20; y < 28; y++) S.push(x * 100 + y); return globalThis.__s45.loadPainting(S); });
+      await D.click('done-painting');
+      await portalsAt(D, [2]);
+      const boxes = (await D.geo()).boxes;
+      for (const st of boxes.sTop) { labels++; if ([...boxes.rowLabels, ...boxes.mDeep].some((r) => hit(st, r))) bad.push('axis-line'); }
     } finally { await D.close(); }
     return { labels, bad };
   };

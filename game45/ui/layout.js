@@ -63,6 +63,7 @@ export const PHASE_GROUPS = Object.freeze({
   RUN: ['run'],
   END_REVEAL: [],
   READOUT: ['end'],
+  CAMPAIGN_END: ['end'],              // UI-only pseudo phase (v3.8.3, B10): READOUT of a campaign that has ended
 });
 
 const PHASES_OF_GROUP = (() => {
@@ -196,7 +197,7 @@ export function drilledText(m) {
 }
 
 // phase to top-right tag key
-const TAG_KEY = { LEVEL_START: 'tag_memory', REVEAL: 'tag_memory', FADE: 'tag_memory', PAINT: 'tag_paint', PLAN: 'tag_plan', RUN: 'tag_run', END_REVEAL: 'tag_result', READOUT: 'tag_result' };
+const TAG_KEY = { LEVEL_START: 'tag_memory', REVEAL: 'tag_memory', FADE: 'tag_memory', PAINT: 'tag_paint', PLAN: 'tag_plan', RUN: 'tag_run', END_REVEAL: 'tag_result', READOUT: 'tag_result', CAMPAIGN_END: 'tag_result' };
 
 // Colours are CSS custom properties set from the live palette (applyTheme): --c-<key> is rgb(), --r-<key> the bare triplet for rgba().
 const V = (k) => `var(--c-${k})`;
@@ -240,6 +241,9 @@ export const PAGE_CSS = [
   `.t.status{font-size:${fz(14, 12)};white-space:nowrap}`,
   '.t.status[data-s45="status-left"]{white-space:normal}.ctr[data-s45="counters"]{display:contents}',   // three portal counters plus S top wrap to a second line inside the left column
   `.t.msg{color:var(--c-red);font-weight:700;font-size:${fz(11, 11)}}`,
+  // the message / reason line under the left panel (v3.8.3, B1, B15): bold, larger, ink; a refusal also carries a warning bar
+  `.t.cap.inf[data-s45="plan-note"][data-on="1"]{color:var(--c-ink);font-weight:700;font-size:${fz(14, 12)}}`,
+  '.t.cap.inf[data-s45="plan-note"][data-msg="1"]{border-left:4px solid var(--c-warn);padding-left:8px}',
   `.t.red{color:var(--c-red);font-weight:700;font-size:${fz(11, 11)}}`,
   '[data-s45="meter"][data-over="1"],[data-s45="rig-status"][data-over="1"]{color:var(--c-warn);font-weight:700}',
   `[data-s45="meter-ghost"]{color:${NAVY_DK};font-size:${fz(11, 11)};white-space:nowrap}`,
@@ -263,6 +267,15 @@ export const PAGE_CSS = [
   '.btn[data-v="link"]{border:none;background:none;border-radius:0;text-transform:none;font-weight:400;text-decoration:underline;color:var(--c-sub)}',
   '.btn[data-v="pause"]{font-size:0}',
   '.btn[data-v="pause"]::before{content:"";display:block;width:calc(var(--s)*5px);height:calc(var(--s)*14px);background:currentColor;box-shadow:calc(var(--s)*9px) 0 currentColor;margin-right:calc(var(--s)*9px)}',
+  // paused (B13): the two bars become a play triangle
+  '.btn[data-v="pause"][data-paused="1"]::before{width:0;height:0;background:none;box-shadow:none;margin-right:0;border-style:solid;border-color:transparent transparent transparent currentColor;border-width:calc(var(--s)*8px) 0 calc(var(--s)*8px) calc(var(--s)*14px)}',
+  // end-of-campaign card (B10)
+  `.cend{position:absolute;box-sizing:border-box;display:none;flex-direction:column;justify-content:center;gap:calc(var(--s)*6px);padding:calc(var(--s)*10px) calc(var(--s)*40px);background:var(--c-surface);border:3px solid ${INK};color:${INK};pointer-events:none}`,
+  `.cend .cg{display:grid;grid-template-columns:1fr 1.4fr 1.4fr 1.5fr;column-gap:calc(var(--s)*14px);align-items:baseline;font-size:${fz(15, 11)};font-variant-numeric:tabular-nums;padding:calc(var(--s)*3px) 0;border-bottom:1px solid var(--c-dashLine)}`,
+  `.cend .cg.ch{font-weight:800;font-size:${fz(13, 10)};letter-spacing:1px;text-transform:uppercase;border-bottom:2px solid ${INK}}`,
+  '.cend .cg.cf{font-weight:800;border-top:2px solid var(--c-ink);border-bottom:none}',
+  '.cend .cg>*:nth-child(n+2){text-align:right}.cend .cg>*:last-child{text-align:left}',
+  `.cend .cn{font-size:${fz(12, 10)};color:${SUB}}`,
   'input[data-s45="dbranch"]{position:absolute;margin:0;padding:0;transform:rotate(-90deg);transform-origin:50% 50%;-webkit-appearance:none;appearance:none;background:transparent;cursor:pointer}',
   `input[data-s45="dbranch"]::-webkit-slider-runnable-track{height:4px;background:${INK};border-radius:2px}`,
   `input[data-s45="dbranch"]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;margin-top:-6px;border-radius:50%;background:${NAVY};border:2px solid ${INK}}`,
@@ -398,12 +411,18 @@ export function mountPage(doc, host, mut) {
   const canvas = mkEl(doc, 'canvas', { id: 'cv' });
   stage.appendChild(canvas);
   app.appendChild(stage);
+  const card = mkEl(doc, 'div', { class: 'cend', 'data-s45': 'campaign-end' });
+  card.appendChild(mkEl(doc, 'div', { class: 'cg ch' }));
+  for (let n = 1; n <= 6; n++) card.appendChild(mkEl(doc, 'div', { class: 'cg', 'data-row': String(n) }));
+  card.appendChild(mkEl(doc, 'div', { class: 'cg cf', 'data-row': 'avg' }));
+  card.appendChild(mkEl(doc, 'div', { class: 'cn' }));
+  app.appendChild(card);
   const zones = {};
   for (const z of ['zone-title', 'zone-heading', 'zone-info', 'zone-spine']) {
     zones[z] = mkEl(doc, 'div', { 'data-s45': z, class: 'zone' });
     app.appendChild(zones[z]);
   }
-  const dom = { doc, app, stage, canvas, zones, items: [], buttons: {}, counterNodes: {}, lay: null, phaseNow: null, oldHdr: old('lay_off_hdr'), noFit: old('lay_off_fit') };
+  const dom = { doc, app, stage, canvas, campEnd: card, zones, items: [], buttons: {}, counterNodes: {}, lay: null, phaseNow: null, oldHdr: old('lay_off_hdr'), noFit: old('lay_off_fit') };
   const T = 'zone-title';
   const HD = 'zone-heading';
   const SP = 'zone-spine';
@@ -432,12 +451,16 @@ export function mountPage(doc, host, mut) {
   dom.swPeeksPaint = txt(dom, SP, 'cap c', 'sw-peeks-paint', [677, 730, 86, 16], ['PAINT'], '');
 
   // PAINT spine
-  dom.mirror = txt(dom, SP, 'small c', 'mirror-tag', [679, 146, 82, 34], ['PAINT'], uiText('lbl_mirror'));
+  dom.mirror = txt(dom, SP, 'small c', 'mirror-tag', [676, 144, 88, 42], ['PAINT'], uiText('lbl_mirror'));
   dom.mirror.style.border = `2px solid ${TEAL}`;
   dom.mirror.style.borderRadius = '5px';
   dom.mirror.style.background = V('surface');
   dom.mirror.style.color = TEAL;
   dom.mirror.style.letterSpacing = '1px';
+  dom.mirror.style.display = 'flex';
+  dom.mirror.style.flexDirection = 'column';
+  dom.mirror.style.justifyContent = 'center';
+  dom.mirror.style.lineHeight = '1.05';
   dom.mirror.appendChild(mkEl(doc, 'div', { style: 'font-weight:400;letter-spacing:0' }, uiText('lbl_mirror_sub')));
   txt(dom, SP, 'capb c', null, [677, 196, 86, 14], ['PAINT'], uiText('lbl_paint_tools'));
   dom.brushCap = txt(dom, SP, 'capb c', null, [677, 366, 86, 14], ['PAINT'], uiText('lbl_brush_r'));
@@ -448,7 +471,7 @@ export function mountPage(doc, host, mut) {
   // PLAN spine
   txt(dom, SP, 'capb c', null, [677, 98, 86, 14], ['PLAN'], uiText('lbl_dbranch'));
   dom.sliderOut = txt(dom, SP, 'val c', 'dbranch-value', [677, 112, 86, 26], ['PLAN'], '50 m');
-  dom.sliderNote = txt(dom, SP, 'small c', 'dbranch-note', [677, 269, 86, 24], ['PLAN'], '');
+  dom.sliderNote = txt(dom, SP, 'small c', 'dbranch-note', [677, 266, 86, 20], ['PLAN'], '');
   dom.sliderNote.style.color = REDC;
   const slider = mkEl(doc, 'input', { type: 'range', min: '20', max: '100', step: '5', value: '50', 'data-s45': 'dbranch', 'data-red': '0' });
   addItem(dom, SP, slider, [685, 140, 30, 122], ['PLAN']);
@@ -458,8 +481,9 @@ export function mountPage(doc, host, mut) {
     const y = 262 - (122 * (v - 20)) / 80 + (v === 100 ? 5 : 0);   // the top tick label sits clear of the dBranch value
     addItem(dom, SP, tk, [714, y - 5, 24, 10], ['PLAN']);
   }
-  dom.meterLabel = txt(dom, SP, 'capb c', null, [677, 294, 86, 14], ['PLAN'], uiText('lbl_meter'));
-  dom.capCaption = txt(dom, SP, 'cap c', 'meter-cap', [677, 306, 86, 28], ['PLAN'], '');
+  dom.meterLabel = txt(dom, SP, 'capb c', null, [677, 286, 86, 14], ['PLAN'], uiText('lbl_meter'));
+  dom.capCaption = txt(dom, SP, 'cap c', 'meter-cap', [677, 300, 86, 46], ['PLAN'], '');
+  dom.capCaption.style.lineHeight = '1.1';   // three short lines end above the gauge at 960 x 540 (B11)
   dom.capCaption.style.textWrap = 'balance';   // "unspent 352.5 m" / "of 2,000 m", not "352.5" / "m of"
   dom.meter = txt(dom, SP, 'mtr c', 'meter', [677, 442, 86, 32], ['PLAN'], '');
   dom.meter.setAttribute('data-over', '0');
@@ -496,7 +520,7 @@ export function mountPage(doc, host, mut) {
   dom.sTop = mkEl(doc, 'span', { class: 'ctr', 'data-s45': 's-top' });
   dom.statusL.appendChild(dom.sTop);
   dom.statusR = txt(dom, INF, 'status', 'rig-status', [780, old('lay_off_status') ? 626 : 640, 630, 22], ['PLAN'], '');
-  dom.planNote = txt(dom, INF, 'cap inf', 'plan-note', [30, 514, 525, 32], ['PLAN', 'PAINT'], '');
+  dom.planNote = txt(dom, INF, 'cap inf', 'plan-note', [30, 514, 525, 32], ['PLAN', 'PAINT', 'RUN'], '');
   dom.helpL = txt(dom, INF, 'cap inf', 'plan-help-left', [30, old('lay_off_status') ? 654 : 664, 630, 90], ['PLAN'], uiText('plan_help_left'));
   dom.helpR = txt(dom, INF, 'cap inf', 'plan-help-right', [780, old('lay_off_status') ? 654 : 664, 630, 90], ['PLAN'], uiText('plan_help_right'));
   dom.runL = txt(dom, INF, 'status', 'run-status-left', [30, 552, 630, 22], ['RUN'], '');
@@ -608,6 +632,12 @@ export function applyLayout(dom, lay, dpr) {
   place(dom.zones['zone-spine'], R.spine);
   place(dom.zones['zone-info'], R.info);
   for (const it of dom.items) placeItem(it, lay.s, gridOfItem(it, dom.phaseNow));
+  // end-of-campaign card: the panel band down to the grid line above the Play again button
+  const ce = dom.campEnd.style;
+  ce.left = `${R.left.x - 3}px`;
+  ce.top = `${R.left.y - 3}px`;
+  ce.width = `${R.right.x + R.right.w - R.left.x + 6}px`;
+  ce.height = `${R.oy + 680 * R.s - R.left.y + 3}px`;
   // 44 px tall at every size; vertically centred in the title bar when the bar is taller than that
   dom.themeBtn.style.right = `${Math.max(8, lay.vw - (R.ox + THEME_RIGHT_G * lay.s))}px`;
   dom.themeBtn.style.top = `${Math.max(2, Math.round((R.title.h - 44) / 2))}px`;
@@ -677,11 +707,44 @@ function fadeWord(alpha) {
   return alpha > 0.66 ? 'sw_fade_early' : alpha > 0.34 ? 'sw_fade_half' : 'sw_fade_late';
 }
 
+// end-of-campaign card (v3.8.3, B10): one row per level with both sides' prospected share, the side ahead, an average over the levels played and the tally
+function updateCampaignEnd(dom, hud) {
+  const card = dom.campEnd;
+  const on = !!hud.campaignEnd;
+  setStyle(card, 'display', on ? 'flex' : 'none');
+  if (!on) return;
+  const sc = (hud.campaign && hud.campaign.scores) || {};
+  const pct = (v) => `${v.toFixed(1)}%`;
+  const cells = (row, vals, cls) => {
+    while (row.childNodes.length < vals.length) row.appendChild(mkEl(dom.doc, 'span'));
+    vals.forEach((v, i) => setTxt(row.childNodes[i], v));
+    if (cls) { row.childNodes[1].style.color = NAVY; row.childNodes[2].style.color = REDC; }
+  };
+  cells(card.querySelector('.ch'), [uiText('lbl_level'), `${uiText('brand_left')} (${uiText('lbl_left')})`, `${uiText('brand_right')} (${uiText('lbl_right')})`, uiText('lbl_ahead')], true);
+  let a = 0;
+  let b = 0;
+  let n = 0;
+  let sl = 0;
+  let sr = 0;
+  for (let id = 1; id <= 6; id++) {
+    const r = sc[id];
+    const row = card.querySelector(`[data-row="${id}"]`);
+    if (!r) { cells(row, [`${uiText('lbl_level')} ${id}`, '-', '-', uiText('lbl_not_played')]); continue; }
+    n++; sl += r.left; sr += r.right;
+    const who = r.left > r.right ? uiText('lbl_left') : r.right > r.left ? uiText('lbl_right') : uiText('lbl_tie');
+    if (r.left > r.right) a++; else if (r.right > r.left) b++;
+    cells(row, [`${uiText('lbl_level')} ${id}`, pct(r.left), pct(r.right), who]);
+  }
+  cells(card.querySelector('[data-row="avg"]'), [uiText('lbl_average'), n ? pct(sl / n) : '-', n ? pct(sr / n) : '-', `${uiText('lbl_left')} ${a} : ${uiText('lbl_right')} ${b}`]);
+  setTxt(card.querySelector('.cn'), uiText('lbl_prospected_note'));
+}
+
 // hud: {phase, message, meter: {used, cap, over}|null, ghostM: number|null, counters: {col: n}|null, cellM, readout: {left, right}|null,
 //       enabled: {id: bool}, active: [ids], dbranch: number|null, countdown, phaseS, fadeAlpha, paintLeft: {cells, cap}|null, peeksLeft, capFull}
 export function updateHud(dom, hud) {
-  showPhase(dom, hud.phase);
-  const ph = hud.phase;
+  const ph = hud.campaignEnd ? 'CAMPAIGN_END' : hud.phase;
+  showPhase(dom, ph);
+  updateCampaignEnd(dom, hud);
   // N4 / N6: the run clock in the header; the drill meter stays in the spine, locked, from RUN on (surface mode)
   const lockedPh = ph === 'RUN' || ph === 'END_REVEAL' || ph === 'READOUT';
   setTxt(dom.clock, hud.clockStr || (hud.surface && hud.level ? `${uiText('lbl_level')} ${hud.level.level_id}` : ''));
@@ -692,8 +755,14 @@ export function updateHud(dom, hud) {
   const capDup = !!hud.capNote && hud.message === hud.capNote;
   setTxt(dom.message, capDup ? '' : hud.message || '');
   setStyle(dom.message, 'display', ph === 'PLAN' || ph === 'PAINT' ? 'none' : '');
-  setTxt(dom.planNote, hud.message || hud.reason || '');
+  const noteText = hud.message || hud.reason || (ph === 'RUN' && hud.paused ? uiText('lbl_paused') : '');
+  setTxt(dom.planNote, noteText);
   setAttr(dom.planNote, 'data-msg', hud.message ? '1' : '0');
+  setAttr(dom.planNote, 'data-on', noteText ? '1' : '0');
+  // paused (B13): the Pause button shows a play triangle and names the key
+  setAttr(dom.buttons.pause, 'data-paused', hud.paused ? '1' : '0');
+  setAttr(dom.buttons.pause, 'aria-label', hud.paused ? uiText('lbl_paused') : uiText('btn_pause'));
+  setAttr(dom.buttons.pause, 'title', hud.paused ? uiText('lbl_paused') : uiText('btn_pause'));
   // state widget
   setTxt(dom.swTitle, ph === 'REVEAL' ? uiText('sw_reveal') : ph === 'FADE' ? uiText('sw_fade') : ph === 'PAINT' ? uiText('sw_gone') : ph === 'PLAN' ? uiText('tag_plan') : '');
   setStyle(dom.swTitle, 'color', ph === 'REVEAL' || ph === 'FADE' ? V('formation') : ph === 'PLAN' ? INK : SUB);

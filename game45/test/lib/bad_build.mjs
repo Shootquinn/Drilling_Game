@@ -22,6 +22,8 @@ function sub(html, from, to, label) {
 export function mutateBuild(html) {
   let h = html;
   h = sub(h, SBG_RE, 'WD:1440,HT:790,TITLE_H:30,SKY:40,SURF:150,XL:30,XR:770,PW:560,SP0:400,SP1:500,SP_Y0:64,SP_Y1:774,BOT:500,INFO_Y1:775,FRAME_PX:1,', 'SBG');
+  // v3.8.3 (D1): the 48 px header floor would hide the changed TITLE_H at 1366 x 768 inside the 2 percent tolerance; the bad build drops the floor too
+  h = sub(h, /TITLE_MIN_PX\s*=\s*48/, 'TITLE_MIN_PX=0', 'TITLE_MIN');
   if (!KEY_RE.test(h)) throw new Error('bad_build: patch "KEY_IDS" did not match');
   KEY_RE.lastIndex = 0;
   h = h.replace(KEY_RE, '$1[]');

@@ -39,6 +39,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   const M = mut;
   const surface = mode === MODE_SURFACE;
   let camp = startCampaign();
+  let scores = {};                     // campaign score pairs by level id (v3.8.3): the readout totals of each finished level, cleared when the campaign restarts
   let level = null;
   let F = null;
   let Farr = null;
@@ -89,7 +90,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   function loadLevelImpl(obj, now, keepCampaign = false) {
     level = publicLevel(obj);
     if (rigSpeedRatio !== undefined) level.rig_speed_ratio = rigSpeedRatio;
-    if (!keepCampaign && LEVEL_IDS.includes(level.level_id)) camp = startCampaign(level.level_id);
+    if (!keepCampaign && LEVEL_IDS.includes(level.level_id)) { camp = startCampaign(level.level_id); scores = {}; }
     F = Int32Array.from(obj.F);
     F.sort();
     Farr = Array.from(F);
@@ -190,13 +191,25 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     return `${droppedText(total)} (${names}) ${strings.dropped_region}`;
   }
 
+  // one text per real stop reason (v3.8.3, B1). dead: after a branch of the portal entered the painted formation the network has reached it and cannot extend inside it;
+  // before that no branch reaches it. cap: a shorter dBranch that still fits is named ("too long"); else the plain limit text. Mutant dead_text_old: the g1g text for every dead stop.
+  const deadText = (p) => (p !== null && p !== undefined && plan && !M.has('dead_text_old') && plan.net.deadKind(p) === 'bottom' ? strings.refuse_dead_end : strings.refuse_dead);
+  function capLongText(p, D) {
+    if (p === null || p === undefined || !plan || M.has('cap_text_plain')) return capText();
+    for (let d = D - DBRANCH_STEP_M; d >= DBRANCH_MIN_M - 1e-9; d -= DBRANCH_STEP_M) {
+      if (plan.net.probe(p, d).status === 'ok') return strings.refuse_cap_long.replace('{d}', gmNum(D)).replace('{fit}', gmNum(d)).replace('{cap}', gmNum(level.drill_cap_m));
+    }
+    return capText();
+  }
+  const noPortalText = () => (plan && plan.portals.length === 0 && !M.has('none_text_old') ? strings.refuse_none_placed : strings.refuse_no_portal);
+
   // the probe of the next generation of the selected portal as plain text: 'ok', or dead / cap / ceiling with the reason the player reads
   function growthOf(st) {
     if (st === 'ok') return { status: 'ok', reason: '' };
-    if (st === 'dead') return { status: 'dead', reason: strings.refuse_dead };
-    if (st === 'cap') return { status: 'cap', reason: capText() };
+    if (st === 'dead') return { status: 'dead', reason: deadText(sel) };
+    if (st === 'cap') return { status: 'cap', reason: capLongText(sel, db) };
     if (st === 'ceiling') return { status: 'ceiling', reason: strings.refuse_ceiling };
-    return { status: 'none', reason: strings.refuse_no_portal };
+    return { status: 'none', reason: noPortalText() };
   }
 
   function refreshPv() {
@@ -213,7 +226,8 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
 
   // ---- timers ----
   function phaseDur() {
-    if (phase === 'LEVEL_START') return GM_LEVEL_START_S;
+    // v3.8.3 (B9): in surface mode the level start card waits for the player (Show formation, Space or Enter); legacy trunk mode keeps the 1.5 s advance. Mutant level_auto: the g1g advance.
+    if (phase === 'LEVEL_START') return surface && !M.has('level_auto') ? null : GM_LEVEL_START_S;
     if (phase === 'REVEAL') return peek ? GM_PEEK_REVEAL_S : (level.reveal_s === undefined ? 8.0 : level.reveal_s);
     if (phase === 'FADE') return peek ? GM_PEEK_FADE_S : (level.fade_s === undefined ? 2.0 : level.fade_s);
     if (phase === 'END_REVEAL') return GM_END_REVEAL_S;
@@ -240,6 +254,10 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
       return { intersected: r.intersected, imaged: r.imaged, total: r.total, drilled: fmtM(cells) };
     };
     readoutData = { left: side(res.L, res.drilledL), right: side(res.R, res.drilledR) };
+    if (surface && LEVEL_IDS.includes(level.level_id)) {
+      const num = (v) => Number(String(v).replace(/,/g, ''));
+      scores[level.level_id] = { left: num(readoutData.left.total), right: num(readoutData.right.total) };
+    }
     finalT = finalTiers(sched, res);
     phase = 'END_REVEAL';
     t0 = now;
@@ -328,9 +346,12 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     const P = ensurePainter();
     if (fillMode) {
       const st = P.fill([Math.floor(pts[0][0]), Math.floor(pts[0][1])]);
-      fillMode = false;
+      const refused = st === 'refused_edge' || st === 'refused_cap';
+      // v3.8.3 (B15): Fill stays selected after a fill, accepted or refused, until the player picks another tool; a refusal says why and does not shake the panels.
+      // Mutant fill_one_shot: the g1g behaviour (the tool reverts to Brush, a refusal shakes).
+      if (M.has('fill_one_shot')) fillMode = false;
       message = st === 'refused_edge' ? strings.fill_edge : st === 'refused_cap' ? strings.fill_cap : '';
-      shake = st === 'refused_edge' || st === 'refused_cap' ? { target: -1, until: wall + GM_SHAKE_S } : null;
+      shake = refused && M.has('fill_one_shot') ? { target: -1, until: wall + GM_SHAKE_S } : null;
       syncInplace();
       touch();
       return { status: st };
@@ -441,15 +462,16 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   }
 
   const capText = () => strings.refuse_cap.replace('{cap}', gmNum(level.drill_cap_m));
-  function refusalText(st) {
-    if (st === 'cap') return capText();
+  function refusalText(st, p, D) {
+    if (st === 'cap') return p === undefined ? capText() : capLongText(p, D);
+    if (st === 'dead' && p !== undefined) return deadText(p);
     return strings[`refuse_${st}`] === undefined ? st : strings[`refuse_${st}`];
   }
 
   function click(p, D) {
     if (!guard('PLAN') || !plan) return illegal();
     const st = planClick(plan, p, D);
-    if (st !== 'ok') return refuse(st, refusalText(st));
+    if (st !== 'ok') return refuse(st, refusalText(st, p, D));
     message = '';
     ghostOn = false;
     refreshPv();
@@ -459,16 +481,16 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
 
   function nextGen() {
     if (!guard('PLAN') || !plan) return illegal();
-    if (sel === null) return refuse('no_portal', strings.refuse_no_portal);
+    if (sel === null) return refuse('no_portal', noPortalText());
     return click(sel, db);
   }
 
   function growTo12() {
     if (!guard('PLAN') || !plan) return illegal();
-    if (sel === null) return refuse('no_portal', strings.refuse_no_portal);
+    if (sel === null) return refuse('no_portal', noPortalText());
     const g = grow(plan, sel, db, { to: 12 });
     const bad = g.results.find((r) => r !== 'ok');
-    message = bad === undefined ? '' : refusalText(bad);
+    message = bad === undefined ? '' : refusalText(bad, sel, db);
     ghostOn = false;
     refreshPv();
     touch();
@@ -690,6 +712,14 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     return { status: 'ok', level: camp.current };
   }
 
+  // end of campaign (v3.8.3, B10): after the last level's Next the campaign has ended; Play again restarts it from Level 1 with no scores
+  function restartCampaign() {
+    if (!guard('READOUT') || !camp.ended) return illegal();
+    const p = prepareLevel(1, 0, { mut: M });
+    loadLevelImpl({ ...p.level, F: p.F }, wall);
+    return { status: 'ok', level: 1 };
+  }
+
   // ---- snapshots ----
   function uiState() {
     return { message, shake: shake && shake.until > wall ? { target: shake.target, until: shake.until } : null };
@@ -765,7 +795,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
       doneEnabled();
       const b = { tick, phase, w: W(), h: H(), cellM: CELL_M, S: [], F: null, portals: [], selected: null, meter: null, segments: [], ghost: null, holes: [], tiers: { left: { cored: [], imaged: [], speckle: [] }, right: { cored: [], imaged: [], speckle: [] } }, pairs: [], brush: null, gens: null, lastPortal: null, ghostM: null, readout: null, meterLocked: false, clockH: null, clockStr: null };
       // surface-mode fields (additive; the trunk view keeps the pre-5a key set plus the three N4 / N6 keys)
-      if (surface) Object.assign(b, { capFull: false, capNote: '', growth: null, undoTarget: null, unspent: null, ore: null, run: null, mode, dropped: [], sTopM: null, selKind: null, plan: null, budgetLine: null, campaign: { current: camp.current, ended: camp.ended, played: camp.played.slice() } });
+      if (surface) Object.assign(b, { capFull: false, capNote: '', growth: null, undoTarget: null, unspent: null, ore: null, run: null, mode, dropped: [], sTopM: null, selKind: null, plan: null, budgetLine: null, campaign: { current: camp.current, ended: camp.ended, played: camp.played.slice(), scores: Object.fromEntries(Object.entries(scores).map(([k, v]) => [k, { ...v }])) } });
       if (phase === 'PAINT' || phase === 'REVEAL' || phase === 'FADE') b.S = painter ? cache.paintS : [];
       if (phase === 'PAINT') b.brush = { r: brush, atCap: !!painter && painter.S.size >= capCells() };
       if (phase === 'PLAN' && plan && pv) {
@@ -908,6 +938,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     skip,
     stepToTick,
     playAgain,
+    restartCampaign,
     nextLevel,
     selectLevel,
   };

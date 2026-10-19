@@ -202,6 +202,8 @@ function mnBoot() {
       meterLocked: v.meterLocked,
       sTopM: v.sTopM,
       campaign: v.campaign || null,
+      campaignEnd: v.phase === 'READOUT' && !!(v.campaign && v.campaign.ended),   // B10: the end-of-campaign card
+      paused: v.phase === 'RUN' && !!v.paused,
       level: v.level,
       surface: v.mode === MODE_SURFACE,
       rig: v.phase === 'PLAN' ? v.plan || null : null,

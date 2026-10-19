@@ -2,7 +2,7 @@
 // Cell layers are W x H ImageData blitted with smoothing off. Segments, portals, holes and the ghost are vector paths.
 // Cell keys in the model are the goldens' keys; they are decoded here with / 100 and % 100 and never built.
 // This file reads no status field: an empty ghost segment list draws nothing.
-import { PALETTE, rgbCss, packAbgr, themeRevision } from './palette.js';
+import { PALETTE, rgbCss, packAbgr, themeRevision, getTheme } from './palette.js';
 import { boreWidthPx, SBG } from './geom.js';
 import { key } from '../core/arith.js';
 import { tagUps, tagHeight, portalXHandle, uiText } from './layout.js';
@@ -297,83 +297,39 @@ function rdSTop(ctx, model, panel, cs, lay) {
   LAYOUT_BOXES.sTop.push({ x: pos.left ? pos.x - w : pos.x, y: pos.y - 0.8 * fz, w, h: fz, t: txt });
 }
 
-let rdStopS = { sig: '', set: null };
-
-// first label spot beside the drop that crosses no network line, ghost, dropped stroke or S outline (candidates right, then left, at four depths)
+// formation-top label spot (v3.8.3, B2): on the tick at the stated depth, beside the drop (right, else left). A spot is clear when the text box stays inside the panel and does not
+// start inside the strip of the depth-axis labels ("200S top 70 m", v3.8.1). The text carries a page-colour halo, so it stays readable over lines and paint.
 function rdSTopSpot(model, panel, cs, x, yb, w, h, lay) {
-  const lines = [];
-  for (const sg of model.segments || []) { const ln = rdLine(sg.cells || [], panel, cs, sg.line); if (ln) lines.push(ln); }
-  if (model.ghost && model.ghost.segments) for (const sg of model.ghost.segments) { const ln = rdLine(sg.cells || [], panel, cs, sg.line); if (ln) lines.push(ln); }
-  for (const d of model.dropped || []) lines.push({ x0: panel.x + (d.sx + 0.5) * cs, y0: d.sy === 0 ? panel.y : panel.y + (d.sy + 0.5) * cs, x1: panel.x + (d.x + 0.5) * cs, y1: panel.y + (d.y + 0.5) * cs });
-  let Sset = null;
-  if (model.S && model.S.length) {
-    const sig = rdSig(model.S);
-    if (rdStopS.sig !== sig) rdStopS = { sig, set: new Set(model.S) };
-    Sset = rdStopS.set;
-  }
   const fzA = Math.max(RD_FZ_MIN, 12 * lay.s);
   const axisX1 = panel.x + 10 * lay.s + 3 * fzA * 0.62 + 6;
   const axisBands = [[panel.y + panel.h - 6 * lay.s - fzA - 3, panel.y + panel.h]];
   for (let r = 0; r < model.h; r++) if (Math.abs((r * model.cellM) % 100) < 1e-9) { const y0 = panel.y + (r + 0.5) * cs + (r === 0 ? 14 * lay.s : 4); axisBands.push([y0 - 0.8 * fzA - 2, y0 + 0.3 * fzA + 2]); }
   const clear = (x0, y0) => {
-    // text box: x0 .. x0 + w, y0 - h .. y0 (baseline y0)
     const bx0 = x0 - 3;
     const bx1 = x0 + w + 3;
     const by0 = y0 - h;
     const by1 = y0 + 3;
-    if (bx0 < panel.x || bx1 > panel.x + panel.w || by0 < panel.y || by1 > panel.y + panel.h) return false;
-    // the depth axis labels ("100", "200", ...) and "m deep" sit in a strip at the left edge: the label never starts inside it (v3.8.1; "200S top 70 m")
+    if (bx0 < panel.x + 2 || bx1 > panel.x + panel.w - 2 || by0 < panel.y || by1 > panel.y + panel.h) return false;
     if (bx0 < axisX1 && !RD_MUT.has('lay_off_stop')) {
       for (const [ya, yz] of axisBands) if (by1 > ya && by0 < yz) return false;
     }
-    for (const ln of lines) {
-      const len = Math.hypot(ln.x1 - ln.x0, ln.y1 - ln.y0);
-      const n = Math.max(1, Math.ceil(len / 3));
-      for (let i = 0; i <= n; i++) {
-        const px = ln.x0 + ((ln.x1 - ln.x0) * i) / n;
-        const py = ln.y0 + ((ln.y1 - ln.y0) * i) / n;
-        if (px >= bx0 - 5 && px <= bx1 + 5 && py >= by0 - 5 && py <= by1 + 5) return false;
-      }
-    }
-    if (Sset) {
-      const c0 = Math.floor((bx0 - panel.x) / cs);
-      const c1 = Math.floor((bx1 - panel.x) / cs);
-      const r0 = Math.floor((by0 - panel.y) / cs);
-      const r1 = Math.floor((by1 - panel.y) / cs);
-      let ins = 0;
-      let out = 0;
-      for (let c = c0; c <= c1; c++) for (let r = r0; r <= r1; r++) (Sset.has(key(c, r)) ? ins++ : out++);
-      if (ins > 0 && out > 0) return false;
-    }
     return true;
   };
-  const dys = [h + 2, -6, 2 * h + 8, 3 * h + 14, 4 * h + 20, 5 * h + 26];
+  // centred on the line first, then just above it, then just below it
+  const dys = RD_MUT.has('lay_off_stop_far') ? [h + 2 + 250 * lay.s] : [0.35 * (h - 4), -4, h + 2];
   for (const dy of dys) {
     for (const left of [false, true]) {
       const ox = left ? x - 8 - w : x + 8;
       if (clear(ox, yb + dy)) return { left, x: left ? x - 8 : x + 8, y: yb + dy };
     }
   }
-  // wide search: every spot in the panel, nearest to the drop first (memoised on the inputs)
-  const ck = `${Math.round(x)}|${Math.round(yb)}|${Math.round(w)}|${Math.round(h)}|${panel.x}|${panel.y}|${panel.w}|${panel.h}|${lines.map((l) => Math.round(l.x0) + ',' + Math.round(l.y0) + ',' + Math.round(l.x1) + ',' + Math.round(l.y1)).join(';')}|${model.S ? model.S.length : 0}`;
-  if (rdSpotMemo.key === ck) return rdSpotMemo.val;
-  const cand = [];
-  for (let dy = -Math.round(yb - panel.y); dy < panel.h; dy += 6) {
-    for (let dx = 8; dx < panel.w; dx += 8) {
-      cand.push({ d: dx * dx + dy * dy * 0.5, dx, dy });
-    }
-  }
-  cand.sort((a, b) => a.d - b.d);
-  let val = { left: false, x: x + 8, y: yb + dys[0] };
-  for (const c of cand) {
-    const yy = yb + c.dy + h;
-    if (clear(x + c.dx, yy)) { val = { left: false, x: x + c.dx, y: yy }; break; }
-    if (clear(x - c.dx - w, yy)) { val = { left: true, x: x - c.dx, y: yy }; break; }
-  }
-  rdSpotMemo = { key: ck, val };
-  return val;
+  // the strip of axis labels blocks the line beside a drop near the left edge: slide right along the same line until the text clears the strip
+  const slide = axisX1 + 4;
+  if (x + 8 < slide && !RD_MUT.has('lay_off_stop_far') && clear(slide, yb + dys[0])) return { left: false, x: slide, y: yb + dys[0] };
+  // no clear spot (a drop in the corner of a small panel): the right side clamped inside the panel
+  const ox = Math.max(panel.x + 5, Math.min(x + 8, panel.x + panel.w - 5 - w));
+  return { left: false, x: ox, y: Math.max(panel.y + h, Math.min(yb + dys[0], panel.y + panel.h - 4)) };
 }
-let rdSpotMemo = { key: '', val: null };
 
 // ghost: a dashed stroke with a 2 px page-colour halo; red past the cap
 function rdGhost(ctx, model, panel, cs, bw) {
@@ -411,7 +367,7 @@ function rdOreSet(model, side) {
 // last drawn depth-label box of the selected rig hole (viewport px), read by uiGeometry for the layout tests
 export const HOLE_LABEL = { rect: null };
 // boxes {x,y,w,h} (viewport px) of what the last frame drew, read by uiGeometry for the layout tests; the lists are emptied at the start of each draw
-export const LAYOUT_BOXES = { sTop: [], tripods: [], flags: [], markers: [], trucks: [], rulerLabels: [], rowLabels: [], mDeep: [], shafts: [], holeNums: [], holeLabels: [] };
+export const LAYOUT_BOXES = { sTop: [], tripods: [], flags: [], markers: [], trucks: [], rulerLabels: [], rowLabels: [], mDeep: [], shafts: [], holeNums: [], holeLabels: [], gauge: [] };
 const RD_MUT = new Set();
 const boxHit = (a, b, m = 0) => a.x < b.x + b.w + m && a.x + a.w + m > b.x && a.y < b.y + b.h + m && a.y + a.h + m > b.y;
 
@@ -455,7 +411,8 @@ function rdHoles(ctx, model, panel, cs, bw, lay) {
     const x = cx - bw / 2;
     const hh = h.depth * cs;
     LAYOUT_BOXES.shafts.push({ x: x, y: panel.y, w: bw, h: hh, col: h.col });
-    ctx.fillStyle = rgbCss(PALETTE.hole, 0.26);
+    // the planned (undrilled) part: light mode a 26 percent wash of the hole colour; dark mode the solid planned-hole colour, which stays 2:1 over the teal painting (D2)
+    ctx.fillStyle = rgbCss(PALETTE.holePlan, getTheme() === 'dark' ? 1 : 0.26);
     ctx.fillRect(x, panel.y, bw, hh);
     const frac = h.planned ? 0 : h.drilledFrac == null ? 1 : h.drilledFrac;
     if (frac > 0) {
@@ -561,13 +518,16 @@ function rdHoleLabels(ctx, model, panel, cs, lay) {
     }
     const clear = (c) => inPanel(c.box)
       && !shafts.some((sh) => sh.col !== h.col && boxHit(c.box, sh))
-      && !placed.some((p) => boxHit(c.box, p.box, 1))
+      && (RD_MUT.has('lay_off_labelhit') || !placed.some((p) => boxHit(c.box, p.box, 1)))
       && !LAYOUT_BOXES.holeNums.some((n) => boxHit(c.box, n));
     // crowded shafts (holes a few columns apart): stack the labels upward from the panel floor on the free side; halo text stays readable over a shaft, labels never overprint each other
     const stack = [];
     for (let k = 0; k < 14; k++) for (const a of rightFirst ? ['left', 'right'] : ['right', 'left']) stack.push(spot(a, a === 'left' ? cx + 13 : cx - 13 - tw, ys - k * (fs + 2)));
-    const freeOfLabels = (c) => inPanel(c.box) && !placed.some((p) => boxHit(c.box, p.box, 1)) && !LAYOUT_BOXES.holeNums.some((n) => boxHit(c.box, n));
-    const pick = cands.find(clear) || stack.find(freeOfLabels) || cands.find((c) => inPanel(c.box)) || cands[2];
+    const freeOfLabels = (c) => inPanel(c.box) && (RD_MUT.has('lay_off_labelhit') || !placed.some((p) => boxHit(c.box, p.box, 1))) && !LAYOUT_BOXES.holeNums.some((n) => boxHit(c.box, n));
+    const picked = cands.find(clear) || stack.find(freeOfLabels);
+    // B17: a label that cannot be placed without overprinting another is not drawn unless its hole is selected (the selected hole is placed first, so it always has a spot)
+    if (!picked && model.rig.selected !== h.col && !RD_MUT.has('lay_off_labels')) continue;
+    const pick = picked || cands.find((c) => inPanel(c.box)) || cands[2];
     placed.push(pick);
     if (model.rig.selected === h.col) HOLE_LABEL.rect = { x: pick.box.x, y: pick.box.y, w: pick.box.w, h: pick.box.h };
     LAYOUT_BOXES.holeLabels.push({ ...pick.box, col: h.col, t: label });
@@ -1092,11 +1052,12 @@ function rdDrillMeter(ctx, lay, model) {
   if (!model.meter || !(model.phase === 'PLAN' || model.meterLocked)) return;
   const s = lay.s;
   const x = Math.round(gx(lay, 705));
-  const y = Math.round(gy(lay, 334));
+  const y = Math.round(gy(lay, 348));
   const w = Math.round(30 * s);
-  const h = Math.round(104 * s);
+  const h = Math.round(90 * s);
   const cap = Math.max(1, model.meter.cap);
   const used = Math.min(1, model.meter.used / cap);
+  LAYOUT_BOXES.gauge.push({ x, y, w, h });
   rdGaugeBox(ctx, x, y, w, h);
   ctx.fillStyle = rgbCss(PALETTE.line, 0.8);
   ctx.fillRect(x, y + h * (1 - used), w, h * used);

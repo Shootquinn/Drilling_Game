@@ -20,7 +20,7 @@ Known gaps: `game45/docs/known_gaps.md`.
 - `game45/ui/` canvas 2D rendering and input
 - `game45/build.mjs` concatenates everything into `game45/dist/play.html` (whitespace-minified; `--no-minify` keeps the source layout)
 - `game45/test/` unit, parity, hygiene, end-to-end and performance tests; golden files `goldens_v36.json` to `goldens_v42.json` (v40 reserved)
-- `cr_scratch/step45_toymaker_spec_v3.md` design spec (v3.8.2)
+- `cr_scratch/step45_toymaker_spec_v3.md` design spec (v3.8.3)
 - `cr_scratch/step45_reference_sim_v3.py` Python reference simulation the JavaScript core is checked against; `step45_07_export_goldens.py` writes the goldens; `step45_swe_v42_independent.py` is the independent oracle
 - `cr_scratch/step45_storyboard_v3/` storyboard builder (`build_storyboard.js`), sim export (`export_sim.py`, `sim_export.json`)
 - `review_manifest.json` the build copied to the review folder (`../review` next to this repo in the Drilling_Game layout)

@@ -157,3 +157,30 @@ test('N1 colour-blind: dark tiers and marks stay apart under protanopia and deut
     assert.ok(L[0] < L[1] && L[1] < L[2], `${kind}: ground < imaged < cored in luminance`);
   }
 });
+
+// ---- D2 (v3.8.3): the planned rig hole in dark mode ----
+// the planned (undrilled) hole as drawn: dark = the solid planned-hole colour; light = a 26 percent wash of it. Teal painting = the tint of S (alpha 84 / 255) over the ground.
+const planOver = (P, name, bg) => (name === 'dark' ? P.holePlan : over(P.holePlan, 0.26, bg));
+const teal = (P) => over(P.sroi, 84 / 255, P.ground);
+export function plannedHoleFails(P, name, minGround, minTeal) {
+  const out = [];
+  const cg = contrast(planOver(P, name, P.ground), P.ground);
+  const ct = contrast(planOver(P, name, teal(P)), teal(P));
+  if (cg < minGround) out.push(`planned hole on ground ${cg.toFixed(2)} < ${minGround}`);
+  if (ct < minTeal) out.push(`planned hole on the painting ${ct.toFixed(2)} < ${minTeal}`);
+  if (!(relLum(P.holePlan) < relLum(P.hole) + 1e-9)) out.push('planned hole is lighter than a drilled hole');
+  return out;
+}
+test('D2 planned rig hole in dark mode reaches about 2:1 over the painting, stays darker than a drilled hole; zero control (light) and known-bad (the g1g maroon) are told apart', () => {
+  assert.deepEqual(plannedHoleFails(DARK, 'dark', 3, 1.8), []);
+  assert.deepEqual([...DARK.holePlan], [176, 96, 95]);
+  assert.deepEqual([...LIGHT.holePlan], [...LIGHT.hole], 'light mode keeps the hole colour for its wash');
+  // known-bad: the g1g planned hole = the hole colour at 26 percent over the ground (88,54,56 in dark)
+  const g1g = { ...DARK, holePlan: DARK.hole };
+  const asG1g = (P) => [contrast(over(P.holePlan, 0.26, P.ground), P.ground), contrast(over(P.holePlan, 0.26, teal(P)), teal(P))];
+  const [cg, ct] = asG1g(g1g);
+  assert.ok(cg < 1.6 && ct < 1.4, `the g1g look measures ${cg.toFixed(2)} / ${ct.toFixed(2)} (the Designer measured 1.52 / 1.24)`);
+  assert.ok(plannedHoleFails({ ...DARK, holePlan: [88, 54, 56] }, 'dark', 3, 1.8).length >= 2, 'the maroon is flagged');
+  // zero control: a bright hole passes, a lighter-than-drilled planned hole is flagged
+  assert.ok(plannedHoleFails({ ...DARK, holePlan: [255, 255, 255] }, 'dark', 3, 1.8).some((m) => /lighter/.test(m)));
+});
