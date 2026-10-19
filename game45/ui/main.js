@@ -1,5 +1,5 @@
 // Boot and window.__s45. The only file that reads globalThis (the init-script globals __S45_MUT and __S45_SLOW, once).
-// S45_LEVEL is the level literal build.mjs inlines ahead of the modules (E11 main record, presentation fields, F).
+// Boot (v3.8.1): Level 1 of the campaign, generated in the page; the LEVEL_START card carries the level select.
 import { createCore } from '../core/index.js';
 import { MODE_TRUNK, MODE_SURFACE } from '../core/consts.js';
 import { strings } from '../core/strings.js';
@@ -11,6 +11,9 @@ import { createLoop } from './loop.js';
 import { bindInput } from './input.js';
 
 const MN_SHAKE_PX = 5;
+// minimum supported viewport (spec 3a, v3.8.1): below it an overlay asks for a larger window
+const MN_MIN_W = 960;
+const MN_MIN_H = 540;
 
 function mnBoot() {
   const g = globalThis;
@@ -101,24 +104,29 @@ function mnBoot() {
     if (dr && dr.kind === 'handle') return null;
     const cm = v.cellM;
     if (hover.onX) return null;
+    // over a portal marker a click selects or drags it: no placement ghost and no separation error there
+    if (hover.onMarker && hover.onMarker() && !dr) return null;
     if (hover.side === 'left') {
       if ((v.portals || []).includes(col) && !dr) return null;
       const pr = game.probePortal(col, dr && dr.kind === 'portal' ? dr.from : null);
       const ok = pr.status === 'ok';
-      return { side: 'left', col, ok, label: ok ? `${uiTextOf('lbl_col')} ${col} (${col * cm} m)` : uiTextOf(`refuse_${pr.status}`) };
+      return { side: 'left', col, ok, label: ok ? `${col * cm} m` : uiTextOf(`refuse_${pr.status}`) };
     }
     if (!v.plan) return null;
     if (v.plan.holes.some((h) => h.col === col) && !dr) return null;
     const pr = game.probeRigHole(col, dr && dr.kind === 'hole' ? dr.from : null);
     const ok = pr.status === 'ok';
-    return { side: 'right', col, ok, depth: ok ? pr.depth : 0, label: ok ? `${uiTextOf('lbl_col')} ${col} (${col * cm} m), ${pr.depth} ${uiTextOf('lbl_cells')} (${pr.depth * cm} m)` : uiTextOf(`refuse_${pr.status}`) };
+    return { side: 'right', col, ok, depth: ok ? pr.depth : 0, label: ok ? `${col * cm} m, ${pr.depth * cm} m ${uiTextOf('lbl_depth')}` : uiTextOf(`refuse_${pr.status}`) };
   }
 
   function enabledOf(v) {
     const e = {};
     for (const id of Object.keys(dom.buttons)) e[id] = false;
     const f = v.flags;
-    if (v.phase === 'LEVEL_START') e['show-formation'] = true;
+    if (v.phase === 'LEVEL_START') {
+      e['show-formation'] = true;
+      for (const n of [1, 2, 3, 4, 5, 6]) e[`level-${n}`] = true;
+    }
     if (v.phase === 'PAINT') {
       for (const id of ['brush-tool', 'brush-2', 'brush-5', 'brush-8', 'brush-12', 'brush-20', 'erase', 'fill', 'clear']) e[id] = true;
       e.undo = f.undo;
@@ -133,7 +141,7 @@ function mnBoot() {
       e['remove-portal'] = v.selected !== null && v.selected !== undefined;
       e.start = f.canStart;
     }
-    if (v.phase === 'RUN') for (const id of ['speed-1', 'speed-4', 'speed-16', 'pause', 'skip']) e[id] = true;
+    if (v.phase === 'RUN') for (const id of ['speed-1', 'speed-2', 'speed-4', 'speed-8', 'speed-16', 'pause', 'skip']) e[id] = true;
     if (v.phase === 'READOUT') e['play-again'] = true;
     return e;
   }
@@ -147,10 +155,11 @@ function mnBoot() {
     if (v.phase === 'RUN') {
       active.push(v.paused ? 'pause' : `speed-${v.speed}`);
     }
+    if (v.phase === 'LEVEL_START') active.push(`level-${v.level.level_id}`);
     return {
       phase: v.phase,
       message: v.ui.message,
-      meter: v.meter ? { used: v.meter.used_m, cap: v.meter.cap_m, over: !!(v.ghost && v.ghost.over_cap) || (v.phase === 'PLAN' && !!v.capFull) } : null,
+      meter: v.meter ? { used: v.meter.used_m, cap: v.meter.cap_m, over: !!(v.ghost && v.ghost.over_cap) || v.meter.used_m > v.meter.cap_m || (v.phase === 'PLAN' && !!v.capFull && v.capNote !== uiTextOf('lbl_cap_full')) } : null,
       ghostM: v.ghostM,
       cellM: v.cellM,
       countdown: v.countdown,
@@ -159,6 +168,10 @@ function mnBoot() {
       paintLeft: v.paintLeft,
       peeksLeft: v.peeksLeft,
       capFull: v.phase === 'PLAN' && !!v.capFull,
+      capNote: v.phase === 'PLAN' ? (v.mode === MODE_SURFACE ? v.capNote : (v.capFull ? uiTextOf('lbl_cap_full') : '')) : '',
+      reason: v.phase === 'PLAN' && v.growth && v.growth.status !== 'ok' ? v.growth.reason : '',
+      undoTarget: v.phase === 'PLAN' ? v.undoTarget : null,
+      unspent: v.unspent || null,
       needsGen: v.phase === 'PLAN' && !v.flags.undoClick,
       rigOver: v.phase === 'PLAN' && !!(v.plan && v.plan.over),
       runInfo: v.phase === 'RUN' ? v.run : null,
@@ -170,7 +183,6 @@ function mnBoot() {
       clockStr: v.clockStr,
       meterLocked: v.meterLocked,
       sTopM: v.sTopM,
-      budgetLine: v.phase === 'READOUT' || v.phase === 'END_REVEAL' ? v.budgetLine : null,
       campaign: v.campaign || null,
       level: v.level,
       surface: v.mode === MODE_SURFACE,
@@ -186,8 +198,11 @@ function mnBoot() {
   }
 
   let layKey = '';
+  let phaseSeen = null;
   function draw() {
     const v = game.view();
+    // a pointer position belongs to the phase it was seen in: a hover from before Back to paint or Done must not draw a ghost or an error in the next phase
+    if (v.phase !== phaseSeen) { phaseSeen = v.phase; hover = null; }
     // a level advance can change the landmark step: relayout when the level geometry changes
     const key = `${v.w}:${v.h}:${v.level.landmark_step_m}`;
     if (key !== layKey && layout) { layKey = key; relayout(); }
@@ -249,6 +264,7 @@ function mnBoot() {
 
   bindInput({
     mut,
+    now: () => loop.clockNow(),
     core,
     dom,
     canvas: dom.canvas,
@@ -276,7 +292,16 @@ function mnBoot() {
     }
   });
 
-  core.loadLevel(startMode === MODE_TRUNK ? S45_LEVEL_TRUNK : S45_LEVEL, loop.clockNow());
+  game.selectLevel(1, loop.clockNow());
+  const tooSmall = document.createElement('div');
+  tooSmall.setAttribute('data-s45', 'too-small');
+  tooSmall.setAttribute('role', 'alert');
+  tooSmall.style.cssText = 'position:fixed;left:0;top:0;right:0;bottom:0;z-index:50;display:none;align-items:center;justify-content:center;text-align:center;padding:16px;box-sizing:border-box;background:rgb(251,248,241);color:rgb(27,27,27);font:700 20px "Segoe UI",Arial,sans-serif';
+  tooSmall.textContent = uiTextOf('too_small');
+  document.body.appendChild(tooSmall);
+  const checkSize = () => { tooSmall.style.display = window.innerWidth < MN_MIN_W || window.innerHeight < MN_MIN_H ? 'flex' : 'none'; };
+  checkSize();
+  window.addEventListener('resize', checkSize);
   relayout();
   draw();
 
@@ -314,6 +339,7 @@ function mnBoot() {
     },
     setSpeed: (s) => act(() => game.setSpeed(s), false),
     renderModel: () => renderModelOf(game.view()),
+    planHover: () => planHoverOf(game.view()),
     uiGeometry: () => {
       const v = game.view();
       const geo = uiGeometryOf(dom, layout, v.portals, v.selected, dprNow());

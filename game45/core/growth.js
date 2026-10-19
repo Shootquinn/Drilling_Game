@@ -2,7 +2,7 @@
 // Surface mode (v3.7.2, root rule v3.7.5): no trunk; a portal is a generation-0 root at the surface whose first click drills one straight segment, a stay-mask keeps a segment on S or the overburden above it, R4 prunes
 // branches that cannot reach the S margin of the portal's target set.
 import {
-  EMPTY, CELL_M, MARGIN, DIR_CLAMP, TIP_SEP_FRAC, TIP_SEP_FLOOR, DBRANCH_MIN_M, DBRANCH_MAX_M, DBRANCH_STEP_M, NUMBRANCH_MAX,
+  EMPTY, CELL_M, MARGIN, THETA, DIR_CLAMP, TIP_SEP_FRAC, TIP_SEP_FLOOR, DBRANCH_MIN_M, DBRANCH_MAX_M, DBRANCH_STEP_M, NUMBRANCH_MAX,
   W_GRID, H_GRID, MODE_SURFACE, START_MODE, RAY_STEP,
 } from './consts.js';
 import { rh, hyp, radians, key } from './arith.js';
@@ -104,7 +104,7 @@ export function assignComponents(Cs, portals, mut = EMPTY) {
 // per-portal data of a target set: T cells, margin masks, margin cell -> component of the nearest T cell (Euclidean over the 3 x 3 neighbourhood, ties lower)
 function targetData(dv, Cs, ks, W, H, mut) {
   const upper = mut.has('attr_upper_tie');
-  const ck = `${ks.join(',')}|${upper ? 1 : 0}|${mut.has('theta_surf') ? 1 : 0}`;
+  const ck = `${ks.join(',')}|${upper ? 1 : 0}|${mut.has('theta_bbox') ? 1 : 0}`;
   const hit = dv.tcache ? dv.tcache.get(ck) : undefined;
   if (hit) return hit;
   const T = [];
@@ -127,7 +127,7 @@ function targetData(dv, Cs, ks, W, H, mut) {
       }
     }
   }
-  const out = { T, nearT, Tset, mcomp, theta: T.length ? thetaOf(T, mut) : null };
+  const out = { T, nearT, Tset, mcomp, theta: T.length ? (mut.has('theta_bbox') ? thetaOf(T, mut) : THETA) : null };
   if (dv.tcache) dv.tcache.set(ck, out);
   return out;
 }

@@ -208,8 +208,8 @@ export function confirmedInDirs(dirs, { skip = [] } = {}) {
 
 // ---- environment hygiene (H-ENV, plan section 6 and AC8) ----
 const IMG = /\.(png|jpg|jpeg|bmp|tga|exr)$/i;
-// E-H4: the golden files kept in game45/test (v36 anchor, v37 time keys, v38 surface keys, v39 surface keys with the straight root). The list is exact: any other goldens_v*.json is an offender.
-export const GOLDENS_LIST = ['goldens_v36.json', 'goldens_v37.json', 'goldens_v38.json', 'goldens_v39.json'];
+// E-H4: the golden files kept in game45/test (v36 anchor, v37 time keys, v38 surface keys, v39 surface keys with the straight root, v41 surface keys with the fixed half-angle; v40 is reserved). The list is exact: any other goldens_v*.json is an offender.
+export const GOLDENS_LIST = ['goldens_v36.json', 'goldens_v37.json', 'goldens_v38.json', 'goldens_v39.json', 'goldens_v41.json'];
 export function goldensOffenders(root, list = GOLDENS_LIST) {
   const d = path.join(root, 'test');
   if (!fs.existsSync(d)) return [];

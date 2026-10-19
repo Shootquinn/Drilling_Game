@@ -80,13 +80,12 @@ export function defaultPortal(compKeys) {
   if (set.has(xe)) return xe;
   return [...set].sort((a, b) => (Math.abs(a - xe) - Math.abs(b - xe)) || (a - b))[0];
 }
-// branch half-angle from the component's bounding box
-export function thetaOf(compKeys, mut = EMPTY) {
+// legacy (trunk mode) and mutant theta_bbox: branch half-angle from the component's bounding box; surface mode uses THETA (consts.js)
+export function thetaOf(compKeys, _mut = EMPTY) {
   let c0 = Infinity, c1 = -Infinity, r0 = Infinity, r1 = -Infinity;
   for (const k of compKeys) {
     const x = Math.floor(k / 100), y = k % 100;
     if (x < c0) c0 = x; if (x > c1) c1 = x; if (y < r0) r0 = y; if (y > r1) r1 = y;
   }
-  if (mut.has('theta_surf')) r0 = 0; // diagnostic: rows 0..r1 (prototype src='surf')
   return Math.min(THETA_MAX, Math.max(THETA_MIN, degrees(Math.atan((c1 - c0 + 1) / (2 * (r1 - r0 + 1))))));
 }

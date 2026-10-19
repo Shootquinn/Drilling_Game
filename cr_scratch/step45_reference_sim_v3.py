@@ -1,5 +1,5 @@
-"""Step 45 reference sim for spec v3.7.5 (cr_scratch/step45_toymaker_spec_v3.md). v3.7.5 (45.10b-9): the surface root drills ONE straight segment (heading 0, length D, generation 1) on its first click; every later tip forks as before; frozen v3.7.4 sim: step45_reference_sim_v38_frozen.py. v3.7.2 (45.10b-4) adds uniform surface-fork branching: START_MODE 'surface' (shipped)
-and 'trunk' (the legacy anchor, reproduces goldens_v37 byte for byte), 61 gates (G1 to G61; G46 to G57 and G61 are new, ten earlier gates carry a surface variant). Frozen v37: step45_reference_sim_v37_frozen.py.
+"""Step 45 reference sim for spec v3.8.0 (cr_scratch/step45_toymaker_spec_v3.md). v3.8.0 (D1): surface-mode branch half-angle theta is the constant THETA_FIXED = 15 deg (30 deg between siblings) for every target set; trunk mode keeps the bounding-box theta_of; new mutant theta_bbox; new gate G64 (62 gates); frozen v3.7.7 sim: step45_reference_sim_v39_frozen.py. v3.7.5 (45.10b-9): the surface root drills ONE straight segment (heading 0, length D, generation 1) on its first click; every later tip forks as before; frozen v3.7.4 sim: step45_reference_sim_v38_frozen.py. v3.7.2 (45.10b-4) adds uniform surface-fork branching: START_MODE 'surface' (shipped)
+and 'trunk' (the legacy anchor, reproduces goldens_v37 byte for byte), 61 gates before v3.8.0 (G1 to G61; G46 to G57 and G61 are new, ten earlier gates carry a surface variant). Frozen v37: step45_reference_sim_v37_frozen.py.
 Earlier text, spec v3.6.1:
 
 5 m cells, grid 200 columns x 100 rows = 1,000 m wide x 500 m deep. Every constant is set in meters and converted to cells
@@ -20,8 +20,12 @@ DBRANCH_MIN_M, DBRANCH_MAX_M, DBRANCH_STEP_M = 20.0, 100.0, 5.0        # 4..20 c
 NUMBRANCH_DEFAULT, NUMBRANCH_MAX = 12, 24
 MAX_PORTALS = 3
 PORTAL_MIN_SEP = int(cells_of(25.0))            # 5 cells
-THETA_MIN, THETA_MAX, DIR_CLAMP = 20.0, 70.0, 60.0
+THETA_MIN, THETA_MAX, DIR_CLAMP = 20.0, 70.0, 60.0     # THETA_MIN / THETA_MAX: legacy (trunk mode) bounding-box theta bounds; DIR_CLAMP: both modes
+THETA_FIXED = 15.0                                      # v3.8.0 surface mode: branch half-angle, 30 deg between siblings
 TIP_SEP_FRAC, TIP_SEP_FLOOR = 0.9, 1.0          # cells
+def tip_sep_of(D, th, floor=None):
+    """Minimum distance between two kept tips of one click, cells: max(floor, 0.9 x D x sin(theta)); at theta 15 deg the floor binds for D < 4.29 cells (20 m only)."""
+    return max(TIP_SEP_FLOOR if floor is None else floor, TIP_SEP_FRAC * D * math.sin(math.radians(th)))
 MARGIN = 1                                      # S prune margin, cells (5 m)
 # ---- v3.7.2 branching (spec 4c, 45.10b-4). START_MODE: 'surface' = uniform surface fork (shipped); 'trunk' = legacy anchor (goldens_v37) ----
 MODE_TRUNK, MODE_SURFACE = 'trunk', 'surface'
@@ -211,7 +215,7 @@ def reach_fn(S, W, H, mut=()):
 
 NET_MUTS = frozenset("""anchor_off_by_one trunk_resurrect root_dir_nonzero mask_always mask_never ray_off ray_back ray_short ray_vs_S ob_gen_free cap_skip_ob root_forks
     reaim_mask_old mask_carry_exit budget_excl_ob pass0_no_snap pass0_dup comp_first unordered_prune pair_ob_kept pair_range_11 range_cheb range_manh
-    range_lt tie_lower tie_upper theta_surf attr_upper_tie""".split())
+    range_lt tie_lower tie_upper theta_bbox attr_upper_tie""".split())
 class Network:
     """Left network: pure function of (S, portals, accepted click stack). mut = mutant switches for the gates.
     mode MODE_TRUNK = legacy (gen-0 trunk, margin-only mask); MODE_SURFACE = uniform surface fork (spec 4c); default START_MODE."""
@@ -237,7 +241,7 @@ class Network:
         for p in self.portals:
             ks = asg[p]; T = [c for k in ks for c in self.Cs[k]]
             self.Tk[p] = ks; self.T[p] = T; self.Tset[p] = frozenset(T)
-            self.theta[p] = theta_of(T + [(min(x for x, y in T), 0)] if 'theta_surf' in self.mut else T) if T else None      # theta_surf: diagnostic, bbox rows 0..r1 (the G1 prototype's final.out)
+            self.theta[p] = (theta_of(T) if 'theta_bbox' in self.mut else THETA_FIXED) if T else None      # v3.8.0: fixed 15 deg; theta_bbox = the v3.7.7 bounding-box angle (mutant)
             self.nearT[p] = margin_cells(T) if T else frozenset(); self.mcomp[p] = margin_comp(self.Cs, ks, self.mut) if T else {}
             self.roots[p] = dict(id=None, portal=p, comp=ks[0] if ks else 0, gen=0, dir=10.0 if 'root_dir_nonzero' in self.mut else 0.0, parent=None,
                                  end=(p, 0.0), trunc=False, t=0.0, A1=0.0)
@@ -308,13 +312,13 @@ class Network:
     def _cand_surface(self, p, D_m):
         D = cells_of(D_m); th = self.theta[p]
         if th is None: return []
-        tip_sep = max(TIP_SEP_FLOOR, TIP_SEP_FRAC * D * math.sin(math.radians(th))); raw = []
+        tip_sep = tip_sep_of(D, th); raw = []
         for pid in self.front[p]:
             par = self.roots[p] if pid is None else self.segs[pid]
             if par['trunc']: continue
             for sgn in ((0,) if pid is None and 'root_forks' not in self.mut else (-1, 1)):       # v3.7.5: the surface root drills ONE straight segment (heading = root dir, 0); every later tip forks
                 d = par['dir'] if sgn == 0 else 0.5*par['dir'] + sgn*th
-                d = max(-DIR_CLAMP, min(DIR_CLAMP, d))
+                d = max(-DIR_CLAMP, min(DIR_CLAMP, d))     # v3.8.0: with theta 15 an un-re-aimed chain stays under 30 deg; the clamp binds only below a re-aimed parent heading > 90 deg
                 ok, st = self.mask()
                 cells, elen, endpt, trunc = sample(par['end'][0], par['end'][1], d, D, ok, par['A1'], "carry"); sv = sample.svals
                 if elen <= 1e-9: continue
@@ -330,7 +334,7 @@ class Network:
     def candidates(self, p, D_m):
         if self.mode == MODE_SURFACE: return self._cand_surface(p, D_m)
         D = cells_of(D_m); th = self.theta[p]; kept = []; ends = []
-        tip_sep = max(TIP_SEP_FLOOR, TIP_SEP_FRAC * D * math.sin(math.radians(th)))
+        tip_sep = tip_sep_of(D, th)
         rule = "restart" if 'restart_phase' in self.mut else ("half" if 'half_coring' in self.mut else "carry")
         for pid in self.front[p]:
             par = self.segs[pid]
@@ -659,7 +663,7 @@ def reaim(net, t, idx, target, cap, segs=None):
                     s=list(sample.svals), sx=cur[0], sy=cur[1], start=t, A0=Acur, plocal=None, portal=s['portal'], comp=s['comp'], D=None)]
         front = [0]
         for g in range(s['gen']+1, ngen+1):
-            D = ds[g-1]; tip_sep = max(TIP_SEP_FLOOR, TIP_SEP_FRAC*D*math.sin(math.radians(th))); ends = []; nxt = []
+            D = ds[g-1]; tip_sep = tip_sep_of(D, th); ends = []; nxt = []
             for pi in front:
                 pp = new[pi]
                 if pp['trunc']: continue
@@ -849,7 +853,7 @@ def tip_violations(net):
         ds = net.dlist(p)
         for g in range(1, net.gens[p]+1):
             ends = [s['end'] for s in net.segs if s['portal'] == p and s['gen'] == g]
-            ts = max(TIP_SEP_FLOOR, TIP_SEP_FRAC*ds[g-1]*math.sin(math.radians(net.theta[p])))
+            ts = tip_sep_of(ds[g-1], net.theta[p])
             bad += sum(1 for i in range(len(ends)) for j in range(i+1, len(ends)) if math.dist(ends[i], ends[j]) < ts - 1e-9)
     return bad
 def chain_rate(Ds, deg, rule, offsets=10):
@@ -1485,6 +1489,7 @@ def surface_scenario():
     clicks = [(p, float(D)) for p in att for D, st in att[p] if st == 'ok']
     mk = lambda mut=(), rig=None: Round(TEST_LEVELS['main'], w['F'], w['S'], [w['portal']], clicks, SEED_MAIN, mut, mode=MODE_SURFACE, rig=rig)
     return w, net, clicks, mk
+SURF_REFUSE = (175.0, 40.0)      # v3.8.0: the first re-aim target the surface scenario refuses (the v3.7.7 target (150, 60) is affordable under the 15 deg fan)
 def surface_reaim_case(net, rcap):
     """Surface counterpart of the GV4 re-aim case: first clamped success toward (20, 20) and first refusal toward (150, 60), scan 40..390 s every 10 s."""
     ok = ref = None
@@ -1493,7 +1498,7 @@ def surface_reaim_case(net, rcap):
         if i is None: continue
         q = reaim(net, float(t), i, (20.0, 20.0), rcap)
         if q is not None and q['clamped'] and ok is None: ok = (t, i, round(q['cost'], 3), round(q['wantedCost'], 3))
-        if ref is None and reaim(net, float(t), i, (150.0, 60.0), rcap) is None: ref = (t, i)
+        if ref is None and reaim(net, float(t), i, SURF_REFUSE, rcap) is None: ref = (t, i)
     return ok, ref
 def surface_variants():
     """Returns {gate: (zero, bad)} for the surface-mode variant of each changed gate; the legacy variant stays in the gate itself."""
@@ -1539,17 +1544,17 @@ def surface_variants():
     # scenario: G9, G33, G34, G35, G37
     w, net, clicks, mk = surface_scenario(); budget, bs, reserve, rcap = budgets(net)
     ok, ref = surface_reaim_case(net, rcap)
-    z = (ok is not None and ref is not None and ok[0] == 140 and ref[0] == 100 and reaim(net, float(ref[0]), ref[1], (150.0, 60.0), rcap) is None)
-    b = bads('G9', reaim_cap_inf=reaim(net, float(ref[0]), ref[1], (150.0, 60.0), 10 ** 9) is not None)
+    z = (ok is not None and ref is not None and ok[0] == 70 and ref[0] == 70 and reaim(net, float(ref[0]), ref[1], SURF_REFUSE, rcap) is None)
+    b = bads('G9', reaim_cap_inf=reaim(net, float(ref[0]), ref[1], SURF_REFUSE, 10 ** 9) is not None)
     out['G9'] = (z, b); out['G9case'] = (ok, ref)
-    RR = mk(); a_ = RR.add_hole(75.0, 80); iR = reaim_pick(RR.net, 140.0, segs=RR.layout); r_ = RR.reaim(140.0, iR, REAIM_TARGET); rs2 = RR.result()
-    RS = mk(('shared_pool',)); RS.add_hole(75.0, 80); iS = reaim_pick(RS.net, 140.0, segs=RS.layout); RS.reaim(140.0, iS, REAIM_TARGET)
-    z = (a_['status'] == 'ok' and r_['status'] == 'ok' and abs(RR.resL - (RR.reserve0 - r_['ra']['cost'])) < 1e-9 and RR.resR == RR.reserve0 - 60.0
+    RR = mk(); a_ = RR.add_hole(75.0, 80, 20); iR = reaim_pick(RR.net, 100.0, segs=RR.layout); r_ = RR.reaim(100.0, iR, REAIM_TARGET); rs2 = RR.result()
+    RS = mk(('shared_pool',)); RS.add_hole(75.0, 80, 20); iS = reaim_pick(RS.net, 100.0, segs=RS.layout); RS.reaim(100.0, iS, REAIM_TARGET)
+    z = (a_['status'] == 'ok' and r_['status'] == 'ok' and abs(RR.resL - (RR.reserve0 - r_['ra']['cost'])) < 1e-9 and RR.resR == RR.reserve0 - 20.0
          and abs(rs2['drilledL'] - (RR.net.length() + r_['ra']['cost'])) < 1e-9 and rs2['drilledR'] == sum(h[1] for hs in RR.holes for h in hs))
     out['G33'] = (z, bads('G33', shared_pool=abs(RS.resL - RR.resL) > 1e-6))
     def seq(mut=()):
         R_ = mk(mut)
-        for t_, tg_ in zip((100.0, 130.0, 150.0), ((190.0, 95.0), (10.0, 50.0), (100.0, 10.0))):
+        for t_, tg_ in zip((95.0, 105.0, 115.0), ((190.0, 95.0), (10.0, 50.0), (100.0, 10.0))):
             i_ = reaim_pick(R_.net, t_, comp=0, segs=R_.layout); st_ = R_.reaim(t_, i_, tg_)['status']
         return R_.resL, st_
     z_, zs = seq(); b_, bs_ = seq(('cap_vs_initial',))
@@ -1566,9 +1571,9 @@ def surface_variants():
                   and res7 == ['ok'] * 6 + ['limit'] and late == 'side_finished' and at_end == 'side_finished' and before_end == 'ok', bads('G35', unclamped_depth=add_rules(('no_clamp',))[0]['depth'] > 5))
     # G37: overburden branch re-aim, no trunk pick, validity codes, tip pick, refusal order
     def second_reaim(use_layout=True):
-        R_ = mk(); new_id = R_.reaim(140.0, reaim_pick(R_.net, 140.0, segs=R_.layout), (20.0, 30.0))['new_ids'][0]; segs = R_.layout if use_layout else R_.net.segs
+        R_ = mk(); new_id = R_.reaim(100.0, reaim_pick(R_.net, 100.0, segs=R_.layout), (20.0, 30.0))['new_ids'][0]; segs = R_.layout if use_layout else R_.net.segs
         try:
-            tt = next(t for t in (141.0, 142.0, 143.0, 144.0, 145.0, 146.0, 148.0, 150.0) if 0 < seg_frac({q['id']: q for q in R_.layout}[new_id], t) < 1)
+            tt = next(t for t in (101.0, 102.0, 103.0, 104.0, 105.0, 106.0, 108.0, 110.0) if 0 < seg_frac({q['id']: q for q in R_.layout}[new_id], t) < 1)
             r_ = reaim(R_.net, tt, new_id, (40.0, 30.0), 10 ** 6, segs=segs)
             return r_ is not None and all(k in r_['new'][0] for k in ('sx', 'sy', 'A0', 'start', 's'))
         except (KeyError, StopIteration): return False
@@ -1665,7 +1670,7 @@ def bads(gate, **kw):
 def branching_gates(gate, src_path=None):
     import inspect, random as _rnd
     SU, TR = MODE_SURFACE, MODE_TRUNK
-    SWA = rect(90, 109, 20, 39)                      # 100 m cover, theta = atan(20 / 40) = 26.565 deg
+    SWA = rect(90, 109, 20, 39)                      # 100 m cover; v3.8.0: theta is 15 deg for every S
     nA = lambda mut=(), cap=400, S=None, ps=(100,): Network(S if S is not None else SWA, list(ps), cap, mut=mut, mode=SU)
     cell_of_end = lambda s: (rh(s['end'][0]), rh(s['end'][1]))
     # ---- G46 anchor ----
@@ -1676,7 +1681,7 @@ def branching_gates(gate, src_path=None):
     # ---- G47 surface root (v3.7.5: the root drills one straight segment; the fork starts at its tip) ----
     def g47(mut=(), D=20.0, ps=(100,), clicks=1):
         n = nA(mut, ps=ps); st = [n.next_gen(ps[0], D) for _ in range(clicks)][-1]; return n, st
-    n47, st = g47(); sg = n47.segs; th = 26.565051177
+    n47, st = g47(); sg = n47.segs; th = THETA_FIXED
     n47b, stb = g47(clicks=2); sb = n47b.segs
     z47 = (st == 'ok' and len(sg) == 1 and sg[0]['gen'] == 1 and sg[0]['parent'] is None and sg[0]['dir'] == 0.0 and abs(sg[0]['len'] - 4.0) < 1e-12 and abs(sg[0]['t'] - 8.0) < 1e-12
            and abs(sg[0]['A0']) < 1e-12 and abs(sg[0]['A1'] - 4.0) < 1e-12 and sg[0]['end'] == (100.0, 4.0) and sg[0]['cells'] == [(100, 1), (100, 2), (100, 3), (100, 4)]
@@ -1684,12 +1689,12 @@ def branching_gates(gate, src_path=None):
     ends = [cell_of_end(s) for s in sb[1:]]
     z47 = z47 and (stb == 'ok' and len(sb) == 3 and all(s['gen'] == 2 and s['parent'] == 0 for s in sb[1:]) and abs(sb[1]['dir'] + th) < 1e-6 and abs(sb[2]['dir'] - th) < 1e-6
                    and all(abs(s['len'] - 4.0) < 1e-12 and abs(s['t'] - 16.0) < 1e-12 and abs(s['A0'] - 4.0) < 1e-12 and abs(s['A1'] - 8.0) < 1e-12 for s in sb[1:])
-                   and abs(sb[1]['end'][0] - 98.2111) < 1e-3 and abs(sb[2]['end'][0] - 101.7889) < 1e-3 and abs(sb[1]['end'][1] - 7.5777) < 1e-3 and ends == [(98, 8), (102, 8)]
+                   and abs(sb[1]['end'][0] - 98.96472) < 1e-4 and abs(sb[2]['end'][0] - 101.03528) < 1e-4 and abs(sb[1]['end'][1] - 7.86370) < 1e-4 and ends == [(99, 8), (101, 8)]
                    and abs(5.0 * n47b.length() - 60.0) < 1e-12 and n47b.gens[100] == 2)
     nt = Network(SWA, [100], 400, mode=TR); nt.next_gen(100, 20.0)
     z47 = z47 and len(nt.segs) == 3 and nt.segs[0]['len'] == 20.0 and nt.segs[0]['t'] == 40.0 and abs(5.0 * nt.length() - 140.0) < 1e-12
     nr, _ = g47(('trunk_resurrect',)); nd, _ = g47(('root_dir_nonzero',)); n25, _ = g47(D=25.0); n101, _ = g47(ps=(101,), clicks=2)
-    adj47 = (abs(n25.segs[0]['len'] - 5.0) < 1e-12 and abs(n25.segs[0]['t'] - 10.0) < 1e-12 and cell_of_end(n101.segs[2]) == (103, 8))
+    adj47 = (abs(n25.segs[0]['len'] - 5.0) < 1e-12 and abs(n25.segs[0]['t'] - 10.0) < 1e-12 and cell_of_end(n101.segs[2]) == (102, 8))
     gate("G47 surface root: no gen-0 segment, the first click drills one straight segment from (p, 0) at heading 0, length D, t = D / 0.5, meter starts at 0; the second click forks its tip at -theta / +theta",
          z47 and adj47,
          bads('G47', trunk_resurrect=len(nr.segs) == 3, root_dir_nonzero=len(nd.segs) == 1 and abs(nd.segs[0]['dir'] - 10.0) < 1e-12 and nd.segs[0]['dir'] != 0.0, root_forks=len(g47(('root_forks',))[0].segs) == 2))
@@ -1698,24 +1703,25 @@ def branching_gates(gate, src_path=None):
     def seglen(S_, d, D, mut=()):
         n = nA(mut, S=S_); ok, st_ = n.mask(); cells, elen, endpt, tr = sample(100, 0.0, d, D, ok, 0.0, "carry"); return elen, tr, (rh(endpt[0]), rh(endpt[1])), elen / SPEED_L
     nD = nA(S=SWD); nD.next_gen(100, 20.0); nD.next_gen(100, 100.0); okA = nA(); okA.next_gen(100, 20.0)
-    z48 = (seglen(SWA, th, 4.0)[:2] == (4.0, False) and seglen(SWD, 20.0, 20.0) == (13.0, True, (104, 12), 26.0) and seglen(SWD5, 20.0, 20.0)[0] == 16.0
-           and seglen(SWD, -20.0, 20.0)[0] == 20.0 and [s['dir'] for s in nD.segs] == [0.0, -20.0, 20.0] and abs(nD.segs[2]['len'] - 13.0) < 1e-12 and nD.segs[2]['trunc'] and not nD.segs[0]['trunc']
-           and all(abs(s['len'] - 4.0) < 1e-12 and not s['trunc'] for s in okA.segs) and seglen(SWD, 20.0, 20.0)[0] != seglen(SWD5, 20.0, 20.0)[0])
+    z48 = (seglen(SWA, th, 4.0)[:2] == (4.0, False) and seglen(SWD, 15.0, 20.0) == (17.0, True, (104, 16), 34.0) and seglen(SWD5, 15.0, 20.0) == (20.0, False, (105, 19), 40.0)
+           and seglen(SWD, -15.0, 20.0)[:2] == (5.5, True) and [s['dir'] for s in nD.segs] == [0.0, -15.0, 15.0] and abs(nD.segs[1]['len'] - 5.5) < 1e-12 and abs(nD.segs[2]['len'] - 17.0) < 1e-12 and cell_of_end(nD.segs[2]) == (104, 20) and nD.segs[2]['trunc'] and not nD.segs[0]['trunc']
+           and all(abs(s['len'] - 4.0) < 1e-12 and not s['trunc'] for s in okA.segs) and seglen(SWD, 15.0, 20.0)[0] != seglen(SWD5, 15.0, 20.0)[0])
     gate("G48 stay-mask: an overburden segment keeps its full length D; a segment that enters the S margin truncates at its first exit; the legacy mask is dead on click 1",
          z48,
-         bads('G48', mask_always_dead=nA(('mask_always',)).next_gen(100, 20.0) == 'dead', mask_always_swd=seglen(SWD, 20.0, 20.0, ('mask_always',))[0] == 0.0,
-              mask_never=seglen(SWD, 20.0, 20.0, ('mask_never',))[0] == 20.0))
+         bads('G48', mask_always_dead=nA(('mask_always',)).next_gen(100, 20.0) == 'dead', mask_always_swd=seglen(SWD, 15.0, 20.0, ('mask_always',))[0] == 0.0,
+              mask_never=seglen(SWD, 15.0, 20.0, ('mask_never',))[0] == 20.0))
     # ---- G49 R4 ray prune ----
-    n2 = nA(); [n2.next_gen(100, 20.0) for _ in range(3)]; g2 = sorted(round(s['dir'], 3) for s in n2.segs if s['gen'] == 3)
-    e1 = (101.7889, 7.5777)
+    SW49 = rect(96, 103, 20, 39)                     # 8 wide: at 15 deg the outward grandchildren leave the 1-cell margin
+    n2 = nA(); n49 = nA(S=SW49); [n49.next_gen(100, 20.0) for _ in range(3)]; g2 = sorted(round(s['dir'], 3) for s in n49.segs if s['gen'] == 3)
+    eo = (102.56600990987044, 11.559221435201419)
     nd1 = nA(S=SWD); nd1.next_gen(100, 20.0); nd1.next_gen(100, 100.0)
-    z49 = (g2 == [-39.848, -13.283, 13.283] and not n2.ray_ok(100, e1, 39.848, 4.0) and n2.ray_ok(100, e1, -13.283, 4.0) and n2.ray_ok(100, e1, -13.5, 4.0)
-           and not n2.ray_ok(100, e1, 38.848, 4.0) and n2.ray_ok(100, e1, 38.0, 4.0) and not n2.ray_ok(100, (111.0, 3.0), 0.0, 4.0) and n2.ray_ok(100, (110.0, 3.0), 0.0, 4.0) and n2.ray_ok(100, (109.0, 3.0), 0.0, 4.0)
-           and [s['dir'] for s in nd1.segs] == [0.0, -20.0, 20.0] and not nd1.ray_ok(100, (95.7, 18.8), -20.0, 20.0) and nd1.ray_ok(100, nd1.segs[2]['end'], 20.0, 20.0))
-    nof = nA(('ray_off',)); [nof.next_gen(100, 20.0) for _ in range(3)]; nvs = nA(('ray_vs_S',))
+    z49 = (g2 == [-7.5, 7.5] and not n49.ray_ok(100, eo, 22.5, 4.0) and n49.ray_ok(100, eo, 7.5, 4.0) and n49.ray_ok(100, eo, 14.5, 4.0)
+           and not n49.ray_ok(100, eo, 15.0, 4.0) and not n49.ray_ok(100, eo, 21.5, 4.0) and not n2.ray_ok(100, (111.0, 3.0), 0.0, 4.0) and n2.ray_ok(100, (110.0, 3.0), 0.0, 4.0) and n2.ray_ok(100, (109.0, 3.0), 0.0, 4.0)
+           and [s['dir'] for s in nd1.segs] == [0.0, -15.0, 15.0] and not nd1.ray_ok(100, (95.7, 18.8), -20.0, 20.0) and nd1.ray_ok(100, nd1.segs[2]['end'], 15.0, 20.0))
+    nof = nA(('ray_off',), S=SW49); [nof.next_gen(100, 20.0) for _ in range(3)]; nvs = nA(('ray_vs_S',))
     gate("G49 R4 ray prune: inward child kept, outward child pruned, end-in-margin child always kept, tolerance 0 (1 deg off does not rescue)",
          z49,
-         bads('G49', ray_off=len([s for s in nof.segs if s['gen'] == 3]) == 4, ray_back=nA(('ray_back',)).next_gen(100, 20.0) == 'dead', ray_short=nA(('ray_short',)).next_gen(100, 20.0) == 'dead',
+         bads('G49', ray_off=len([s for s in nof.segs if s['gen'] == 3]) == 4 and len(g2) == 2, ray_back=nA(('ray_back',)).next_gen(100, 20.0) == 'dead', ray_short=nA(('ray_short',)).next_gen(100, 20.0) == 'dead',
               ray_vs_S=not nvs.ray_ok(100, (110.0, 3.0), 0.0, 4.0) and nvs.ray_ok(100, (109.0, 3.0), 0.0, 4.0)))
     # ---- G50 cap and ceiling (O4: the ceiling world SW-C = rect(75, 124, 20, 99), portal 100, 20 m clicks, no cap) ----
     SWC = rect(75, 124, 20, 99)
@@ -1827,19 +1833,49 @@ def branching_gates(gate, src_path=None):
          got() == EXP and adj == (150.0, 155.0) and cover_col({(x, 5) for x in (90, 91, 95, 96)}) == 91,
          bads('G61', **{m: verdict(badc[m]) != verdict(got()) for m in badc}))
 
+    # ---- G64 fixed branch half-angle (v3.8.0): theta is 15 deg for every target set, 30 deg between siblings; legacy trunk mode keeps the bounding-box angle ----
+    SWflat = rect(25, 174, 20, 44); SWtall = rect(98, 101, 20, 79)
+    def g64_nets(mut=()):
+        out = []
+        for S_, ps in ((SWA, (100,)), (SWflat, (100,)), (SWtall, (100,)), (SWA | rect(150, 170, 30, 60), (95, 160))):
+            n = Network(S_, list(ps), 10 ** 6, mut=mut, mode=SU)
+            for D in (50.0, 50.0, 50.0, 75.0, 75.0, 20.0):
+                for p in ps: n.next_gen(p, D)
+            out.append(n)
+        return out
+    z64n = g64_nets(); b64n = g64_nets(('theta_bbox',))
+    sib = [abs(a['dir'] - b['dir']) for n in z64n for a in n.segs for b in n.segs if a['parent'] is not None and a['parent'] == b['parent'] and a['id'] < b['id'] and a['gen'] >= 2]
+    nz = Network(set(), [100], 400, mode=SU)
+    tipsep_ok = (tip_sep_of(4.0, 15.0) == TIP_SEP_FLOOR and abs(tip_sep_of(5.0, 15.0) - 0.9 * 5 * math.sin(math.radians(15))) < 1e-12 and tip_sep_of(5.0, 15.0) > TIP_SEP_FLOOR
+                 and all(tip_sep_of(D / CELL_M, 15.0) == TIP_SEP_FLOOR for D in (20.0,)) and all(tip_sep_of(D / CELL_M, 15.0) > TIP_SEP_FLOOR for D in range(25, 101, 5))
+                 and all(2 * (D / CELL_M) * math.sin(math.radians(15.0)) > tip_sep_of(D / CELL_M, 15.0) for D in range(20, 101, 5)))
+    dirs64 = [abs(s_['dir']) for n in z64n for s_ in n.segs]
+    w64, net64, clicks64, mk64 = surface_scenario(); R64 = mk64(); i64 = reaim_pick(R64.net, 70.0, segs=R64.layout); r64 = R64.reaim(70.0, i64, (20.0, 20.0))
+    new64 = sorted(round(q['dir'], 2) for q in R64.layout if q['id'] in r64['new_ids'])
+    clamp64 = new64 == [-102.11, -60.0, -45.0, -36.05, -33.03]      # the 60 deg clamp still binds below a re-aimed parent (heading -102.11): child -66.05 becomes -60
+    gate("G64 fixed half-angle: surface theta = 15 deg for every target set (none for an empty one), siblings 30 deg apart, headings of un-re-aimed chains under 30 deg (the 60 deg clamp cannot bind); legacy trunk theta stays the bounding-box angle; tip separation floor binds at 20 m only",
+         all(n.theta[q] == 15.0 for n in z64n for q in n.theta) and nz.theta[100] is None and sib and all(abs(x - 30.0) < 1e-9 for x in sib) and max(dirs64) < 30.0
+         and abs(Network(SWA, [100], 400, mode=TR).theta[100] - 26.565051177) < 1e-6 and abs(Network(SWflat, [100], 400, mode=TR).theta[100] - 70.0) < 1e-6 and tipsep_ok and clamp64,
+         bads('G64', theta_bbox=any(abs(n.theta[q] - 15.0) > 1e-9 for n in b64n for q in n.theta), floor_removed=tip_sep_of(4.0, 15.0, 0.0) < TIP_SEP_FLOOR))
+
 if __name__ == "__main__":
     import sys
     if "--export-json" in sys.argv:   # 45.8: write the JS parity goldens through the standard exporter and exit before any gate runs
         import runpy
         _i = sys.argv.index("--export-json"); _here = os.path.dirname(os.path.abspath(__file__))
-        _out = sys.argv[_i + 1] if _i + 1 < len(sys.argv) and not sys.argv[_i + 1].startswith("--") else os.path.join(_here, "..", "game45", "test", "goldens_v39.json")
+        _out = sys.argv[_i + 1] if _i + 1 < len(sys.argv) and not sys.argv[_i + 1].startswith("--") else os.path.join(_here, "..", "game45", "test", "goldens_v41.json")
         os.makedirs(os.path.dirname(os.path.abspath(_out)), exist_ok=True)
         sys.argv = [os.path.join(_here, "step45_07_export_goldens.py"), "--out", os.path.abspath(_out)]
         runpy.run_path(sys.argv[0], run_name="step45_export"); sys.exit(0)
     PRINT_ONLY = "--print" in sys.argv
     set_mode(MODE_TRUNK)     # the 45 legacy gates and every GV golden run in trunk mode (the anchor); the surface gates pass mode= explicitly
     CK = []
+    COLLECT = "--collect" in sys.argv; FAILS = []      # --collect: list every failing gate instead of stopping at the first
     def gate(name, zero, bad):
+        if COLLECT:
+            if not zero: FAILS.append(name + ": zero control failed")
+            if not bad: FAILS.append(name + ": known-bad mutant not caught")
+            CK.append(name); return
         assert zero, name + ": zero control failed"
         assert bad, name + ": known-bad mutant not caught"
         CK.append(name)
@@ -2368,4 +2404,6 @@ if __name__ == "__main__":
     assert [fmt1(x) for x in (43.75, 45.25, 0.05, 0.049)] == ['43.8', '45.3', '0.1', '0.0'] and pct1(0, 0) == "no formation"
     assert [round(u01(*v), 6) for v in [(7919, 5, 4), (7919, 4, 6), (7919, 6, 4), (15838, 40, 20)]] == [0.062413, 0.136708, 0.081696, 0.83714]
     if not ZC: branching_gates(gate); speed_gates(gate)
+    if COLLECT:
+        print("FAILS:", len(FAILS)); [print("  ", f[:200]) for f in FAILS]
     print("gates passed:", len(CK), ":", ", ".join(CK))

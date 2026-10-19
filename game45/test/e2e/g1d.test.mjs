@@ -323,7 +323,7 @@ test('G1D-OVERPIX the over cells of a hole draw in the warning colour and the ce
   } finally { await D.close(); }
 });
 
-test('G1D-CAP the cap warning reads "Max Length Exceeded" on the drill meter note, the refusal text is the same string and shows once, the meter turns red', async () => {
+test('G1D-CAP (v3.8.1) the note under the meter reads "Next generation would exceed the 2,000 m limit" when only the next generation does not fit; the refusal text is the same string and shows once; the meter turns red; lbl_cap_full stays "Max Length Exceeded" for a real over', async () => {
   needPlay();
   const G = getGoldens();
   const { D } = await toPlan(browser, G, 'GV4', { startMode: 'surface', rec: G.S_GV4, pointerPortals: false });
@@ -335,13 +335,14 @@ test('G1D-CAP the cap warning reads "Max Length Exceeded" on the drill meter not
       capFull = (await D.model()).capFull;
     }
     assert.equal(capFull, true, 'the cap was not reached');
-    assert.equal((await D.text('cap-full')).trim(), CAP_TEXT);
+    const NEXT_TEXT = 'Next generation would exceed the 2,000 m limit';
+    assert.equal((await D.text('cap-full')).trim(), NEXT_TEXT);
     assert.equal(await D.attr('meter', 'data-over'), '1');
     await D.press('next-gen');
-    assert.equal((await D.state()).ui.message, CAP_TEXT, 'the refusal text is the same string');
+    assert.equal((await D.state()).ui.message, NEXT_TEXT, 'the refusal text is the same string');
     assert.equal((await D.text('message')).trim(), '', 'the duplicate message is suppressed');
     assert.equal(await D.page.evaluate(() => globalThis.__s45.stringTable.lbl_cap_full), CAP_TEXT);
-    assert.equal(await D.page.evaluate(() => globalThis.__s45.stringTable.refuse_cap), CAP_TEXT);
+    assert.equal(await D.page.evaluate(() => globalThis.__s45.stringTable.refuse_cap), 'Next generation would exceed the {cap} m limit');
   } finally { await D.close(); }
 });
 
@@ -372,7 +373,7 @@ test('G1D-BUTTON Remove portal button: label, enabled only in PLAN with a portal
 const SIZES = [[1366, 768], [1920, 1080]];
 const boxesOf = (D, sel) => D.page.evaluate((q) => [...document.querySelectorAll(q)].map((e) => { const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height, t: e.textContent.trim() }; }), sel);
 
-test('G1D-LAYOUT-STATUS three portals: every status-left item (counters, S top) stays inside the left column and above the plan help text, at 1366 x 768 and 1920 x 1080', async () => {
+test('G1D-LAYOUT-STATUS three portals: every status-left item (counters, formation top) stays inside the left column and above the plan help text, at 1366 x 768 and 1920 x 1080', async () => {
   needPlay();
   const G = getGoldens();
   for (const [w, h] of SIZES) {
@@ -383,7 +384,7 @@ test('G1D-LAYOUT-STATUS three portals: every status-left item (counters, S top) 
       const g = await D.geo();
       const items = await boxesOf(D, '[data-s45="counters"] > .ctr, [data-s45="s-top"]');
       assert.ok(items.length >= 4, `${w}x${h}: ${items.length} status items`);
-      assert.ok(items.some((i) => /^S top/.test(i.t)), `${w}x${h}: S top missing`);
+      assert.ok(items.some((i) => /^formation top/.test(i.t)), `${w}x${h}: formation top missing`);
       const help = (await boxesOf(D, '[data-s45="plan-help-left"]'))[0];
       const limit = g.panels.left.x + g.panels.left.w + 2;
       for (const i of items) {

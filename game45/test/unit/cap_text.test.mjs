@@ -11,15 +11,16 @@ const GAME45 = path.resolve(fileURLToPath(new URL('../../', import.meta.url)));
 const ROOT = path.resolve(GAME45, '..');
 const { strings } = await import(pathToFileURL(path.join(GAME45, 'core', 'strings.js')).href);
 const TEXT = 'Max Length Exceeded';
+const NEXT = 'Next generation would exceed the {cap} m limit';
 
-// checker: the two cap strings equal the text exactly (case included)
-const capErrors = (t) => [t.lbl_cap_full === TEXT ? null : `lbl_cap_full "${t.lbl_cap_full}"`, t.refuse_cap === TEXT ? null : `refuse_cap "${t.refuse_cap}"`].filter(Boolean);
+// checker (v3.8.1): lbl_cap_full is the over text; refuse_cap names only the next generation (a template with the cap in metres)
+const capErrors = (t) => [t.lbl_cap_full === TEXT ? null : `lbl_cap_full "${t.lbl_cap_full}"`, t.refuse_cap === NEXT ? null : `refuse_cap "${t.refuse_cap}"`].filter(Boolean);
 
-test('C3-TEXT lbl_cap_full and refuse_cap read "Max Length Exceeded" (exact case), both the same string; label_wrong (old wording) is caught', () => {
+test('C3-TEXT (v3.8.1) lbl_cap_full reads "Max Length Exceeded" (a total over its limit), refuse_cap reads "Next generation would exceed the {cap} m limit"; the two differ; the v3.7.7 shared wording is caught', () => {
   assert.deepEqual(capErrors(strings), []);
-  assert.equal(strings.lbl_cap_full, strings.refuse_cap);
+  assert.notEqual(strings.lbl_cap_full, strings.refuse_cap);
+  assert.ok(capErrors({ ...strings, refuse_cap: TEXT }).length >= 1, 'label_wrong: the v3.7.7 refuse_cap passes the checker');
   assert.ok(capErrors({ ...strings, lbl_cap_full: 'drill string full' }).length >= 1, 'label_wrong: old lbl_cap_full passes the checker');
-  assert.ok(capErrors({ ...strings, refuse_cap: 'drill cap reached' }).length >= 1, 'label_wrong: old refuse_cap passes the checker');
   assert.ok(capErrors({ ...strings, lbl_cap_full: 'max length exceeded' }).length >= 1, 'case is exact');
 });
 

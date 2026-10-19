@@ -23,6 +23,7 @@ export const PM_SURFACE = [
   { id: 'PM20', mut: 'cap_skip_ob', title: 'overburden length skips the cap', detectors: ['UG50'] },
   { id: 'PM21', mut: 'reaim_mask_old', title: 'legacy 8-cell re-aim mask', detectors: ['UG52', 'UG37S'] },
   { id: 'PM22', mut: 'pair_ob_kept', title: 'overburden pairs kept', detectors: ['UG55'] },
+  { id: 'PM27', mut: 'theta_bbox', title: 'bounding-box half-angle in surface mode (v3.7.7)', detectors: ['UG64', 'P-GVu'] },
   { id: 'PM26', mut: 'root_forks', title: 'root forks at once (v3.7.4 first click)', detectors: ['UG47', 'P-GVu'] },
 ];
 const byId = new Map(ENTRIES_SURFACE.map((t) => [t.id, t]));

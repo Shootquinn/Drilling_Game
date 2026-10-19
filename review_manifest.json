@@ -1,0 +1,7 @@
+{
+  "dir": "../review",
+  "files": [
+    { "src": "game45/dist/play.html", "dest": "play_g1e.html" },
+    { "src": "game45/docs/known_gaps.md", "dest": "known_gaps.md" }
+  ]
+}

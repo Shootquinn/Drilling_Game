@@ -40,15 +40,15 @@ function zone(id,r,bg){
 zone('zone-title',rect.title,null); zone('zone-heading',rect.heading,null);
 const spine=zone('zone-spine',rect.spine,'rgba(235,229,214,0.9)'); const info=zone('zone-info',rect.info,null);
 const host=document.createElement('div'); host.className='z'; host.style.cssText='left:0;top:0;width:'+vw+'px;height:'+vh+'px;pointer-events:none'; document.body.appendChild(host);
-const IDS=['show-formation','done-painting','brush-tool','brush-2','brush-5','brush-8','brush-12','brush-20','erase','fill','undo','clear','peek','next-gen','grow-12','plan-undo','back-to-paint','start','speed-1','speed-4','speed-16','pause','skip','play-again'];
+const IDS=['show-formation','done-painting','brush-tool','brush-2','brush-5','brush-8','brush-12','brush-20','erase','fill','undo','clear','peek','next-gen','grow-12','plan-undo','back-to-paint','start','speed-1','speed-2','speed-4','speed-8','speed-16','level-1','level-2','level-3','level-4','level-5','level-6','pause','skip','play-again'];
 const bw=(rect.spine.w-8), bh=Math.max(14,20*s), under=o.controls==='under';
 const ux=rect.left.x, uy=rect.left.y+rect.left.h+8*s, uw=Math.max(50,60*s);
 const ctl={};
 IDS.forEach(function(id){ const b=document.createElement('button'); b.setAttribute('data-s45',id); b.textContent=id; b.style.display='none'; host.appendChild(b); ctl[id]=b; });
 const sl=document.createElement('input'); sl.type='range'; sl.setAttribute('data-s45','dbranch'); sl.style.display='none'; host.appendChild(sl);
-const KEYIDS=['key-intersected','key-imaged','key-unseen','key-outline','key-planned','key-ghost','key-shadow','key-portal','key-hole','key-drilled','key-dropped','key-run-intersected','key-run-imaged','key-run-unseen','key-run-barren'];
+const KEYIDS=['key-intersected','key-imaged','key-unseen','key-outline','key-planned','key-ghost','key-shadow','key-portal','key-stake','key-hole','key-drilled','key-dropped','key-run-intersected','key-run-imaged','key-run-unseen','key-run-barren'];
 const kn={};
-KEYIDS.forEach(function(id){ const k=document.createElement('div'); k.className='k'; k.setAttribute(id==='key-hole'?'data-key2':'data-s45',id); k.textContent=D.KEY_TEXT[id]||id.replace('key-',''); k.style.display='none'; host.appendChild(k); kn[id]=k; });
+KEYIDS.forEach(function(id){ const k=document.createElement('div'); k.className='k'; k.setAttribute(id==='key-hole'||id==='key-stake'?'data-key2':'data-s45',id); k.textContent=D.KEY_TEXT[id]||id.replace('key-',''); k.style.display='none'; host.appendChild(k); kn[id]=k; });
 let phase='LEVEL_START';
 function render(){
   const ids=D.LEGAL[phase]; let i=0;
@@ -60,7 +60,7 @@ function render(){
   else { sl.style.left=(rect.spine.x+4)+'px'; sl.style.top=(rect.spine.y+8*s+i*(bh+4*s))+'px'; sl.style.width=bw+'px'; sl.style.height=bh+'px'; }
   const want=o.keys[phase]||[]; let j=0;
   KEYIDS.forEach(function(id){ const k=kn[id]; const on=want.indexOf(id)>=0; k.style.display=on?'block':'none';
-    if(on){ k.style.left=(rect.info.x+8+j*130*s)+'px'; k.style.top=(rect.info.y+10*s)+'px'; j++; } });
+    if(on){ k.style.left=(rect.info.x+8+j*95*s)+'px'; k.style.top=(rect.info.y+10*s)+'px'; j++; } });
 }
 render();
 globalThis.__s45={ready:true,

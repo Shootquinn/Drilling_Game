@@ -1,5 +1,6 @@
 // World payloads for the page and the Node oracle. Every number comes from the goldens (goldens.mjs); nothing here types an expected value.
 import { getGoldens, world } from './goldens.mjs';
+import { LEVELS_V39 } from '../../core/level_table.js';
 
 export const keysOf = (it) => Array.from(it).sort((a, b) => a - b);
 
@@ -13,6 +14,14 @@ export function levelRecord(G, which) {
   if (which === 'gv1') return { ...base, reveal_s: 8.0, fade_s: 2.0, peeks: 2, landmark_step_m: 25, cap_frac: 0.25, F: keysOf(G.GV1.F) };
   if (which === 'pipe') return { ...base, reveal_s: 7.0, fade_s: 2.0, peeks: 1, landmark_step_m: 50, cap_frac: 0.25, F: keysOf(G.GV3.F) };
   throw new Error(`unknown level ${which}`);
+}
+// The page boots Level 1 (v3.8.1). The rows written against the fixed GV4 formation load it after boot: E11 main record + the Level 4 presentation
+// fields of the level table + F = GV4.F (the record the build inlined as S45_LEVEL before v3.8.1); trunk = the legacy presentation (8.0 s, 2 peeks).
+export function bootLevelRecord(G, { trunk = false } = {}) {
+  const L4 = LEVELS_V39[4];
+  const base = { ...G.E11.test_levels.main, landmark_step_m: L4.landmark_step_m, cap_frac: L4.cap_frac };
+  const pres = trunk ? { reveal_s: 8.0, fade_s: 2.0, peeks: 2 } : { reveal_s: L4.reveal_s, fade_s: L4.fade_s, peeks: L4.peeks };
+  return { ...base, ...pres, F: keysOf(G.GV4.F) };
 }
 // GV world -> { level, S, portals, clicks, seed, w }
 export function gvWorld(G, gv) {

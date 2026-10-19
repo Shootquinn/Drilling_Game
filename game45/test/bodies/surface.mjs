@@ -10,7 +10,7 @@ import { cmp, cmpNum, check, cmpSegs, cmpSet, TOL_LEN } from '../lib/tol.mjs';
 import { world } from '../lib/goldens.mjs';
 import { roundGV4m } from './common.mjs';
 import {
-  W, H, rectK, unionK, SWA, SWD, SWD5, S2C, S2M, S2K, SWC, S2T, SAB, THETA_A, netOf, clickNet, sig, gsig, rhJ, netHash, worldRec, POLICY_WORLDS,
+  W, H, rectK, unionK, SWA, SWD, SWD5, SW49, S2C, S2M, S2K, SWC, S2T, SAB, THETA_A, netOf, clickNet, sig, gsig, rhJ, netHash, worldRec, POLICY_WORLDS,
   modeLiteralHits, ratioLiteralHits, rayLiteralHits, LITERAL_OK, coreFiles, fixture, CORE_DIR_REAL,
 } from '../lib/surface.mjs';
 
@@ -61,7 +61,7 @@ export const ug46 = {
 
 // ---------------------------------------------------------------- UG47 surface root (v3.7.5: the first click drills one straight segment, the second forks its tip)
 export const ug47 = {
-  id: 'UG47', title: 'G47 surface root: SW-A click D 20 gives 1 segment at heading 0, len 4.0, t 8.0, meter 20.0 m, meterStart 0; click 2 forks its tip at -/+26.565 (len 4.0, t 16.0, meter 60.0 m) (trunk mode: 3 segments, seg 0 len 20.0, 140.0 m)', mode: 'surface',
+  id: 'UG47', title: 'G47 surface root: SW-A click D 20 gives 1 segment at heading 0, len 4.0, t 8.0, meter 20.0 m, meterStart 0; click 2 forks its tip at -/+15 (len 4.0, t 16.0, meter 60.0 m) (trunk mode: 3 segments, seg 0 len 20.0, 140.0 m)', mode: 'surface',
   observe: async (C, G, X) => {
     const a = clickNet(C, SWA, [20]), b = clickNet(C, SWA, [20, 20]);
     const o = {
@@ -88,29 +88,29 @@ export const ug47 = {
     cmp(e, 'click 2 nsegs', o.segs2?.length, 3); cmp(e, 'click 2 gens', o.segs2?.map((s) => s.gen), [1, 2, 2]); cmp(e, 'click 2 parents', o.segs2?.map((s) => s.parent), [null, 0, 0]);
     cmp(e, 'click 2 dirs', o.segs2?.map((s) => s.dir), [0, -num(THETA_A), num(THETA_A)]);
     cmp(e, 'click 2 len', o.segs2?.map((s) => s.len), [4, 4, 4]); cmp(e, 'click 2 t', o.segs2?.map((s) => s.t), [8, 16, 16]); cmp(e, 'click 2 A1', o.segs2?.map((s) => s.A1), [4, 8, 8]);
-    cmp(e, 'click 2 end cells', o.segs2?.map((s) => s.endCell), [[100, 4], [98, 8], [102, 8]]); cmpNum(e, 'click 2 meter m', o.meterM2, 60.0, 1e-12); cmp(e, 'generations used', o.gens, 2);
+    cmp(e, 'click 2 end cells', o.segs2?.map((s) => s.endCell), [[100, 4], [99, 8], [101, 8]]); cmpNum(e, 'click 2 meter m', o.meterM2, 60.0, 1e-12); cmp(e, 'generations used', o.gens, 2);
     cmp(e, 'trunk nsegs', o.trunk?.nsegs, 3); cmp(e, 'trunk seg 0 len', o.trunk?.len0, 20.0); cmp(e, 'trunk seg 0 t', o.trunk?.t0, 40.0); cmpNum(e, 'trunk meter m', o.trunk?.meterM, 140.0, 1e-12);
-    // adjacent: D 25 m gives len 5.0, t 10.0; portal 101 shifts the click-2 ends by +1 column (cell 103 on the +theta side)
+    // adjacent: D 25 m gives len 5.0, t 10.0; portal 101 shifts the click-2 ends by +1 column (cell 102 on the +theta side)
     cmp(e, 'D 25 len', o.d25?.map((s) => s.len), [5]); cmp(e, 'D 25 t', o.d25?.map((s) => s.t), [10]);
-    cmp(e, 'portal 101 end cell', o.p101?.[2]?.endCell, [103, 8]);
+    cmp(e, 'portal 101 end cell', o.p101?.[2]?.endCell, [102, 8]);
     return e;
   },
   good: (G) => ({
     res: ['ok'], segs: E(G).swa_click1.segs.map(gsig), res2: ['ok', 'ok'], segs2: E(G).swa_click2.segs.map(gsig), meterM: 20.0, meterM2: 60.0, meterStart: 0, gens: 2,
-    d25: [{ len: 5, t: 10 }], p101: [{}, {}, { endCell: [103, 8] }], trunk: { nsegs: 3, len0: 20.0, t0: 40.0, meterM: 140.0 },
+    d25: [{ len: 5, t: 10 }], p101: [{}, {}, { endCell: [102, 8] }], trunk: { nsegs: 3, len0: 20.0, t0: 40.0, meterM: 140.0 },
   }),
   bad: [{ mut: ['trunk_resurrect'] }, { mut: ['root_dir_nonzero'] }, { mut: ['root_forks'] }],
   synth: [
     { name: 'trunk_resurrect (3 segments)', obs: (G) => { const o = ug47.good(G); o.segs = E(G).swa_bad.trunk_resurrect.segs.map(gsig); return o; } },
     { name: 'root_dir_nonzero (1 segment at heading 10)', obs: (G) => { const o = ug47.good(G); o.segs = E(G).swa_bad.root_dir_nonzero.segs.map(gsig); return o; } },
-    { name: 'root_forks (the first click gives the pair at -/+26.565)', obs: (G) => { const o = ug47.good(G); o.segs = E(G).swa_bad.root_forks.segs.map(gsig); return o; } },
+    { name: 'root_forks (the first click gives the pair at -/+15)', obs: (G) => { const o = ug47.good(G); o.segs = E(G).swa_bad.root_forks.segs.map(gsig); return o; } },
     { name: 'meter starts at r0 (140.0 m)', obs: (G) => { const o = ug47.good(G); o.meterM = 140.0; o.meterStart = 20; return o; } },
   ],
 };
 
 // ---------------------------------------------------------------- UG48 stay-mask
 export const ug48 = {
-  id: 'UG48', title: 'G48 stay-mask: SW-A click 1 and 2 keep 4.0; SW-D click 2 +20 child truncates at 13.0 (end cell 104, 16; t 34.0); SW-D5 16.0; legacy mask is dead', mode: 'surface',
+  id: 'UG48', title: 'G48 stay-mask: SW-A click 1 and 2 keep 4.0; SW-D click 2 +15 child truncates at 17.0 (end cell 104, 20; t 42.0); SW-D5 20.0 untruncated; legacy mask is dead', mode: 'surface',
   observe: async (C, G) => {
     const o = {};
     for (const [k, S] of [['swa', SWA], ['swd', SWD], ['swd5', SWD5]]) {
@@ -124,59 +124,60 @@ export const ug48 = {
     const e = [];
     const sm = E(G).stay_mask;
     cmp(e, 'swa result', o.swa?.res, 'ok'); cmp(e, 'swa first click', o.swaFirst, 'ok'); cmp(e, 'swa lens', o.swa?.segs.map((s) => s.len), [sm.swa[0], sm.swa[0], sm.swa[0]]); cmp(e, 'swa trunc', o.swa?.segs.map((s) => s.trunc), [false, false, false]);
-    cmp(e, 'swd result', o.swd?.res, 'ok'); cmp(e, 'swd segments', o.swd?.segs.length, 3); cmp(e, 'swd dirs', o.swd?.segs.map((s) => s.dir), [0, -20, 20]); cmp(e, 'swd root kept whole', [o.swd?.segs[0]?.len, o.swd?.segs[0]?.trunc], [4, false]);
-    cmp(e, 'swd -20 child (enters the margin, leaves at once)', [o.swd?.segs[1]?.len, o.swd?.segs[1]?.trunc, o.swd?.segs[1]?.endCell], [4, true, [99, 8]]);
-    cmp(e, 'swd len', o.swd?.segs[2]?.len, sm.swd[0]); cmp(e, 'swd trunc', o.swd?.segs[2]?.trunc, sm.swd[1]); cmp(e, 'swd end cell', o.swd?.segs[2]?.endCell, [104, 16]); cmp(e, 'swd t', o.swd?.segs[2]?.t, 34);
-    cmp(e, 'swd5 len', o.swd5?.segs[2]?.len, sm.swd5[0]); cmp(e, 'swd5 trunc', o.swd5?.segs[2]?.trunc, sm.swd5[1]); cmp(e, 'swd5 end cell', o.swd5?.segs[2]?.endCell, [105, 19]);
-    cmp(e, 'hand lengths 4.0 / 13.0 / 16.0', [sm.swa[0], sm.swd[0], sm.swd5[0]], [4, 13, 16]);
-    check(e, 'adjacent: SW-D (13.0) and SW-D5 (16.0) differ', o.swd?.segs[2]?.len !== o.swd5?.segs[2]?.len);
+    cmp(e, 'swd result', o.swd?.res, 'ok'); cmp(e, 'swd segments', o.swd?.segs.length, 3); cmp(e, 'swd dirs', o.swd?.segs.map((s) => s.dir), [0, -15, 15]); cmp(e, 'swd root kept whole', [o.swd?.segs[0]?.len, o.swd?.segs[0]?.trunc], [4, false]);
+    cmp(e, 'swd -15 child (enters the margin, leaves at once)', [o.swd?.segs[1]?.len, o.swd?.segs[1]?.trunc, o.swd?.segs[1]?.endCell], [5.5, true, [99, 9]]);
+    cmp(e, 'swd len', o.swd?.segs[2]?.len, sm.swd[0]); cmp(e, 'swd trunc', o.swd?.segs[2]?.trunc, sm.swd[1]); cmp(e, 'swd end cell', o.swd?.segs[2]?.endCell, [104, 20]); cmp(e, 'swd t', o.swd?.segs[2]?.t, 42);
+    cmp(e, 'swd5 len', o.swd5?.segs[2]?.len, sm.swd5[0]); cmp(e, 'swd5 trunc', o.swd5?.segs[2]?.trunc, sm.swd5[1]); cmp(e, 'swd5 end cell', o.swd5?.segs[2]?.endCell, [105, 23]);
+    cmp(e, 'hand lengths 4.0 / 17.0 / 20.0', [sm.swa[0], sm.swd[0], sm.swd5[0]], [4, 17, 20]);
+    check(e, 'adjacent: SW-D (17.0) and SW-D5 (20.0) differ', o.swd?.segs[2]?.len !== o.swd5?.segs[2]?.len);
     return e;
   },
   good: (G) => {
     const sm = E(G).stay_mask;
-    const mk = (r, endCell, t) => ({ len: r[0], trunc: r[1], endCell, dir: 20, t });
-    const kids = (r, endCell, t) => [{ dir: 0, len: 4, trunc: false }, { dir: -20, len: 4, trunc: true, endCell: [99, 8] }, mk(r, endCell, t)];
+    const mk = (r, endCell, t) => ({ len: r[0], trunc: r[1], endCell, dir: 15, t });
+    const kids = (r, endCell, t) => [{ dir: 0, len: 4, trunc: false }, { dir: -15, len: 5.5, trunc: true, endCell: [99, 9] }, mk(r, endCell, t)];
     return {
       swa: { res: 'ok', segs: [{ len: 4, trunc: false }, { len: 4, trunc: false }, { len: 4, trunc: false }] }, swaFirst: 'ok',
-      swd: { res: 'ok', segs: kids(sm.swd, [104, 16], 34) }, swd5: { res: 'ok', segs: kids(sm.swd5, [105, 19], 40) },
+      swd: { res: 'ok', segs: kids(sm.swd, [104, 20], 42) }, swd5: { res: 'ok', segs: kids(sm.swd5, [105, 23], 48) },
     };
   },
   bad: [{ mut: ['mask_always'] }, { mut: ['mask_never'] }],
   synth: [
     { name: 'mask_always (SW-A dead, SW-D length 0)', obs: (G) => ({ swa: { res: 'dead', segs: [] }, swaFirst: 'dead', swd: { res: 'dead', segs: [] }, swd5: { res: 'dead', segs: [] } }) },
-    { name: 'mask_never (SW-D 20.0 untruncated)', obs: (G) => { const o = ug48.good(G); o.swd.segs[2] = { len: 20, trunc: false, endCell: E(G).stay_mask.mask_never_swd[2], dir: 20, t: 48 }; return o; } },
-    { name: 'fixed-length mask (13.0 for both)', obs: (G) => { const o = ug48.good(G); o.swd5.segs[2].len = 13; return o; } },
+    { name: 'mask_never (SW-D 20.0 untruncated)', obs: (G) => { const o = ug48.good(G); o.swd.segs[2] = { len: 20, trunc: false, endCell: E(G).stay_mask.mask_never_swd[2], dir: 15, t: 48 }; return o; } },
+    { name: 'fixed-length mask (17.0 for both)', obs: (G) => { const o = ug48.good(G); o.swd5.segs[2].len = 17; return o; } },
   ],
 };
 
 // ---------------------------------------------------------------- UG49 R4 ray prune
 const RAY_BOOL = (G) => E(G).ray_cases.map((r) => r[3]);
 export const ug49 = {
-  id: 'UG49', title: 'G49 R4 ray prune: SW-A click 3 keeps -39.848, -13.283, +13.283 and prunes +39.848; ray cases to tolerance 0 (1 deg off stays pruned); SW-D click 2 keeps the -20 and +20 children, an outward ray from deep overburden is pruned', mode: 'surface',
+  id: 'UG49', title: 'G49 R4 ray prune: SW-49 (8 wide) click 3 keeps -7.5 and +7.5 and prunes the outward +-22.5; ray cases to tolerance 0 (14.5 kept, 15.0 pruned); SW-D click 2 keeps the -15 and +15 children, an outward ray from deep overburden is pruned', mode: 'surface',
   observe: async (C, G) => {
     const a = clickNet(C, SWA, [20, 20, 20]);
-    const o = { res: a.res, gen3: a.n.segs.filter((s) => s.gen === 3).map((s) => Number(s.dir.toFixed(3))).sort((x, y) => x - y), rays: E(G).ray_cases.map(([e, h, D]) => a.n.rayOk(100, e, h, D)) };
+    const b = clickNet(C, SW49, [20, 20, 20]);
+    const o = { res: b.res, gen3: b.n.segs.filter((s) => s.gen === 3).map((s) => Number(s.dir.toFixed(3))).sort((x, y) => x - y), rays: E(G).ray_cases.map(([e, h, D, , w]) => (w === 'sw49' ? b.n : a.n).rayOk(100, e, h, D)) };
     const d = clickNet(C, SWD, [20, 100]);
-    o.swd = { nsegs: d.n.segs.length, dirs: d.n.segs.map((s) => s.dir), prunedMinus20: d.n.rayOk(100, [95.7, 18.8], -20.0, 20.0), keptEnd: d.n.rayOk(100, d.n.segs[2].end, 20.0, 20.0) };
+    o.swd = { nsegs: d.n.segs.length, dirs: d.n.segs.map((s) => s.dir), prunedMinus20: d.n.rayOk(100, [95.7, 18.8], -20.0, 20.0), keptEnd: d.n.rayOk(100, d.n.segs[2].end, 15.0, 20.0) };
     o.vsS = { c110: a.n.rayOk(100, [110, 3], 0, 4), c109: a.n.rayOk(100, [109, 3], 0, 4) };
     return o;
   },
   judge: (o, G) => {
     const e = [];
-    cmp(e, 'click results', o.res, ['ok', 'ok', 'ok']); cmp(e, 'gen 3 headings', o.gen3, [-39.848, -13.283, 13.283]);
+    cmp(e, 'click results', o.res, ['ok', 'ok', 'ok']); cmp(e, 'gen 3 headings', o.gen3, E(G).ray49_gen3); cmp(e, 'gen 3 headings hand', o.gen3, [-7.5, 7.5]);
     cmp(e, 'ray cases', o.rays, RAY_BOOL(G));
-    cmp(e, 'ray cases hand (outward pruned, inward kept, 38.848 pruned, 38.0 kept, col 110 kept, col 111 pruned, col 109 kept)', RAY_BOOL(G), [false, true, true, false, true, true, false, true]);
-    cmp(e, 'SW-D kept segments (root and both children, end in margin)', o.swd?.nsegs, 3); cmp(e, 'SW-D kept headings', o.swd?.dirs, [0, -20, 20]); cmp(e, 'SW-D outward ray pruned', o.swd?.prunedMinus20, false); cmp(e, 'SW-D +20 end in margin kept', o.swd?.keptEnd, true);
+    cmp(e, 'ray cases hand (outward 22.5 and 21.5 pruned, 15.0 pruned, 14.5 kept, 7.5 kept, col 110 kept, col 111 pruned, col 109 kept)', RAY_BOOL(G), [false, false, false, true, true, true, false, true]);
+    cmp(e, 'SW-D kept segments (root and both children, end in margin)', o.swd?.nsegs, 3); cmp(e, 'SW-D kept headings', o.swd?.dirs, [0, -15, 15]); cmp(e, 'SW-D outward ray pruned', o.swd?.prunedMinus20, false); cmp(e, 'SW-D +15 end in margin kept', o.swd?.keptEnd, true);
     cmp(e, 'column 110 (margin, not S) kept by the rule', o.vsS?.c110, true); cmp(e, 'column 109 kept', o.vsS?.c109, true);
     return e;
   },
-  good: (G) => ({ res: ['ok', 'ok', 'ok'], gen3: [-39.848, -13.283, 13.283], rays: RAY_BOOL(G), swd: { nsegs: 3, dirs: [0, -20, 20], prunedMinus20: false, keptEnd: true }, vsS: { c110: true, c109: true } }),
+  good: (G) => ({ res: ['ok', 'ok', 'ok'], gen3: [-7.5, 7.5], rays: RAY_BOOL(G), swd: { nsegs: 3, dirs: [0, -15, 15], prunedMinus20: false, keptEnd: true }, vsS: { c110: true, c109: true } }),
   bad: [{ mut: ['ray_off'] }, { mut: ['ray_back'] }, { mut: ['ray_short'] }, { mut: ['ray_vs_S'] }],
   synth: [
-    { name: 'ray_off (4 generation-3 segments)', obs: (G) => { const o = ug49.good(G); o.gen3 = E(G).swa_bad.ray_off.segs.filter((s) => s.gen === 3).map((s) => Number(s.dir.toFixed(3))).sort((x, y) => x - y); o.rays = RAY_BOOL(G).map(() => true); return o; } },
+    { name: 'ray_off (4 generation-3 segments)', obs: (G) => { const o = ug49.good(G); o.gen3 = [-22.5, -7.5, 7.5, 22.5]; o.rays = RAY_BOOL(G).map(() => true); return o; } },
     { name: 'ray_back (click 1 dead)', obs: () => ({ res: ['dead', 'dead', 'dead'], gen3: [], rays: [], swd: { nsegs: 0 }, vsS: {} }) },
     { name: 'ray_vs_S (col 110 pruned, 109 kept)', obs: (G) => { const o = ug49.good(G); o.vsS = { c110: false, c109: true }; return o; } },
-    { name: 'coarse tolerance (heading 38.848 kept)', obs: (G) => { const o = ug49.good(G); o.rays = RAY_BOOL(G).map((v, i) => (i === 3 ? true : v)); return o; } },
+    { name: 'coarse tolerance (heading 15.0 kept)', obs: (G) => { const o = ug49.good(G); o.rays = RAY_BOOL(G).map((v, i) => (i === 2 ? true : v)); return o; } },
   ],
 };
 
@@ -539,9 +540,9 @@ export const ug61 = {
 };
 
 // ---------------------------------------------------------------- UG37S surface variant of G37 (re-aim of an overburden branch; detector of PM21)
-const UG37S_MASK = [{ seg: 3, status: 'ok', res_left: 100 }, { seg: 3, status: 'ok', res_left: 100 }];   // reference sim v3, S_MID scenario (GV4, portal 91), Round.reaim at 50 s
+const UG37S_MASK = [{ seg: 3, status: 'ok', res_left: 53 }, { seg: 3, status: 'ok', res_left: 53 }];   // reference sim v3, S_MID scenario (GV4, portal 91), Round.reaim at 50 s
 export const ug37s = {
-  id: 'UG37S', title: 'G37 surface: an overburden branch re-aims at 10 s (full fields, no gen-0 segment); three re-aims at 100, 130, 150 s leave 60.100161, 26.739531, 24.870536 (never below 0)', mode: 'surface',
+  id: 'UG37S', title: 'G37 surface: an overburden branch re-aims at 10 s (full fields, no gen-0 segment); three re-aims at 95, 105, 115 s leave 32.020875, 11.334164, 1.925841 (never below 0)', mode: 'surface',
   observe: async (C, G) => {
     const w = { ...worldRec(G.S_P.GV4), clicks: G.S_MID.clicks.map((c) => [c[0], c[1]]) };
     const mk = () => new C.Round(C.TEST_LEVELS.main, w.F, w.S, w.portals, w.clicks, w.seed);
@@ -558,18 +559,78 @@ export const ug37s = {
     const e = [];
     cmp(e, 'overburden re-aim segment', o.i0, G.S_MID.overburden_reaim_seg); cmp(e, 'overburden re-aim status', o.status, 'ok'); cmp(e, 'no gen-0 segment', o.gen0, 0);
     cmp(e, 'three re-aims', o.seq, G.S_MID.three_reaims);
-    cmp(e, 'mask re-aims at 50 s (reference sim v3: reserves 100 and 100; reaim_mask_old gives 100 and 89.818501)', o.mask, UG37S_MASK);
+    cmp(e, 'mask re-aims at 50 s (reference sim v3: reserves 53 and 53; reaim_mask_old gives 53 and 33.109756)', o.mask, UG37S_MASK);
     check(e, 'reserve never below 0', (o.seq ?? []).every((r) => r.res_left >= 0));
     return e;
   },
   good: (G) => ({ i0: G.S_MID.overburden_reaim_seg, status: 'ok', gen0: 0, seq: G.S_MID.three_reaims.map((r) => ({ ...r })), mask: UG37S_MASK.map((r) => ({ ...r })) }),
   bad: [{ mut: ['reaim_mask_old'] }, { mut: ['cap_vs_initial'] }],
   synth: [
-    { name: 'cap_vs_initial (third re-aim leaves -5.205579)', obs: (G) => { const o = ug37s.good(G); o.seq = G.S_MID.three_reaims_cap_vs_initial.map((r) => ({ ...r })); return o; } },
-    { name: 'reaim_mask_old (mask re-aim reserves 100 and 89.818501)', obs: (G) => { const o = ug37s.good(G); o.mask = [{ seg: 3, status: 'ok', res_left: 100 }, { seg: 3, status: 'ok', res_left: 89.818501 }]; return o; } },
+    { name: 'cap_vs_initial (third re-aim leaves -9.495467)', obs: (G) => { const o = ug37s.good(G); o.seq = G.S_MID.three_reaims_cap_vs_initial.map((r) => ({ ...r })); return o; } },
+    { name: 'reaim_mask_old (mask re-aim reserves 53 and 33.109756)', obs: (G) => { const o = ug37s.good(G); o.mask = [{ seg: 3, status: 'ok', res_left: 53 }, { seg: 3, status: 'ok', res_left: 33.109756 }]; return o; } },
     { name: 'a gen-0 segment resurrected', obs: (G) => { const o = ug37s.good(G); o.gen0 = 1; return o; } },
   ],
 };
 
-export const ENTRIES_SURFACE = [ug46, ug47, ug48, ug49, ug50, ug51, ug52, ug53, ug54, ug55, ug56, ug57, ug61, ug37s];
+// ---------------------------------------------------------------- UG64 fixed branch half-angle (spec 4c, v3.8.0)
+const THETA_WORLDS = [['swa', SWA, [100]], ['flat', rectK(25, 174, 20, 44), [100]], ['tall', rectK(98, 101, 20, 79), [100]], ['two', unionK(SWA, rectK(150, 170, 30, 60)), [95, 160]]];
+const tipSepOf = (K, Dc, th) => Math.max(K.TIP_SEP_FLOOR, K.TIP_SEP_FRAC * Dc * Math.sin((th * Math.PI) / 180));
+export const ug64 = {
+  id: 'UG64', title: 'G64 fixed half-angle: surface theta = 15 deg for every target set (none for an empty one), siblings 30 deg apart, un-re-aimed headings under 30 deg; trunk mode keeps the bounding-box angle (SW-A 26.565, flat 70); tip separation floor binds at 20 m only', mode: 'surface',
+  observe: async (C, G, X) => {
+    const o = { worlds: {}, K: { THETA: C.consts.THETA, DIR_CLAMP: C.consts.DIR_CLAMP } };
+    for (const [name, S, ps] of THETA_WORLDS) {
+      const n = netOf(C, S, ps, 1e6);
+      for (const D of [50, 50, 50, 75, 75, 20]) for (const p of ps) n.nextGen(p, D);
+      const sib = [];
+      for (const a of n.segs) for (const b of n.segs) if (a.parent !== null && a.parent === b.parent && a.id < b.id && a.gen >= 2) sib.push(Math.abs(a.dir - b.dir));
+      o.worlds[name] = { theta: ps.map((p) => n.theta[p]), sib, maxDir: Math.max(...n.segs.map((s) => Math.abs(s.dir))) };
+    }
+    o.empty = netOf(C, new Int32Array(0), [100], 400).theta[100] ?? null;
+    // the clamp still binds below a re-aimed parent: S_MID scenario, re-aim at 70 s toward (20, 20), regrown headings
+    const w = { ...worldRec(G.S_P.GV4), clicks: G.S_MID.clicks.map((c) => [c[0], c[1]]) };
+    const R = new C.Round(C.TEST_LEVELS.main, w.F, w.S, w.portals, w.clicks, w.seed);
+    const ids = R.reaim(70.0, C.reaimPick(R.net, 70.0, { segs: R.layout }), [20, 20]).newIds ?? [];
+    o.clampDirs = R.layout.filter((s) => ids.includes(s.id)).map((s) => Number(s.dir.toFixed(2))).sort((x, y) => x - y);
+    const T = await X('trunk');
+    o.trunk = { swa: netOf(T, SWA).theta[100], flat: netOf(T, rectK(25, 174, 20, 44)).theta[100] };
+    o.tipSep = { d20: tipSepOf(C.consts, 4, C.consts.THETA), d25: tipSepOf(C.consts, 5, C.consts.THETA), d100: tipSepOf(C.consts, 20, C.consts.THETA),
+      sibling20: 2 * 4 * Math.sin((C.consts.THETA * Math.PI) / 180), sibling100: 2 * 20 * Math.sin((C.consts.THETA * Math.PI) / 180) };
+    return o;
+  },
+  judge: (o, G) => {
+    const e = [];
+    cmp(e, 'consts.THETA', o.K?.THETA, 15); cmp(e, 'consts.THETA equals the golden S_consts', o.K?.THETA, G.S_consts.theta_fixed); cmp(e, 'clamp stays 60', o.K?.DIR_CLAMP, 60);
+    for (const [name] of THETA_WORLDS) {
+      const w = o.worlds?.[name];
+      check(e, `${name}: every portal theta is 15`, !!w && w.theta.every((t) => t === 15), JSON.stringify(w?.theta));
+      check(e, `${name}: siblings 30 deg apart`, !!w && w.sib.length > 0 && w.sib.every((x) => Math.abs(x - 30) < 1e-9));
+      check(e, `${name}: headings under 30`, !!w && w.maxDir < 30, String(w?.maxDir));
+    }
+    cmp(e, 'empty target set: no theta', o.empty, null);
+    cmp(e, 'clamp binds below a re-aimed parent (-102.11 gives -60.0, not -66.05)', o.clampDirs, [-102.11, -60, -45, -36.05, -33.03]);
+    cmpNum(e, 'trunk SW-A bounding-box theta', o.trunk?.swa, 26.565051177, 1e-6); cmpNum(e, 'trunk flat theta (clamped)', o.trunk?.flat, 70, 1e-9);
+    cmpNum(e, 'D 20 m tip separation is the floor', o.tipSep?.d20, 1.0, 1e-12);
+    check(e, 'D 25 m tip separation is 0.9 D sin theta (above the floor)', Math.abs(o.tipSep?.d25 - 0.9 * 5 * Math.sin((15 * Math.PI) / 180)) < 1e-12 && o.tipSep?.d25 > 1.0);
+    check(e, 'D 100 m tip separation above the floor', o.tipSep?.d100 > 1.0);
+    check(e, 'siblings never prune each other (2 D sin theta above tip separation at 20 m and 100 m)', o.tipSep?.sibling20 > o.tipSep?.d20 && o.tipSep?.sibling100 > o.tipSep?.d100);
+    return e;
+  },
+  good: () => ({
+    K: { THETA: 15, DIR_CLAMP: 60 },
+    worlds: Object.fromEntries(THETA_WORLDS.map(([name, , ps]) => [name, { theta: ps.map(() => 15), sib: [30, 30], maxDir: 29 }])),
+    empty: null, clampDirs: [-102.11, -60, -45, -36.05, -33.03], trunk: { swa: 26.565051177, flat: 70 },
+    tipSep: { d20: 1.0, d25: 0.9 * 5 * Math.sin((15 * Math.PI) / 180), d100: 0.9 * 20 * Math.sin((15 * Math.PI) / 180), sibling20: 2.07, sibling100: 10.35 },
+  }),
+  bad: [{ mut: ['theta_bbox'] }],
+  synth: [
+    { name: 'theta_bbox (SW-A 26.565)', obs: (G) => { const o = ug64.good(G); o.worlds.swa.theta = [26.565051177]; return o; } },
+    { name: 'sibling gap 53 deg (theta 26.565)', obs: (G) => { const o = ug64.good(G); o.worlds.swa.sib = [53.13, 53.13]; return o; } },
+    { name: 'tip separation without the floor (0.93 at 20 m)', obs: (G) => { const o = ug64.good(G); o.tipSep.d20 = 0.9317; return o; } },
+    { name: 'clamp removed (regrown child at -66.05)', obs: (G) => { const o = ug64.good(G); o.clampDirs = [-102.11, -66.05, -45, -36.05, -33.03]; return o; } },
+    { name: 'trunk mode switched to the fixed angle', obs: (G) => { const o = ug64.good(G); o.trunk = { swa: 15, flat: 15 }; return o; } },
+  ],
+};
+
+export const ENTRIES_SURFACE = [ug46, ug47, ug48, ug49, ug50, ug51, ug52, ug53, ug54, ug55, ug56, ug57, ug61, ug37s, ug64];
 export { coverTable, coverAtCol };

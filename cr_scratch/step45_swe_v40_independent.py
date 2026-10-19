@@ -1,6 +1,7 @@
-"""Step 45.10b-9: v3.7.5 straight root (the SPlan.click root drills one segment, generation 1 forks); the section below is the 45.10b-4 text re-pointed at goldens_v39.json.
+"""Step 45 D1 (v3.8.0): the branch half-angle is the constant 15 deg in surface mode (SPlan theta_rows='fixed'; 'T' = the v3.7.7 bounding-box angle, 'surface' = the same from row 0, both kept as mutants); W1 to W3, G4 re-valued; compared with goldens_v41.json. Frozen: step45_swe_v39_independent.py.
+Step 45.10b-9: v3.7.5 straight root (the SPlan.click root drills one segment, generation 1 forks); the section below is the 45.10b-4 text re-pointed at goldens_v41.json.
 Step 45.10b-4: v3.7.2 surface branching (section v39_branching at the end, own SPlan, own R4, own stay-mask, own attribution, own pass 0, own pair reach, own cover cap, compared with
-goldens_v39.json S keys); sections 45.10b-3 and below unchanged and run against the trunk-mode anchor (goldens_v39.json keeps every goldens_v37 key).
+goldens_v41.json S keys); sections 45.10b-3 and below unchanged and run against the trunk-mode anchor (goldens_v41.json keeps every goldens_v37 key).
 Step 45.10b-3: v3.7 speed model (spec 2d) on top of the v3.6 independent check below; section v37_speed at the end re-derives the speed and clock values
 from the spec text and compares them with goldens_v37.json. Env S45_ZC=1 runs the zero control (R 10, legacy travel 50 m, v36 values).
 
@@ -616,7 +617,7 @@ def v37_speed(SIM, G):
     bad = (any(own_clock(t, mut=('trunc',)) != e for t, e in T60) and any(own_clock(t, mut=('seconds',)) != e for t, e in T60) and own_clock(Fraction(16000, 10), mut=('nocomma',)) == "elapsed 4000.0 h"
            and own_clock_even(0.1) == "elapsed 0.2 h" and own_clock(Fraction(1, 10)) == "elapsed 0.3 h")
     check("S5 clock strings: hand table (8 times, 7 ticks); half up; comma from 1,000 h", zero, bad, "mutants: truncation, seconds, no comma, Python tie-to-even at tick 1")
-    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v39.json"))
+    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v41.json"))
     J = json.load(open(gp)); E12 = J['E12']; mism = []
     for k in ('GV1', 'GV1b', 'GV2', 'GV3', 'GV3b', 'GV4'):
         for side, i in (('left', 0), ('right', 1)):
@@ -989,12 +990,12 @@ def v36_checks(SIM, G, FULL=False):
 
 # =====================================================================================================
 # v3.7.2 surface branching (Step 45.10b-4). Re-derived from the spec text (sections 2d, 4b, 4c, 4d, 5, 6, 8a): own class SPlan, own R4 ray, own stay-mask,
-# own attribution, own pass 0, own pair-reach filter, own cover cap. The sim is read only for outputs; worlds (F, S, seeds, click lists) come from goldens_v39.json.
+# own attribution, own pass 0, own pair-reach filter, own cover cap. The sim is read only for outputs; worlds (F, S, seeds, click lists) come from goldens_v41.json.
 # =====================================================================================================
 class SPlan:
     """Uniform surface fork. Root (p, 0), no trunk. Children: heading 0.5 x parent + s x theta (root: s x theta), clamp 60, length D. Stay-mask, R4, tip spacing.
     ties='share': portals tied at the smallest column distance all serve a component (D29); 'lower' is the spec's literal text."""
-    def __init__(self, S, portals, cap, W=GW, H=GH, ties='share', theta_rows='T', mask='stay', r4=True, rev=False, ob_free=False):
+    def __init__(self, S, portals, cap, W=GW, H=GH, ties='share', theta_rows='fixed', mask='stay', r4=True, rev=False, ob_free=False):
         self.S = set(S); self.cap = cap; self.W = W; self.H = H; self.mask = mask; self.r4 = r4; self.rev = rev; self.ob_free = ob_free
         self.halo = {(x + i, y + j) for x, y in self.S for i in (-1, 0, 1) for j in (-1, 0, 1)}
         self.C = comps8(S); self.ports = sorted(portals); self.serve = {p: [] for p in self.ports}
@@ -1007,7 +1008,7 @@ class SPlan:
             T = [c for ci in self.serve[p] for c in self.C[ci]]
             if not T: self.th[p] = None; self.haloT[p] = set(); self.near[p] = {}; continue
             xs = [x for x, y in T]; ys = [y for x, y in T]; top = 0 if theta_rows == 'surface' else min(ys)
-            self.th[p] = max(20.0, min(70.0, math.degrees(math.atan((max(xs) - min(xs) + 1) / (2.0 * (max(ys) - top + 1))))))
+            self.th[p] = 15.0 if theta_rows == 'fixed' else max(20.0, min(70.0, math.degrees(math.atan((max(xs) - min(xs) + 1) / (2.0 * (max(ys) - top + 1))))))
             self.haloT[p] = {(x + i, y + j) for x, y in T for i in (-1, 0, 1) for j in (-1, 0, 1)}
             nm = {}
             for ci in self.serve[p]:
@@ -1175,32 +1176,36 @@ def reaim_s(n, t, idx, target, cap):
 def v39_branching(SIM):
     t0 = time.time()
     print("== v3.7.2 surface branching (spec 4c), independent")
-    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v39.json"))
+    gp = os.environ.get('S45_GOLDENS', os.path.join(HERE, "..", "game45", "test", "goldens_v41.json"))
     J = json.load(open(gp)); cellset = lambda L: {tuple(c) for c in L}
     # ---- hand worlds: SW-A etc., values typed from the plan / spec ----
     def rect(c0, c1, r0, r1): return {(x, y) for x in range(c0, c1 + 1) for y in range(r0, r1 + 1)}
-    SWA, SWD, SWD5 = rect(90, 109, 20, 39), rect(100, 103, 6, 29), rect(100, 104, 6, 29); TH = math.degrees(math.atan(20 / 40.0))
+    SWA, SWD, SWD5 = rect(90, 109, 20, 39), rect(100, 103, 6, 29), rect(100, 104, 6, 29); TH = 15.0
     nA = SPlan(SWA, [100], CAP); st1 = nA.click(100, 20.0)
     nA2 = SPlan(SWA, [100], CAP); nA2.click(100, 20.0); st2 = nA2.click(100, 20.0)
     z = (st1 == 'ok' and len(nA.seg) == 1 and abs(nA.th[100] - TH) < 1e-9 and [round(s['d'], 3) for s in nA.seg] == [0.0] and abs(nA.seg[0]['L'] - 4.0) < 1e-12 and abs(nA.seg[0]['t'] - 8.0) < 1e-12
          and [rcell(*s['e']) for s in nA.seg] == [(100, 4)] and nA.seg[0]['par'] is None and nA.seg[0]['g'] == 1 and abs(nA.total() * M - 20.0) < 1e-12
-         and st2 == 'ok' and len(nA2.seg) == 3 and [round(s['d'], 3) for s in nA2.seg] == [0.0, -26.565, 26.565] and [s['par'] for s in nA2.seg] == [None, 0, 0] and [s['g'] for s in nA2.seg] == [1, 2, 2]
-         and [rcell(*s['e']) for s in nA2.seg] == [(100, 4), (98, 8), (102, 8)] and all(abs(s['L'] - 4.0) < 1e-12 for s in nA2.seg) and [round(s['t'], 9) for s in nA2.seg] == [8.0, 16.0, 16.0]
+         and st2 == 'ok' and len(nA2.seg) == 3 and [round(s['d'], 3) for s in nA2.seg] == [0.0, -15.0, 15.0] and [s['par'] for s in nA2.seg] == [None, 0, 0] and [s['g'] for s in nA2.seg] == [1, 2, 2]
+         and [rcell(*s['e']) for s in nA2.seg] == [(100, 4), (99, 8), (101, 8)] and all(abs(s['L'] - 4.0) < 1e-12 for s in nA2.seg) and [round(s['t'], 9) for s in nA2.seg] == [8.0, 16.0, 16.0]
          and abs(nA2.total() * M - 60.0) < 1e-12)
     bad = len(SPlan(SWA, [100], CAP, mask='margin').seg) == 0 and SPlan(SWA, [100], CAP, mask='margin').click(100, 20.0) == 'dead'
-    check("W1 surface root: click 1 is ONE straight segment from (100, 0), length 4.0, t 8.0, meter 20.0 m; click 2 forks its tip at -/+ 26.565 (t 16.0, meter 60.0 m); the legacy margin-only mask is dead on click 1", z, bad)
+    check("W1 surface root: click 1 is ONE straight segment from (100, 0), length 4.0, t 8.0, meter 20.0 m; click 2 forks its tip at -/+ 15 (t 16.0, meter 60.0 m); the legacy margin-only mask is dead on click 1", z, bad)
     ok, _ = SPlan(SWD, [100], CAP).make_ok(); l13 = segment(100.0, 0.0, 20.0, 20.0, ok, 0.0); ok5, _ = SPlan(SWD5, [100], CAP).make_ok(); l16 = segment(100.0, 0.0, 20.0, 20.0, ok5, 0.0)
     okg, _ = SPlan(SWD, [100], CAP, mask='grid').make_ok(); lg = segment(100.0, 0.0, 20.0, 20.0, okg, 0.0)
     nD = SPlan(SWD, [100], CAP); nD.click(100, 20.0); nD.click(100, 100.0)
-    check("W2 stay-mask: SW-D 20 deg segment 13.0 truncated at cell (104, 12) from the surface and (104, 16) as the click-2 child, SW-D5 16.0; the click-2 pair is [-20, +20] after the straight root", l13[0] == 13.0 and l13[3] and rcell(*l13[2]) == (104, 12) and l16[0] == 16.0 and [s['d'] for s in nD.seg] == [0.0, -20.0, 20.0] and rcell(*nD.seg[2]['e']) == (104, 16) and abs(nD.seg[2]['L'] - 13.0) < 1e-12,
+    l15 = segment(100.0, 0.0, 15.0, 20.0, SPlan(SWD, [100], CAP).make_ok()[0], 0.0); l15w = segment(100.0, 0.0, 15.0, 20.0, SPlan(SWD5, [100], CAP).make_ok()[0], 0.0)
+    check("W2 stay-mask: SW-D 20 deg segment 13.0 truncated at cell (104, 12) from the surface, SW-D5 16.0; at 15 deg SW-D 17.0 truncated at (104, 16), SW-D5 20.0 whole at (105, 19); the click-2 pair is [-15, +15] after the straight root, the +15 child 17.0 long ending in cell (104, 20)", l13[0] == 13.0 and l13[3] and rcell(*l13[2]) == (104, 12) and l16[0] == 16.0 and l15[0] == 17.0 and l15[3] and rcell(*l15[2]) == (104, 16) and l15w[0] == 20.0 and not l15w[3] and rcell(*l15w[2]) == (105, 19) and [s['d'] for s in nD.seg] == [0.0, -15.0, 15.0] and rcell(*nD.seg[2]['e']) == (104, 20) and abs(nD.seg[2]['L'] - 17.0) < 1e-12,
           lg[0] == 20.0, "mask never ends the segment: 20.0")
-    nA.click(100, 20.0); nA.click(100, 20.0); g2 = sorted(round(s['d'], 3) for s in nA.seg if s['g'] == 3)
-    e1 = (101.7889, 7.5777)
-    thr = [h for h in (x / 10 for x in range(200, 400)) if not nA.keep_r4(100, e1, h)][0]
-    z = (g2 == [-39.848, -13.283, 13.283] and not nA.keep_r4(100, e1, 39.848) and nA.keep_r4(100, e1, -13.283) and not nA.keep_r4(100, e1, 38.848) and nA.keep_r4(100, e1, 38.0) and not nA.keep_r4(100, (111.0, 3.0), 0.0)
-         and nA.keep_r4(100, (110.0, 3.0), 0.0) and 38.0 < thr < 39.0)
-    nO = SPlan(SWA, [100], CAP, r4=False); nO.click(100, 20.0); nO.click(100, 20.0); nO.click(100, 20.0)
-    check("W3 R4: after the straight root the click-3 children keep -39.848, -13.283, +13.283 and prune +39.848 (threshold heading 38.x deg), tolerance 0; ray at column 111 pruned, 110 kept", z, len([s for s in nO.seg if s['g'] == 3]) == 4
+    SW49 = rect(96, 103, 20, 39); n49 = SPlan(SW49, [100], CAP)
+    for _ in range(3): n49.click(100, 20.0)
+    g2 = sorted(round(s['d'], 3) for s in n49.seg if s['g'] == 3)
+    eo = (102.566, 11.5592)
+    nA.click(100, 20.0); nA.click(100, 20.0)
+    thr = [h for h in (x / 10 for x in range(0, 300)) if not n49.keep_r4(100, eo, h)][0]
+    z = (g2 == [-7.5, 7.5] and not n49.keep_r4(100, eo, 22.5) and not n49.keep_r4(100, eo, 21.5) and not n49.keep_r4(100, eo, 15.0) and n49.keep_r4(100, eo, 14.5) and n49.keep_r4(100, eo, 7.5) and not nA.keep_r4(100, (111.0, 3.0), 0.0)
+         and nA.keep_r4(100, (110.0, 3.0), 0.0) and 14.5 < thr <= 15.0)
+    nO = SPlan(SW49, [100], CAP, r4=False); nO.click(100, 20.0); nO.click(100, 20.0); nO.click(100, 20.0)
+    check("W3 R4 on an 8 wide body: after the straight root the click-3 children keep -7.5 and +7.5 and prune the outward +-22.5 (threshold heading 14.5 to 15.0 deg), tolerance 0; ray at column 111 pruned, 110 kept", z, len([s for s in nO.seg if s['g'] == 3]) == 4
           and nA.ray_first(100, (101.7895, 3.5777), 0.0, limit=4.0) is None and nA.ray_first(100, (101.7895, 3.5777), 0.0, back=True) is None, f"outward threshold {thr}")
     n8 = SPlan(SWA, [100], 4); n7 = SPlan(SWA, [100], 3)
     SWC = rect(75, 124, 20, 99); nC = SPlan(SWC, [100], 10 ** 9); rc_ = [nC.click(100, 20.0) for _ in range(25)]
@@ -1229,7 +1234,7 @@ def v39_branching(SIM):
     check("W8 pass 0 at a free portal column: column 50 and 89 give hole 90, 91 gives 91, 100 gives 100", [p0(c)[0] for c in (50, 89, 91, 100)] == [90, 90, 91, 100] and p0(89) == (90, 8),
           balrog_s(type('N', (), dict(C=CsA, ports=[50], serve={50: [0]}))(), [8], snap=False)[0][0][0][0] == 50)
 
-    # ---- compare with goldens_v39 (S keys) ----
+    # ---- compare with goldens_v41 (S keys) ----
     def cmp_rec(rec, own, tag):
         n = own['n']; bad = []
         if rec['results'] != own['res']: bad.append('results')
@@ -1257,7 +1262,7 @@ def v39_branching(SIM):
         o = play_s(F, S, rec['portals'], [tuple(c) for c in rec['clicks']], rec['cap'], rec['W'], rec['H'], rec['seed'])
         b_ = cmp_rec(rec, o, nm_)
         if b_: mism[nm_] = b_
-    check("G1 nine policy worlds (GV2, GV3, GV4, L1 to L6): attempts, results, budget, holes, every segment (cells, dir, len, t, comp), cored and revealed cells, scores, pairs, finish times equal goldens_v39 S_P",
+    check("G1 nine policy worlds (GV2, GV3, GV4, L1 to L6): attempts, results, budget, holes, every segment (cells, dir, len, t, comp), cored and revealed cells, scores, pairs, finish times equal goldens_v41 S_P",
           not mism and len(J['S_P']) == 9,
           any(len(SPlan(cellset(r['S']), r['portals'], r['cap'], theta_rows='surface').seg) >= 0 and policy_s(SPlan(cellset(r['S']), r['portals'], r['cap'], theta_rows='surface'), r['portals'][0], *r['policy']) != r['attempts']
               for r in J['S_P'].values()), f"mismatch {mism}; mutant: theta from row 0 changes the policy run on at least one world")
@@ -1274,17 +1279,17 @@ def v39_branching(SIM):
         b_ = cmp_rec(rec, o, nm_)
         if b_: mism[nm_] = b_
     gv4 = J['S_GV4']; o = play_s(cellset(gv4['F']), cellset(gv4['S']), gv4['portals'], [tuple(c) for c in gv4['clicks']], gv4['cap'], 200, 100, gv4['seed'])
-    check("G3 spec click lists in surface mode (GV1, GV1b, GV2, GV3, GV3b, GV4 with two free portals) equal goldens_v39 S_GV*", not mism, play_s(cellset(gv4['F']), cellset(gv4['S']), gv4['portals'], [tuple(c) for c in gv4['clicks']], gv4['cap'], 200, 100, gv4['seed'] + 1)['sparse'] != o['sparse'], f"mismatch {mism}; mutant: seed + 1")
+    check("G3 spec click lists in surface mode (GV1, GV1b, GV2, GV3, GV3b, GV4 with two free portals) equal goldens_v41 S_GV*", not mism, play_s(cellset(gv4['F']), cellset(gv4['S']), gv4['portals'], [tuple(c) for c in gv4['clicks']], gv4['cap'], 200, 100, gv4['seed'] + 1)['sparse'] != o['sparse'], f"mismatch {mism}; mutant: seed + 1")
     # ---- hand vectors in S_E ----
     E = J['S_E']; sw = lambda s: [round(x, 9) for x in (s['dir'], s['len'], s['t'])]
     nA1 = SPlan(SWA, [100], CAP); nA1.click(100, 20.0)
     z = [sw(dict(dir=s['d'], len=s['L'], t=s['t'])) for s in nA1.seg] == [sw(s) for s in E['swa_click1']['segs']] and E['swa_click1']['results'] == ['ok'] and len(E['swa_click1']['segs']) == 1 \
         and len(E['swa_click2']['segs']) == 3 and len(E['swa_bad']['root_forks']['segs']) == 2
-    ok_, _ = SPlan(SWD, [100], CAP).make_ok(); sd = segment(100.0, 0.0, 20.0, 20.0, ok_, 0.0)
-    z = z and E['stay_mask']['swd'][0] == sd[0] == 13.0 and E['stay_mask']['swd5'][0] == 16.0 and E['stay_mask']['mask_never_swd'][0] == 20.0 and E['stay_mask']['mask_always_swd'][0] == 0.0
+    ok_, _ = SPlan(SWD, [100], CAP).make_ok(); sd = segment(100.0, 0.0, 15.0, 20.0, ok_, 0.0)
+    z = z and E['stay_mask']['swd'][0] == sd[0] == 17.0 and E['stay_mask']['swd5'][0] == 20.0 and E['stay_mask']['mask_never_swd'][0] == 20.0 and E['stay_mask']['mask_always_swd'][0] == 0.0
     z = z and E['cap']['cap4'] == ['ok'] and E['cap']['cap3'] == ['cap'] and E['cap']['cap3_skip_ob'] == ['ok'] and E['ceiling_world']['results'] == rc_ and E['ceiling_world']['ob_gen_free'][24] != 'ceiling'
     z = z and E['swa_bad']['ray_back']['results'] == ['dead'] and E['swa_bad']['ray_short']['results'] == ['dead'] and E['swa_bad']['trunk_resurrect']['results'] == ['ok'] and len(E['swa_bad']['trunk_resurrect']['segs']) == 3
-    rays = all(nA.keep_r4(100, tuple(e), h) == r for e, h, D, r in E['ray_cases'])
+    rays = all((n49 if w_ == 'sw49' else nA).keep_r4(100, tuple(e), h) == r for e, h, D, r, w_ in E['ray_cases']) and E['ray49_gen3'] == g2
     att = E['attribution']; z = z and att['S2k']['comp'] == [2, 1, 0] and att['comp_first']['comp'] == [0, 0, 0] and att['S2k']['comp_lengths'] == [4.0, 4.0, 4.0] and att['comp_first']['comp_lengths'] == [12.0, 0.0, 0.0]
     rt = E['reach_table']; z = z and [r for o_, r in rt['zero']] == tb('euclid') and [r for o_, r in rt['pair_range_11']] == tb('euclid', 11) and [r for o_, r in rt['range_cheb']] == tb('cheb') \
         and [r for o_, r in rt['range_manh']] == tb('manh') and [r for o_, r in rt['range_lt']] == tb('strict')
@@ -1305,7 +1310,7 @@ def v39_branching(SIM):
     got = {k: (v['col'], v['cover_m']) for k, v in J['S_cover'].items()}
     L3 = keep50(dil2(cellset(J['E8']['levels']['3']['F']))); l3 = (5.0 * min(y for x, y in L3 if x == 120), 5.0 * min(y for x, y in L3 if x == 121))
     okf = lambda k, m_: (m_ <= 150.0 + 1e-9) or not k.startswith('L')
-    check("G5 cover cap: c_d and cover per world equal goldens_v39 S_cover (L1 110, L2 80, L3 155 at 121 / 150 at 120, L4 285 at 93, L5 170, L6 330, GV2 50, GV3 50, GV4 185); verdicts L3 to L6 rejected",
+    check("G5 cover cap: c_d and cover per world equal goldens_v41 S_cover (L1 110, L2 80, L3 155 at 121 / 150 at 120, L4 285 at 93, L5 170, L6 330, GV2 50, GV3 50, GV4 185); verdicts L3 to L6 rejected",
           mine == got and l3 == (150.0, 155.0) and {k: v['ok'] for k, v in J['S_cover'].items()} == {k: okf(k, mine[k][1]) for k in mine} and not okf('L3', 155.0),
           cover(keep50(dil2(cellset(J['E8']['levels']['3']['F']))))[0] == 121 != 120)
     # ---- mid-run scenario ----
@@ -1318,13 +1323,13 @@ def v39_branching(SIM):
         if i is None: continue
         q = reaim_s(n, float(t), i, (20.0, 20.0), rc)
         if q is not None and q['clamped'] and okc is None: okc = [t, i, round(q['cost'], 3), round(q['want'], 3)]
-        if refc is None and reaim_s(n, float(t), i, (150.0, 60.0), rc) is None: refc = [t, i]
-    r150 = reaim_s(n, 140.0, pick(n, 140.0), (20.0, 20.0), rc)
+        if refc is None and reaim_s(n, float(t), i, tuple(rcase['refusal_target']), rc) is None: refc = [t, i]
+    r150 = reaim_s(n, 100.0, pick(n, 100.0), (20.0, 20.0), rc)
     depth80 = min((max(y for x, y in S if x == 80) + 1 + round(25 / M)), rs)
-    check("G6 mid-run, surface GV4 world (policy 50 m x 3, then 75 m): first clamped re-aim 140 s seg 18 cost 37.387 (wanted 50.078), first refusal toward (150, 60) at 100 s seg 11, add hole column 80 depth 60, reserves 100 / 40 / 60",
-          okc == rcase['first_clamped'] and refc == rcase['first_refusal_target_150_60'] and okc == [140, 18, 37.387, 50.078] and refc == [100, 11] and abs(r150['cost'] - M_['reaim']['cost']) < 1e-6
-          and M_['add']['depth'] == depth80 == 60 and M_['reserves']['right'] == rs - 60 and abs(M_['reserves']['left'] - (rs - r150['cost'])) < 1e-6 and (rs, rc) == (100, 40),
-          reaim_s(n, 100.0, pick(n, 100.0), (150.0, 60.0), 10 ** 9) is not None, "mutant: infinite cap accepts the refused re-aim")
+    check("G6 mid-run, surface GV4 world (policy 50 m x 3, then 75 m): first clamped re-aim 70 s seg 7 cost 19.207 (wanted 54.293), first refusal toward (175, 40) at 70 s seg 7, re-aim at 100 s, add hole column 80 depth 20, reserves 53 / 33 / 33, cap 21",
+          okc == rcase['first_clamped'] and refc == rcase['first_refusal'] and rcase['refusal_target'] == [175.0, 40.0] and okc == [70, 7, 19.207, 54.293] and refc == [70, 7] and abs(r150['cost'] - M_['reaim']['cost']) < 1e-6 and M_['reaim']['t'] == 100.0
+          and M_['add']['req_depth'] == 20 and M_['add']['depth'] == min(20, depth80, rs) == 20 and M_['reserves']['right'] == rs - 20 and abs(M_['reserves']['left'] - (rs - r150['cost'])) < 1e-6 and (rs, rc) == (53, 21),
+          reaim_s(n, 70.0, pick(n, 70.0), tuple(rcase['refusal_target']), 10 ** 9) is not None, "mutant: infinite cap accepts the refused re-aim")
     print(f"   v3.7.2 block time {time.time() - t0:.1f} s")
 
 
@@ -1356,7 +1361,7 @@ if __name__ == "__main__":
 
     # ---------------- compare with the sim's printed goldens ----------------
     sys.path.insert(0, HERE); import step45_reference_sim_v3 as SIM
-    SIM.set_mode(SIM.MODE_TRUNK)       # the v3.6 and v3.7 blocks compare the trunk-mode anchor; the surface block reads goldens_v39.json
+    SIM.set_mode(SIM.MODE_TRUNK)       # the v3.6 and v3.7 blocks compare the trunk-mode anchor; the surface block reads goldens_v41.json
     simgold = SIM.GOLD; mism = []
     def cmp(k, field, mine):
         if field in ('endL', 'endR'): mine = round(mine, 3)

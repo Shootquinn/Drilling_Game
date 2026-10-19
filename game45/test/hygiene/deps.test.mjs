@@ -17,7 +17,7 @@ test('H-DEP both packages resolve under S45_DEPS; OneDrive root and missing pack
   assert.equal(typeof d.playwright.chromium?.launch, 'function');
   assert.equal(typeof d.PNG, 'function');
   // known-bad 1: a root under OneDrive
-  const od = 'C:/Users/me/OneDrive/proj/cr_scratch';
+  const od = 'C:/Users/Quinn Morley/OneDrive/PROJECTS/CC/gpr/cr_scratch';
   assert.throws(() => resolveDep(od, 'pngjs'), /OneDrive/);
   // known-bad 2: a package that is not installed
   assert.throws(() => resolveDep(root, 'no-such-package-s45'), (err) => err.message.includes('npm i playwright-core pngjs') && err.message.includes(INSTALL.split(';')[0]));

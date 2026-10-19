@@ -1,5 +1,7 @@
 // UI contract constants and the page driver for the L3 tests (step45_10_testplan.md section 1). Tests read only the fields listed there.
 import { fileUrl, PLAY, newPage, launch, waitReady, initMut, initSlow, initStartMode } from './browser.mjs';
+import { getGoldens } from './goldens.mjs';
+import { bootLevelRecord } from './worlds.mjs';
 
 export const SEL = {
   canvas: '#cv',
@@ -8,19 +10,19 @@ export const SEL = {
   text: (id) => `[data-s45="${id}"]`,
 };
 export const BUTTON_IDS = ['show-formation', 'done-painting', 'brush-2', 'brush-5', 'brush-8', 'brush-12', 'brush-20', 'brush-tool', 'erase', 'fill', 'undo', 'clear', 'peek',
-  'next-gen', 'grow-12', 'plan-undo', 'back-to-paint', 'start', 'speed-1', 'speed-4', 'speed-16', 'pause', 'skip', 'play-again'];
+  'next-gen', 'grow-12', 'plan-undo', 'back-to-paint', 'start', 'speed-1', 'speed-2', 'speed-4', 'speed-8', 'speed-16', 'pause', 'skip', 'play-again', 'level-1', 'level-2', 'level-3', 'level-4', 'level-5', 'level-6'];
 export const TEXT_IDS = ['meter', 'meter-ghost', 'readout-left', 'readout-right', 'phase', 'message', 'key-intersected', 'key-imaged', 'key-unseen'];   // plus counter-<portal>
 export const S6_MEMBERS = ['ready', 'state', 'stateHash', 'loadPainting', 'loadLevel', 'setWallClock', 'frame', 'pause', 'stepToTick', 'setSpeed', 'renderModel', 'uiGeometry', 'perf', 'stringTable'];
 export const PHASES = ['LEVEL_START', 'REVEAL', 'FADE', 'PAINT', 'PLAN', 'RUN', 'END_REVEAL', 'READOUT'];
 
 // buttons legal per phase (everything else is an illegal input in that phase)
 export const LEGAL = {
-  LEVEL_START: ['show-formation'],
+  LEVEL_START: ['show-formation', 'level-1', 'level-2', 'level-3', 'level-4', 'level-5', 'level-6'],
   REVEAL: [],
   FADE: [],
   PAINT: ['done-painting', 'brush-tool', 'brush-2', 'brush-5', 'brush-8', 'brush-12', 'brush-20', 'erase', 'fill', 'undo', 'clear', 'peek'],
   PLAN: ['next-gen', 'grow-12', 'plan-undo', 'back-to-paint', 'start'],
-  RUN: ['speed-1', 'speed-4', 'speed-16', 'pause', 'skip'],
+  RUN: ['speed-1', 'speed-2', 'speed-4', 'speed-8', 'speed-16', 'pause', 'skip'],
   END_REVEAL: [],
   READOUT: ['play-again'],
 };
@@ -33,7 +35,8 @@ export const KEY_TEXT = {
   'key-outline': 'true outline; hatched = never sensed',
   'key-shadow': 'shadow band (under the surface line): where a portal may sit',
   'key-portal': 'portal',
-  'key-hole': 'first hole (at a portal)',
+  'key-hole': 'rig hole',
+  'key-stake': 'distance flag: every 250 m',
   'key-dropped': 'dropped (X): no branch fits',
   'key-run-intersected': 'intersected',
   'key-run-imaged': 'imaged',
@@ -124,7 +127,8 @@ export class Driver {
 }
 
 // open a page on the shipped file (or url) in manual-clock mode
-export async function openGame(browser, { url = process.env.S45_URL ?? fileUrl(PLAY), mut = null, startMode = null, slow = 0, width = 1280, height = 720, manual = true, allowOrigin = null, init = [] } = {}) {
+// level: 'gv4' (default) loads the fixed GV4 formation after boot (the rows written before v3.8.1 pin it); 'boot' leaves the page as it boots (Level 1); an object is loaded as given
+export async function openGame(browser, { url = process.env.S45_URL ?? fileUrl(PLAY), mut = null, startMode = null, slow = 0, width = 1280, height = 720, manual = true, allowOrigin = null, init = [], level = 'gv4' } = {}) {
   // S45_URL is a kit self-check override (a conformance stub served over HTTP); unset in every closing run
   if (process.env.S45_URL && !allowOrigin) allowOrigin = new URL(process.env.S45_URL).origin;
   const scripts = [...init];
@@ -135,6 +139,12 @@ export async function openGame(browser, { url = process.env.S45_URL ?? fileUrl(P
   const D = new Driver(page, log, context);
   await D.goto(url);
   if (manual) await D.manual();
+  // the fixture shells of the frame rows have no loadLevel: they keep their own boot
+  if (level !== 'boot' && (await D.page.evaluate(() => typeof globalThis.__s45.loadLevel === 'function'))) {
+    const rec = level === 'gv4' ? bootLevelRecord(getGoldens(), { trunk: startMode === 'trunk' }) : level;
+    const r = await D.page.evaluate((lv) => globalThis.__s45.loadLevel(lv), rec);
+    if (r?.status !== 'ok') throw new Error(`boot level load refused: ${JSON.stringify(r)}`);
+  }
   return D;
 }
 export { launch };
@@ -178,12 +188,20 @@ export async function clickStack(D, clicks, { stopAtDisabled = false } = {}) {
     if (sel !== p) { await selectPortal(D, p); sel = p; }
     await D.slider(dm);
     if (stopAtDisabled && !(await D.enabled('next-gen'))) { counts.push(null); continue; }
-    await D.click('next-gen');
+    // a click the probe refuses (dead or over the cap) leaves the button grey (v3.8.1); the golden click lists still carry them, so the core is asked directly
+    if (await D.enabled('next-gen')) await D.click('next-gen');
+    else await D.press('next-gen');
     counts.push((await D.state()).plan.clicks.length);
   }
   return counts;
 }
-export async function startRun(D) { await D.click('start'); const p = await D.phase(); if (p !== 'RUN') throw new Error(`start left phase ${p}`); }
+// legacy: the 1x wall-to-tick rate of before v3.8.1 (100 ticks per wall second): the page needs the run_pace_off mutant and the run is set to 1x
+export async function startRun(D, { legacy = false } = {}) {
+  await D.click('start');
+  const p = await D.phase();
+  if (p !== 'RUN') throw new Error(`start left phase ${p}`);
+  if (legacy) await D.page.evaluate(() => globalThis.__s45.setSpeed(1));
+}
 export async function finishRun(D) {
   await D.click('skip');
   await D.untilPhase('END_REVEAL', { maxS: 5 });

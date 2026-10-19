@@ -7,6 +7,7 @@
 // env.mut: the UI mutant switches rightclick_places and x_places_after_remove (known-bad only).
 import { pickRadiusCells, planSideAt } from './geom.js';
 import { portalMarker, portalXHandle } from './layout.js';
+import { PORTAL_MIN_SEP } from '../core/consts.js';
 
 const IN_TAP_PX = 3;
 const PLAN_TAP_PX = 4;
@@ -16,6 +17,9 @@ const SKY_TOP_GRID = 60;
 const FLAG_TOP_GRID = 24;
 const DEPTH_STEP = 1;
 const IN_PLAN_EDITS = new Set(['next-gen', 'grow-12', 'plan-undo', 'remove-portal']);
+// a click within the 25 m separation of the portal just placed, moved or selected is the tail of that gesture (a drag release, a double tap): it adds nothing and shows no error
+const SETTLE_S = 0.6;
+const RUN_START_SPEED = 4;
 
 function inPanelAt(lay, x, y) {
   for (const side of ['left', 'right']) {
@@ -53,7 +57,12 @@ export function bindInput(env) {
     'plan-undo': () => g.undoClick(),
     'back-to-paint': () => g.backToPaint(),
     'remove-portal': () => g.removeSelected(),
-    start: () => g.start(),
+    // the run starts at 4x: at 1x a level takes minutes (the pace of core/state.js stretches 16x to 6 s or more)
+    start: () => {
+      const r = g.start();
+      if (r.status === 'ok') g.setSpeed(RUN_START_SPEED);
+      return r;
+    },
     pause: () => g.pause(),
     skip: () => g.skip(),
     // READOUT button: NEXT advances the campaign (surface mode); after the last level, and in trunk mode, it plays the level again
@@ -63,7 +72,8 @@ export function bindInput(env) {
     },
   };
   for (const r of [2, 5, 8, 12, 20]) BUTTON_ACTIONS[`brush-${r}`] = () => g.brush(r);
-  for (const s of [1, 4, 16]) BUTTON_ACTIONS[`speed-${s}`] = () => g.setSpeed(s);
+  for (const s of [1, 2, 4, 8, 16]) BUTTON_ACTIONS[`speed-${s}`] = () => g.setSpeed(s);
+  for (const n of [1, 2, 3, 4, 5, 6]) BUTTON_ACTIONS[`level-${n}`] = () => g.selectLevel(n);
 
   for (const id of Object.keys(dom.buttons)) {
     dom.buttons[id].addEventListener('click', () => {
@@ -76,6 +86,9 @@ export function bindInput(env) {
   });
 
   let drag = null;
+  let recent = null;
+  const settle = (col) => { recent = { col, until: env.now() + SETTLE_S }; };
+  const settled = (col) => !mut.has('ui_no_settle') && recent !== null && env.now() < recent.until && Math.abs(col - recent.col) < PORTAL_MIN_SEP && (core.view().portals || []).includes(recent.col);
   const local = (ev) => {
     const r = canvas.getBoundingClientRect();
     return { x: ev.clientX - r.left, y: ev.clientY - r.top };
@@ -168,19 +181,28 @@ export function bindInput(env) {
     }
   });
 
+  // the hover record for the pointer at p: the cell, the panel side, the drag in progress (none after a release), over the x handle, over a portal marker
+  function hoverOf(ev, withDrag) {
+    const lay = env.layout();
+    const p = local(ev);
+    const view = core.view();
+    const plan = view.phase === 'PLAN';
+    const side = plan ? planSideAt(lay, p.x, p.y) : inPanelAt(lay, p.x, p.y);
+    if (!side) return null;
+    const c = inCell(lay, side, p.x, p.y);
+    let dragInfo = null;
+    if (withDrag && drag && drag.phase === 'PLAN' && drag.marker !== null) dragInfo = { kind: 'portal', from: drag.marker };
+    else if (withDrag && drag && drag.phase === 'PLAN' && drag.hole !== null) dragInfo = { kind: drag.hole.kind, from: drag.hole.col };
+    return { col: c[0], row: c[1], side, drag: dragInfo, onX: plan && xHandleAt(lay, view, p.x, p.y) !== null, onMarker: plan && side === 'left' ? () => markerAt(env.layout(), core.view(), p.x, p.y) !== null : null };
+  }
+
   window.addEventListener('pointermove', (ev) => {
     const lay = env.layout();
     const p = local(ev);
     const view = core.view();
     const plan = view.phase === 'PLAN';
     const side = plan ? planSideAt(lay, p.x, p.y) : inPanelAt(lay, p.x, p.y);
-    if (side) {
-      const c = inCell(lay, side, p.x, p.y);
-      let dragInfo = null;
-      if (drag && drag.phase === 'PLAN' && drag.marker !== null) dragInfo = { kind: 'portal', from: drag.marker };
-      else if (drag && drag.phase === 'PLAN' && drag.hole !== null) dragInfo = { kind: drag.hole.kind, from: drag.hole.col };
-      env.hover({ col: c[0], row: c[1], side, drag: dragInfo, onX: plan && xHandleAt(lay, view, p.x, p.y) !== null });
-    } else env.hover(null);
+    env.hover(hoverOf(ev, true));
     if (plan && !drag) {
       if (side === 'left') setCursor(xHandleAt(lay, view, p.x, p.y) !== null ? 'pointer' : markerAt(lay, view, p.x, p.y) !== null ? 'grab' : 'copy');
       else if (side === 'right') {
@@ -201,7 +223,14 @@ export function bindInput(env) {
     env.redraw();
   });
 
+  // after a release the drag is over: the hover is recomputed from the new state, so a dragged portal's own marker never reads as a refused placement (B1)
   window.addEventListener('pointerup', (ev) => {
+    pointerUp(ev);
+    env.hover(hoverOf(ev, false));
+    env.redraw();
+  });
+
+  function pointerUp(ev) {
     if (!drag) return;
     const d = drag;
     drag = null;
@@ -222,8 +251,8 @@ export function bindInput(env) {
       return;
     }
     if (d.marker !== null) {
-      if (!d.moved) env.act(() => g.selectPortal(d.marker), true);
-      else if (upSide === 'left') env.act(() => g.movePortal(d.marker, colAt(lay, 'left', p.x)), true);
+      if (!d.moved) { settle(d.marker); env.act(() => g.selectPortal(d.marker), true); }
+      else if (upSide === 'left') { settle(colAt(lay, 'left', p.x)); env.act(() => g.movePortal(d.marker, colAt(lay, 'left', p.x)), true); }
       else if (upSide === null) env.act(() => g.removePortal(d.marker), true);
       else env.redraw();
       return;
@@ -237,9 +266,14 @@ export function bindInput(env) {
       return;
     }
     if (d.moved || !d.side) { env.redraw(); return; }
-    if (d.side === 'left') env.act(() => g.addPortal(colAt(lay, 'left', d.x0)), true);
+    if (d.side === 'left') {
+      const col = colAt(lay, 'left', d.x0);
+      if (settled(col)) { env.redraw(); return; }
+      const r = env.act(() => g.addPortal(col), true);
+      if (r && r.status === 'ok') settle(col);
+    }
     else if (core.view().plan) env.act(() => g.addRigHole(colAt(lay, 'right', d.x0)), false);
-  });
+  }
 
   window.addEventListener('pointercancel', () => {
     drag = null;
@@ -267,8 +301,25 @@ export function bindInput(env) {
     bumpDepth(col, ev.deltaY < 0 ? DEPTH_STEP : -DEPTH_STEP);
   }, { passive: false });
 
+  // Ctrl+Z undoes (PAINT: the last stroke; PLAN: the last accepted click, the same action as the Undo button). Ctrl+Y and Ctrl+Shift+Z are redo:
+  // the game has no redo (spec 4, Undo), so they are swallowed and do nothing. Other phases leave the keys to the browser.
+  function undoKey(ev, view) {
+    if (!(ev.ctrlKey || ev.metaKey) || ev.altKey || (view.phase !== 'PAINT' && view.phase !== 'PLAN')) return false;
+    const t = ev.target;
+    if (t && (t.tagName === 'TEXTAREA' || (t.tagName === 'INPUT' && t.type !== 'range') || t.isContentEditable)) return false;
+    const k = String(ev.key).toLowerCase();
+    const redo = k === 'y' || (k === 'z' && ev.shiftKey);
+    if (k !== 'z' && !redo) return false;
+    ev.preventDefault();
+    if (redo || ev.repeat) return true;
+    if (view.phase === 'PAINT') env.act(() => g.undo(), false);
+    else env.act(() => g.undoClick(), true);
+    return true;
+  }
+
   window.addEventListener('keydown', (ev) => {
     const view = core.view();
+    if (undoKey(ev, view)) return;
     if (view.phase !== 'PLAN' || ev.ctrlKey || ev.metaKey || ev.altKey) return;
     if (ev.key === 'Delete' || ev.key === 'Backspace') {
       // the selected object of selKind (a portal or a rig hole); a text field keeps its own Delete; a held key removes one object only

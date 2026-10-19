@@ -2,6 +2,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
+import crypto from 'node:crypto';
 import path from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
@@ -12,6 +13,9 @@ import { shotPath, depsRoot } from '../lib/deps.mjs';
 import { mkTmp } from '../lib/tmpfs.mjs';
 
 const ROOT = path.resolve(GAME45, '..');
+// exchange files the review folder may hold besides the published build: Cowork briefs and findings (.md, .zip) and play-test bundles
+const EXCHANGE_RE = /^(cowork_[A-Za-z0-9_.-]+\.(md|zip)|L[0-9]+_playtest\.zip|[A-Za-z0-9_-]+_playtest\.zip)$/;
+const sha256 = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');
 
 test('H-NET static scan: the clean page and the SVG namespace give 0 hits; each of the 11 patterns is caught; the real play.html has 0 hits', () => {
   const clean = '<!doctype html><html><body><svg xmlns="http://www.w3.org/2000/svg"></svg><canvas id="cv"></canvas><script>(function(){"use strict";var a = 1;})();</script></body></html>';
@@ -55,7 +59,7 @@ test('H-SHOT screenshot guard, source scan, review manifest policy, publish_revi
   // shotPath
   assert.ok(shotPath('a.png').replace(/\\/g, '/').toLowerCase().startsWith(`${depsRoot().toLowerCase()}/shots/`));
   assert.throws(() => shotPath('../../gpr/x.png'));
-  assert.throws(() => shotPath('../../../Users/me/OneDrive/x.png'));
+  assert.throws(() => shotPath('../../../Users/Quinn Morley/OneDrive/x.png'));
   // source scan: zero control on the kit, known-bad on synthetic lines
   assert.deepEqual(shotViolations('await page.screenshot({ type: "png" }); await page.screenshot({ path: shotPath("a.png") });'), []);
   assert.deepEqual(shotViolations('await page.screenshot({ path: "x.png" });'), ['"x.png"']);
@@ -90,13 +94,29 @@ test('H-SHOT screenshot guard, source scan, review manifest policy, publish_revi
     const bad = spawnSync(process.execPath, [path.join(TEST_DIR, 'tools', 'publish_review.mjs'), '--manifest', path.join(t.dir, 'm2', 'review_manifest.json'), '--out', path.join(t.dir, 'cli_bad')], { encoding: 'utf8' });
     assert.notEqual(bad.status, 0, 'CLI accepted a manifest that lists a PNG');
   } finally { t.cleanup(); }
-  // the real G1 package (written by the Engine Builder / Manager at the 45.10 close): manifest valid, folder holds exactly the listed files, no image
-  const manifestPath = path.join(ROOT, 'deliverables', 'step45_game', 'review_manifest.json');
-  const reviewDir = path.join(ROOT, 'deliverables', 'step45_game', 'review');
+  // the real review package (v3.8.1): the manifest lists one play_g1*.html and known_gaps.md; the folder holds exactly those plus exchange files (Cowork
+  // briefs and findings, play-test zips); exactly one published play_g1*.html sits in it and it is the one the manifest names
+  const manifestPath = path.join(ROOT, 'review_manifest.json');
   assert.ok(fs.existsSync(manifestPath), `${manifestPath} does not exist (G1 package, AC13)`);
   const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+  const reviewDir = path.resolve(path.dirname(manifestPath), manifest.dir);
   assert.deepEqual(validateManifest(manifest, path.dirname(manifestPath)), []);
-  assert.deepEqual(manifest.files.map((f) => f.dest).sort(), ['known_gaps.md', 'play_g1d.html'], 'the review package is play_g1d.html and known_gaps.md only');
-  assert.deepEqual(unlisted(manifest, reviewDir), [], 'unlisted files in the review folder');
+  const dests = manifest.files.map((f) => f.dest).sort();
+  const PLAY_RE = /^play_g1[a-z0-9]*\.html$/;
+  assert.equal(dests.filter((d) => PLAY_RE.test(d)).length, 1, 'the manifest lists exactly one play_g1*.html');
+  assert.ok(dests.includes('known_gaps.md'), 'the manifest lists known_gaps.md');
+  assert.equal(dests.length, 2, 'the manifest lists the build and known_gaps.md only');
+  if (!fs.existsSync(reviewDir)) { console.log(`# H-SHOT review folder ${reviewDir} absent (fresh clone): folder checks skipped`); return; }
+  const strays = unlisted(manifest, reviewDir).filter((f) => !EXCHANGE_RE.test(f));
+  assert.deepEqual(strays, [], 'unlisted files in the review folder that are not exchange files');
   assert.ok(fs.existsSync(reviewDir) && manifest.files.every((f) => fs.existsSync(path.join(reviewDir, f.dest))), 'a listed file is not in the review folder');
+  const published = fs.readdirSync(reviewDir).filter((f) => PLAY_RE.test(f));
+  assert.deepEqual(published, dests.filter((d) => PLAY_RE.test(d)), 'the folder holds exactly one published play_g1*.html and it is the manifest build');
+  // known-bad: a second published build, an image and a stray file are not exchange files
+  for (const bad of ['play_g1c.html', 'shot.png', 'notes.txt', 'cowork.exe']) assert.equal(EXCHANGE_RE.test(bad), false, `${bad} must not pass as an exchange file`);
+  for (const good of ['cowork_brief.md', 'cowork_findings_1_L4.md', 'cowork_findings_2.zip', 'L4_playtest.zip', 'L1_playtest.zip']) assert.equal(EXCHANGE_RE.test(good), true, `${good} must pass as an exchange file`);
+  // the published copy is the manifest build once the integrator has published it: a difference is reported, not failed (the build moves with every change)
+  const src = path.resolve(path.dirname(manifestPath), manifest.files.find((f) => PLAY_RE.test(f.dest)).src);
+  const same = fs.existsSync(src) && sha256(src) === sha256(path.join(reviewDir, published[0]));
+  console.log(`# H-SHOT published ${published[0]} ${same ? 'equals' : 'differs from (publish pending)'} ${path.relative(ROOT, src).split(path.sep).join('/')}`);
 });

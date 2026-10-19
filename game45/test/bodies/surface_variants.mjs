@@ -1,8 +1,8 @@
 // Step 45.10b-5c: surface-mode variants of the changed gates G1, G2, G9, G10, G20, G31, G33, G34, G35 (spec v3.7.4 section 13 table, testplan B.2).
 // Entry shape and runner: bodies/surface.mjs header and unit/surface.test.mjs. Per entry: zero control (surface core), known-bad core mutants (`bad`),
 // known-bad observations that need no core switch (`badObs`), detector self-check (`good`, `synth`), and the adjacent input inside the same observation.
-// Expected values: the reference sim (surface_variants() in cr_scratch/step45_reference_sim_v3.py) and goldens_v39 S_MID / S_P. The mid-run scenario is the S_P.GV4 world with the S_MID click list (policy 50 m x 3, then 75 m).
-// Core mutant switches that do not exist yet (Engine Builder list): mean_column (G10), default_per_comp_kept (G31), resnap_kept (G31), theta_surf (G47), reaim_cap_inf (G9, covered here by a cap argument).
+// Expected values: the reference sim (surface_variants() in cr_scratch/step45_reference_sim_v3.py) and goldens_v41 S_MID / S_P. The mid-run scenario is the S_P.GV4 world with the S_MID click list (policy 50 m x 3, then 75 m).
+// Core mutant switches that do not exist yet (Engine Builder list): mean_column (G10), default_per_comp_kept (G31), resnap_kept (G31), reaim_cap_inf (G9, covered here by a cap argument).
 import { cmp, cmpNum, check } from '../lib/tol.mjs';
 import { rectK, unionK, S2C, worldRec } from '../lib/surface.mjs';
 
@@ -65,24 +65,24 @@ const scen = (C, G) => {
 };
 const g9obs = (C, G, cap = null) => {
   const res = scen(C, G), cap0 = cap ?? res.reaimCap;
-  const ok = G.S_MID.reaim_case.first_clamped_success, ref = G.S_MID.reaim_case.first_refusal_target_150_60;
+  const ok = G.S_MID.reaim_case.first_clamped_success, ref = G.S_MID.reaim_case.first_refusal, tgt = G.S_MID.reaim_case.refusal_target;
   const iOk = C.reaimPick(res.net, ok.t), iRef = C.reaimPick(res.net, ref[0]);
-  const rOk = C.reaim(res.net, ok.t, iOk, [20.0, 20.0], cap0), rRef = C.reaim(res.net, ref[0], iRef, [150.0, 60.0], cap0);
+  const rOk = C.reaim(res.net, ok.t, iOk, [20.0, 20.0], cap0), rRef = C.reaim(res.net, ref[0], iRef, tgt, cap0);
   return { cap: res.reaimCap, okSeg: iOk, okClamped: !!rOk?.clamped, okCost: rOk ? num(rOk.cost) : null, refSeg: iRef, refRefused: rRef === null };
 };
 export const ug09s = {
-  id: 'UG09S', title: 'G9 surface: GV4 main world, cap 40: re-aim of seg 18 at 140 s toward (20, 20) is accepted clamped (cost 37.386988); seg 11 at 100 s toward (150, 60) is refused; an infinite cap accepts it', mode: 'surface',
+  id: 'UG09S', title: 'G9 surface: GV4 main world, cap 21: re-aim of seg 7 at 70 s toward (20, 20) is accepted clamped (cost 19.20688); seg 7 at 70 s toward (175, 40) is refused; an infinite cap accepts it', mode: 'surface',
   observe: async (C, G) => g9obs(C, G),
   judge: (o, G) => {
-    const e = [], ok = G.S_MID.reaim_case.first_clamped_success, ref = G.S_MID.reaim_case.first_refusal_target_150_60;
+    const e = [], ok = G.S_MID.reaim_case.first_clamped_success, ref = G.S_MID.reaim_case.first_refusal;
     cmp(e, 'cap', o.cap, ok.cap); cmp(e, 'success seg', o.okSeg, ok.seg); check(e, 'success is clamped', o.okClamped === true); cmpNum(e, 'success cost', o.okCost, ok.cost, 1e-6);
-    cmp(e, 'refusal seg', o.refSeg, ref[1]); check(e, 'refusal at 100 s toward (150, 60)', o.refRefused === true);
+    cmp(e, 'refusal seg', o.refSeg, ref[1]); check(e, 'refusal toward the golden refusal target', o.refRefused === true);
     return e;
   },
-  good: (G) => ({ cap: 40, okSeg: 18, okClamped: true, okCost: G.S_MID.reaim_case.first_clamped_success.cost, refSeg: 11, refRefused: true }),
+  good: (G) => ({ cap: 21, okSeg: 7, okClamped: true, okCost: G.S_MID.reaim_case.first_clamped_success.cost, refSeg: 7, refRefused: true }),
   bad: [],
   // reaim_cap_inf is not a core switch; the same check with the cap argument at 1e9 is the known-bad
-  badObs: [{ name: 'infinite cap accepts at 100 s', observe: async (C, G) => g9obs(C, G, 1e9) }],
+  badObs: [{ name: 'infinite cap accepts at 70 s', observe: async (C, G) => g9obs(C, G, 1e9) }],
   synth: [
     { name: 'infinite cap (refusal accepted)', obs: (G) => ({ ...ug09s.good(G), refRefused: false }) },
     { name: 'no clamp (success unclamped)', obs: (G) => ({ ...ug09s.good(G), okClamped: false }) },
@@ -166,12 +166,12 @@ const mainRound = (C, G) => { const w = scenWorld(G); return new C.Round(C.TEST_
 
 // ---------------------------------------------------------------- UG33S G33 round driver, per-side reserves
 export const ug33s = {
-  id: 'UG33S', title: 'G33 surface: GV4 main round, add at 75.0 s col 80 (depth 60), re-aim at 140 s toward (20, 20): left reserve 62.613012, right 40, drilled 436.886988 / 460, score L and R equal S_MID', mode: 'surface',
+  id: 'UG33S', title: 'G33 surface: GV4 main round, add at 75.0 s col 80 (depth 20), re-aim at 100 s toward (20, 20): left reserve 33.72422, right 33, drilled 228.27578 / 229, score L and R equal S_MID', mode: 'surface',
   observe: async (C, G) => {
     const R = mainRound(C, G);
-    const a = R.addHole(75.0, 80);
-    const i = C.reaimPick(R.net, 140.0, { segs: R.layout });
-    const r = R.reaim(140.0, i, [20.0, 20.0]);
+    const a = R.addHole(75.0, 80, 20);
+    const i = C.reaimPick(R.net, 100.0, { segs: R.layout });
+    const r = R.reaim(100.0, i, [20.0, 20.0]);
     const res = R.result();
     return { add: [a.status, a.depth], reaim: [r.status, i], resL: num(R.resL), resR: num(R.resR), L: Array.from(res.L), R: Array.from(res.R), drilled: [num(res.drilledL), num(res.drilledR)] };
   },
@@ -182,17 +182,17 @@ export const ug33s = {
     cmp(e, 'L', o.L, M.result.L); cmp(e, 'R', o.R, M.result.R); cmpNum(e, 'drilled left', o.drilled[0], M.result.drilledL, 1e-6); cmp(e, 'drilled right', o.drilled[1], M.result.drilledR);
     return e;
   },
-  good: (G) => ({ add: ['ok', 60], reaim: ['ok', 18], resL: 62.613012, resR: 40, L: G.S_MID.result.L, R: G.S_MID.result.R, drilled: [436.886988, 460] }),
+  good: (G) => ({ add: ['ok', 20], reaim: ['ok', 11], resL: 33.72422, resR: 33, L: G.S_MID.result.L, R: G.S_MID.result.R, drilled: [228.27578, 229] }),
   bad: [{ mut: ['shared_pool'] }],
   synth: [
-    { name: 'shared_pool (the re-aim pays from the right pool as well)', obs: (G) => ({ ...ug33s.good(G), resL: 2.613012, resR: 40 }) },
-    { name: 'adjacent: left reserve 62.5 against 62.613012', obs: (G) => ({ ...ug33s.good(G), resL: 62.5 }) },
+    { name: 'shared_pool (the re-aim pays from the right pool as well)', obs: (G) => ({ ...ug33s.good(G), resL: -26.27578, resR: 33 }) },
+    { name: 'adjacent: left reserve 33.5 against 33.72422', obs: (G) => ({ ...ug33s.good(G), resL: 33.5 }) },
   ],
 };
 
 // ---------------------------------------------------------------- UG34S G34 reserve cap
 export const ug34s = {
-  id: 'UG34S', title: 'G34 surface: three re-aims at 100, 130, 150 s on component 0 end with reserve left 60.100161, 26.739531, 24.870536, never below 0 (cap from the initial reserve gives -5.205579)', mode: 'surface',
+  id: 'UG34S', title: 'G34 surface: three re-aims at 95, 105, 115 s on component 0 end with reserve left 32.020875, 11.334164, 1.925841, never below 0 (cap from the initial reserve gives -9.495467)', mode: 'surface',
   observe: async (C, G) => {
     const seq = [];
     const R = mainRound(C, G);
@@ -209,7 +209,7 @@ export const ug34s = {
   good: (G) => ({ seq: G.S_MID.three_reaims.map((r) => ({ ...r })) }),
   bad: [{ mut: ['cap_vs_initial'] }],
   synth: [
-    { name: 'cap_vs_initial (third re-aim leaves -5.205579)', obs: (G) => ({ seq: G.S_MID.three_reaims_cap_vs_initial.map((r) => ({ ...r })) }) },
+    { name: 'cap_vs_initial (third re-aim leaves -9.495467)', obs: (G) => ({ seq: G.S_MID.three_reaims_cap_vs_initial.map((r) => ({ ...r })) }) },
     { name: 'adjacent: reserve rises after the second re-aim', obs: (G) => { const o = ug34s.good(G); o.seq[1].res_left = 70; return o; } },
   ],
 };

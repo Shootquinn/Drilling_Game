@@ -10,7 +10,6 @@ const ROOT = path.resolve(HERE, '..');
 const DEPS = process.env.S45_DEPS ?? 'C:/borebot_render/step45';
 const SIZE_GATE = 5000000;
 const SIZE_TARGET = 250000;
-const { LEVELS_V39 } = await import(pathToFileURL(path.join(HERE, 'core', 'level_table.js')).href);
 const FIXTURE_JSON = process.env.S45_FIXTURE_JSON ?? path.join(ROOT, 'cr_scratch', 'step45_storyboard_v3', 'sim_export.json');
 
 const CORE_ORDER = ['arith', 'consts', 'hash', 'strings', 'grid', 'archetypes', 'levels', 'paint', 'portals', 'growth', 'plan', 'balrog', 'sense', 'readout', 'statehash', 'clock', 'reaim', 'advisor', 'round', 'preview', 'generator', 'state', 'index'];
@@ -22,13 +21,14 @@ function fail(msg) {
 }
 
 function parseArgs(argv) {
-  const o = { out: null, src: null, kb: false, shell: false };
+  const o = { out: null, src: null, kb: false, shell: false, nomin: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--out') o.out = argv[++i];
     else if (a === '--src') o.src = argv[++i];
     else if (a === '--kb-module-src') o.kb = true;
     else if (a === '--shell') o.shell = true;
+    else if (a === '--no-minify') o.nomin = true;
     else fail(`unknown argument ${a}`);
   }
   if ((o.out === undefined) || (o.src === undefined)) fail('--out and --src need a value');
@@ -136,6 +136,8 @@ function parseModule(file, rawSrc) {
     }
     // whole-line comments outside template literals and block comments are left out of the bundle (size target)
     if (inCode[i] && /^\s*\/\/(?!\s*----)/.test(line)) continue;
+    // blank lines outside template literals and block comments are left out as well (size target)
+    if (inCode[i] && !line.trim()) continue;
     // leading indentation of code lines is left out as well (size target); lines inside template literals and block comments keep theirs
     out.push(inCode[i] ? line.replace(/^[ \t]+/, '') : line);
   }
@@ -145,6 +147,91 @@ function parseModule(file, rawSrc) {
 function relName(f) {
   const rel = path.relative(process.cwd(), f).replace(/\\/g, '/');
   return !rel || rel.startsWith('..') ? f.replace(/\\/g, '/') : rel;
+}
+
+// ---- whitespace minifier (size target): comments, runs of spaces and spaces beside punctuation leave the bundle; strings, template literals and regex literals are copied as they are ----
+const MIN_KEYWORDS = new Set(['return', 'typeof', 'case', 'in', 'of', 'void', 'delete', 'throw', 'else', 'do', 'new', 'instanceof']);
+const MIN_TIGHT = new Set('=,;:(){}[]?*%&|^~'.split(''));
+const MIN_REGEX_AFTER = new Set('(,=:[!&|?{};+-*%<>~^'.split(''));
+function minifyCode(src) {
+  const out = [];
+  const n = src.length;
+  let i = 0;
+  const tpl = [];            // stack of brace depths for ${ } inside template literals
+  let depth = 0;
+  let word = '';             // the last identifier word read in code state
+  const lastSig = () => { for (let k = out.length - 1; k >= 0; k--) { const c = out[k].slice(-1); if (c !== ' ' && c !== '\n') return c; } return ''; };
+  const isId = (c) => /[A-Za-z0-9_$]/.test(c);
+  const tplText = (from) => {
+    let j = from;
+    while (j < n && src[j] !== '`') {
+      if (src[j] === '\\') { j += 2; continue; }
+      if (src[j] === '$' && src[j + 1] === '{') break;
+      j++;
+    }
+    return j;
+  };
+  while (i < n) {
+    const c = src[i];
+    const d = src[i + 1];
+    if (c === '/' && d === '/') { while (i < n && src[i] !== '\n') i++; continue; }
+    if (c === '/' && d === '*') { const e = src.indexOf('*/', i + 2); const body = src.slice(i, e + 2); i = e + 2; if (body.includes('\n')) out.push('\n'); continue; }
+    if (c === '"' || c === "'") {
+      let j = i + 1;
+      while (j < n && src[j] !== c) { if (src[j] === '\\') j++; j++; }
+      out.push(src.slice(i, j + 1)); i = j + 1; word = ''; continue;
+    }
+    if (c === '`') {
+      const j = tplText(i + 1);
+      if (src[j] === '$') { out.push(src.slice(i, j + 2)); i = j + 2; tpl.push(depth); depth = 0; word = ''; continue; }
+      out.push(src.slice(i, j + 1)); i = j + 1; word = ''; continue;
+    }
+    if (c === '{') { depth++; out.push(c); i++; word = ''; continue; }
+    if (c === '}') {
+      if (tpl.length && depth === 0) {
+        depth = tpl.pop();
+        const j = tplText(i + 1);
+        if (src[j] === '$') { out.push(src.slice(i, j + 2)); i = j + 2; tpl.push(depth); depth = 0; continue; }
+        out.push(src.slice(i, j + 1)); i = j + 1; continue;
+      }
+      depth--; out.push(c); i++; word = ''; continue;
+    }
+    if (c === '/') {
+      const p = lastSig();
+      if (p === '' || MIN_REGEX_AFTER.has(p) || MIN_KEYWORDS.has(word)) {
+        let j = i + 1;
+        let cls = false;
+        while (j < n) {
+          if (src[j] === '\\') { j += 2; continue; }
+          if (src[j] === '[') cls = true;
+          else if (src[j] === ']') cls = false;
+          else if (src[j] === '/' && !cls) break;
+          j++;
+        }
+        j++;
+        while (j < n && /[a-z]/.test(src[j])) j++;
+        out.push(src.slice(i, j)); i = j; word = ''; continue;
+      }
+      out.push(c); i++; word = ''; continue;
+    }
+    if (c === ' ' || c === '\t' || c === '\r' || c === '\n') {
+      let j = i;
+      let nl = false;
+      while (j < n && (src[j] === ' ' || src[j] === '\t' || src[j] === '\r' || src[j] === '\n')) { if (src[j] === '\n') nl = true; j++; }
+      i = j;
+      const p = out.length ? out[out.length - 1].slice(-1) : '';
+      const q = src[j] || '';
+      if (q === '/' && (src[j + 1] === '/' || src[j + 1] === '*')) continue;
+      if (nl) { if (p !== '\n' && out.length) out.push('\n'); continue; }
+      if (p === '' || p === '\n' || p === ' ') continue;
+      if (MIN_TIGHT.has(p) || MIN_TIGHT.has(q) || q === '') continue;
+      out.push(' ');
+      continue;
+    }
+    if (isId(c)) { let j = i; while (j < n && isId(src[j])) j++; word = src.slice(i, j); out.push(word); i = j; continue; }
+    out.push(c); i++; word = '';
+  }
+  return out.join('');
 }
 
 // ---- module sets ----
@@ -275,37 +362,12 @@ errs.push(...checkDuplicates(mods));
 if (errs.length) fail(`\n  ${errs.join('\n  ')}`);
 mods = flat ? mods : topoOrder(mods);
 
-// the level literals of the playable: E11.test_levels.main (the GV4 world) plus presentation fields and F = GV4.F, inlined into the build only.
-// S45_LEVEL boots Level 4 of the level table (reveal 5.0 s, 0 peeks); S45_LEVEL_TRUNK keeps the legacy presentation (8.0 s, 2 peeks) for the trunk-mode rows.
-function levelLiteral() {
-  const gp = path.join(HERE, 'test', 'goldens_v36.json');
-  if (!fs.existsSync(gp)) fail(`goldens ${gp} do not exist`);
-  const g = JSON.parse(fs.readFileSync(gp, 'utf8'));
-  const F = g.GV4.F.map((p) => p[0] * 100 + p[1]).sort((a, b) => a - b);
-  const L4 = LEVELS_V39[4];
-  const base = { ...g.E11.test_levels.main, landmark_step_m: L4.landmark_step_m, cap_frac: L4.cap_frac };
-  const level = { ...base, reveal_s: L4.reveal_s, fade_s: L4.fade_s, peeks: L4.peeks };
-  const legacy = { ...base, reveal_s: 8.0, fade_s: 2.0, peeks: 2 };
-  // F is written once; both records share it
-  const runs = [];
-  for (const k of F) {
-    const last = runs[runs.length - 1];
-    if (last && last[0] + last[1] === k) last[1] += 1;
-    else runs.push([k, 1]);
-  }
-  return `const S45_F = ((r) => { const o = []; for (const [k, n] of r) for (let i = 0; i < n; i += 1) o.push(k + i); return o; })(${JSON.stringify(runs)});
-const S45_LEVEL = { ...${JSON.stringify(level)}, F: S45_F };
-const S45_LEVEL_TRUNK = { ...${JSON.stringify(legacy)}, F: S45_F };
-`;
-}
-
 let prelude = '';
-if (!opt.src && !opt.shell) prelude = levelLiteral();
 if (opt.shell) {
   if (!fs.existsSync(FIXTURE_JSON)) fail(`fixture ${FIXTURE_JSON} does not exist`);
   prelude = `const S45_FIXTURE = ${JSON.stringify(JSON.parse(fs.readFileSync(FIXTURE_JSON, 'utf8')))};\n`;
 }
-const bundle = `(function () {\n'use strict';\n${prelude}${mods.map((m) => `// ---- ${path.basename(path.dirname(m.file))}/${path.basename(m.file)}\n${m.code}`).join('\n')}\n})();\n`;
+const bundle = `(function () {\n'use strict';\n${prelude}${mods.map((m) => `// ---- ${path.basename(path.dirname(m.file))}/${path.basename(m.file)}\n${opt.nomin ? m.code : minifyCode(m.code)}`).join('\n')}\n})();\n`;
 const safe = bundle.replace(/<\/script/gi, '<\\/script');
 const HEAD = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n<title>Borehole, first playable</title>\n<style>html,body{margin:0;padding:0;background:#f4f1ea}</style>\n</head>\n<body>\n';
 

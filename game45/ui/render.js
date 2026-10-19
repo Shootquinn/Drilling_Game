@@ -5,8 +5,10 @@
 import { PALETTE, rgbCss, packAbgr } from './palette.js';
 import { boreWidthPx, SBG } from './geom.js';
 import { key } from '../core/arith.js';
-import { tagUps, tagHeight, portalXHandle } from './layout.js';
+import { tagUps, tagHeight, portalXHandle, uiText } from './layout.js';
 
+// smallest canvas label size in px: the 960 x 540 minimum window scales the labels down with the layout (v3.8.1)
+const RD_FZ_MIN = 9;
 const RD_TINT_ALPHA = 84;
 const RD_SOLID = 255;
 
@@ -279,12 +281,12 @@ function rdSTop(ctx, model, panel, cs, lay) {
   ctx.moveTo(x - 6, yb);
   ctx.lineTo(x + 6, yb);
   ctx.stroke();
-  const txt = `S top ${model.sTopM % 1 === 0 ? model.sTopM : model.sTopM.toFixed(1)} m`;
-  const fz = Math.max(12, 12 * s);
+  const txt = `${uiText('lbl_s_top')} ${model.sTopM % 1 === 0 ? model.sTopM : model.sTopM.toFixed(1)} m`;
+  const fz = Math.max(RD_FZ_MIN, 12 * s);
   ctx.font = `700 ${fz}px "Segoe UI",Arial,sans-serif`;
   const w = ctx.measureText(txt).width;
   const h = fz + 4;
-  const pos = rdSTopSpot(model, panel, cs, x, yb, w, h);
+  const pos = rdSTopSpot(model, panel, cs, x, yb, w, h, lay);
   ctx.textAlign = pos.left ? 'right' : 'left';
   ctx.lineJoin = 'round';
   ctx.strokeStyle = rgbCss(PALETTE.ground, 1);
@@ -292,12 +294,13 @@ function rdSTop(ctx, model, panel, cs, lay) {
   ctx.strokeText(txt, pos.x, pos.y);
   ctx.fillStyle = rgbCss(PALETTE.sroiLine, 1);
   ctx.fillText(txt, pos.x, pos.y);
+  LAYOUT_BOXES.sTop.push({ x: pos.left ? pos.x - w : pos.x, y: pos.y - 0.8 * fz, w, h: fz, t: txt });
 }
 
 let rdStopS = { sig: '', set: null };
 
 // first label spot beside the drop that crosses no network line, ghost, dropped stroke or S outline (candidates right, then left, at four depths)
-function rdSTopSpot(model, panel, cs, x, yb, w, h) {
+function rdSTopSpot(model, panel, cs, x, yb, w, h, lay) {
   const lines = [];
   for (const sg of model.segments || []) { const ln = rdLine(sg.cells || [], panel, cs, sg.line); if (ln) lines.push(ln); }
   if (model.ghost && model.ghost.segments) for (const sg of model.ghost.segments) { const ln = rdLine(sg.cells || [], panel, cs, sg.line); if (ln) lines.push(ln); }
@@ -308,6 +311,10 @@ function rdSTopSpot(model, panel, cs, x, yb, w, h) {
     if (rdStopS.sig !== sig) rdStopS = { sig, set: new Set(model.S) };
     Sset = rdStopS.set;
   }
+  const fzA = Math.max(RD_FZ_MIN, 12 * lay.s);
+  const axisX1 = panel.x + 10 * lay.s + 3 * fzA * 0.62 + 6;
+  const axisBands = [[panel.y + panel.h - 6 * lay.s - fzA - 3, panel.y + panel.h]];
+  for (let r = 0; r < model.h; r++) if (Math.abs((r * model.cellM) % 100) < 1e-9) { const y0 = panel.y + (r + 0.5) * cs + (r === 0 ? 14 * lay.s : 4); axisBands.push([y0 - 0.8 * fzA - 2, y0 + 0.3 * fzA + 2]); }
   const clear = (x0, y0) => {
     // text box: x0 .. x0 + w, y0 - h .. y0 (baseline y0)
     const bx0 = x0 - 3;
@@ -315,6 +322,10 @@ function rdSTopSpot(model, panel, cs, x, yb, w, h) {
     const by0 = y0 - h;
     const by1 = y0 + 3;
     if (bx0 < panel.x || bx1 > panel.x + panel.w || by0 < panel.y || by1 > panel.y + panel.h) return false;
+    // the depth axis labels ("100", "200", ...) and "m deep" sit in a strip at the left edge: the label never starts inside it (v3.8.1; "200S top 70 m")
+    if (bx0 < axisX1 && !RD_MUT.has('lay_off_stop')) {
+      for (const [ya, yz] of axisBands) if (by1 > ya && by0 < yz) return false;
+    }
     for (const ln of lines) {
       const len = Math.hypot(ln.x1 - ln.x0, ln.y1 - ln.y0);
       const n = Math.max(1, Math.ceil(len / 3));
@@ -401,7 +412,7 @@ const RD_CORE_BARREN = [133, 125, 112];
 // last drawn depth-label box of the selected rig hole (viewport px), read by uiGeometry for the layout tests
 export const HOLE_LABEL = { rect: null };
 // boxes {x,y,w,h} (viewport px) of what the last frame drew, read by uiGeometry for the layout tests; the lists are emptied at the start of each draw
-export const LAYOUT_BOXES = { tripods: [], flags: [], markers: [], trucks: [], rulerLabels: [], rowLabels: [], mDeep: [], shafts: [], holeNums: [], holeLabels: [] };
+export const LAYOUT_BOXES = { sTop: [], tripods: [], flags: [], markers: [], trucks: [], rulerLabels: [], rowLabels: [], mDeep: [], shafts: [], holeNums: [], holeLabels: [] };
 const RD_MUT = new Set();
 const boxHit = (a, b, m = 0) => a.x < b.x + b.w + m && a.x + a.w + m > b.x && a.y < b.y + b.h + m && a.y + a.h + m > b.y;
 
@@ -410,7 +421,7 @@ function holeNumLayout(ctx, model, panel, cs, lay) {
   const planMine = model.phase === 'PLAN' && !!model.rig && model.rig.count > 0;
   if ((model.phase !== 'RUN' && !planMine) || !model.holes) return [];
   const s = lay.s;
-  const fz = Math.max(11, 11 * s);
+  const fz = Math.max(RD_FZ_MIN, 11 * s);
   ctx.font = `700 ${fz}px "Segoe UI",Arial,sans-serif`;
   const bw = boreWidthPx(cs);
   const shafts = model.holes.map((h) => ({ x: panel.x + (h.col + 0.5) * cs - bw / 2 - 1, y: panel.y, w: bw + 2, h: h.depth * cs }));
@@ -511,9 +522,10 @@ function rdHoleHandle(ctx, model, panel, cs, lay, h, isSel) {
   ctx.strokeStyle = rgbCss(PALETTE.hole, 1);
   const hs = Math.max(8, 9 * s);
   ctx.fillStyle = '#fff';
-  ctx.fillRect(cx - hs / 2, yb - hs / 2, hs, hs);
+  const yh = Math.min(yb, panel.y + panel.h - hs / 2 - 2);   // a full-depth hole's handle sits inside the frame
+  ctx.fillRect(cx - hs / 2, yh - hs / 2, hs, hs);
   ctx.lineWidth = 2;
-  ctx.strokeRect(cx - hs / 2, yb - hs / 2, hs, hs);
+  ctx.strokeRect(cx - hs / 2, yh - hs / 2, hs, hs);
 }
 
 // depth label of every rig hole ("N cells, M m"), the selected hole placed first. A spot is clear when it stays 4 px inside the panel and no shaft, number or earlier label is under it;
@@ -521,7 +533,7 @@ function rdHoleHandle(ctx, model, panel, cs, lay, h, isSel) {
 function rdHoleLabels(ctx, model, panel, cs, lay) {
   if (model.phase !== 'PLAN' || !model.rig || !model.rig.holes) return;
   const s = lay.s;
-  const fs = Math.max(11, 12 * s);
+  const fs = Math.max(RD_FZ_MIN, 12 * s);
   ctx.font = `700 ${fs}px "Segoe UI",Arial,sans-serif`;
   const hs = Math.max(8, 9 * s);
   const mine = (model.holes || []).filter((h) => h.order !== undefined);
@@ -552,7 +564,11 @@ function rdHoleLabels(ctx, model, panel, cs, lay) {
       && !shafts.some((sh) => sh.col !== h.col && boxHit(c.box, sh))
       && !placed.some((p) => boxHit(c.box, p.box, 1))
       && !LAYOUT_BOXES.holeNums.some((n) => boxHit(c.box, n));
-    const pick = cands.find(clear) || cands.find((c) => inPanel(c.box)) || cands[2];
+    // crowded shafts (holes a few columns apart): stack the labels upward from the panel floor on the free side; halo text stays readable over a shaft, labels never overprint each other
+    const stack = [];
+    for (let k = 0; k < 14; k++) for (const a of rightFirst ? ['left', 'right'] : ['right', 'left']) stack.push(spot(a, a === 'left' ? cx + 13 : cx - 13 - tw, ys - k * (fs + 2)));
+    const freeOfLabels = (c) => inPanel(c.box) && !placed.some((p) => boxHit(c.box, p.box, 1)) && !LAYOUT_BOXES.holeNums.some((n) => boxHit(c.box, n));
+    const pick = cands.find(clear) || stack.find(freeOfLabels) || cands.find((c) => inPanel(c.box)) || cands[2];
     placed.push(pick);
     if (model.rig.selected === h.col) HOLE_LABEL.rect = { x: pick.box.x, y: pick.box.y, w: pick.box.w, h: pick.box.h };
     LAYOUT_BOXES.holeLabels.push({ ...pick.box, col: h.col, t: label });
@@ -602,12 +618,19 @@ function rdPlanHover(ctx, model, view, lay) {
     }
   }
   ctx.globalAlpha = 1;
-  const fs = Math.max(11, 12 * s);
+  const fs = Math.max(RD_FZ_MIN, 12 * s);
   ctx.font = `700 ${fs}px "Segoe UI",Arial,sans-serif`;
   const tw = ctx.measureText(ph.label).width + 12 * s;
   const th = fs + 8 * s;
-  const tx = Math.max(panel.x, Math.min(panel.x + panel.w - tw, x - tw / 2));
+  let tx = Math.max(panel.x, Math.min(panel.x + panel.w - tw, x - tw / 2));
   const ty = y - 62 * s;
+  // the label never covers a portal's "gen n / 12" tag: slide it clear of the tag it would overlap
+  if (ph.side === 'left') {
+    for (const pc of (model.portals || []).slice().sort((a, b) => a - b)) {
+      const px = panel.x + (pc + 0.5) * cs;
+      if (tx < px + 48 * s && tx + tw > px - 48 * s) { const r = px + 48 * s + 4; tx = r + tw <= panel.x + panel.w ? r : Math.max(panel.x, px - 48 * s - 4 - tw); }
+    }
+  }
   ctx.beginPath();
   ctx.roundRect(tx, ty, tw, th, 4);
   ctx.fillStyle = '#fff';
@@ -657,7 +680,7 @@ function rdPortals(ctx, model, panel, cs, lay) {
     const isSel = col === sel;
     const amber = g > 12;
     const label = `gen ${g} / 12`;
-    const fs = Math.max(11, 12 * s);
+    const fs = Math.max(RD_FZ_MIN, 12 * s);
     ctx.font = `700 ${fs}px "Segoe UI",Arial,sans-serif`;
     const tw = ctx.measureText(label).width + 18 * s;
     const th = fs + 9 * s;
@@ -753,7 +776,7 @@ function rdTicks(ctx, lay, panel, isLeft) {
   const cs = lay.cellPx;
   const s = lay.s;
   const F = SBG.FRAME_PX;
-  const fz = Math.max(12, 12 * s);
+  const fz = Math.max(RD_FZ_MIN, 12 * s);
   ctx.strokeStyle = rgbCss(PALETTE.ink, 1);
   ctx.fillStyle = rgbCss(PALETTE.sub, 1);
   ctx.lineWidth = 1.5;
@@ -1100,7 +1123,7 @@ function rdDrillMeter(ctx, lay, model) {
       ctx.lineTo(x + w + 4 * s, y);
       ctx.stroke();
       ctx.fillStyle = rgbCss(col, 1);
-      ctx.font = `800 ${Math.max(12, 14 * s)}px "Segoe UI",Arial,sans-serif`;
+      ctx.font = `800 ${Math.max(RD_FZ_MIN, 14 * s)}px "Segoe UI",Arial,sans-serif`;
       ctx.textAlign = 'left';
       ctx.fillText('+', x + w + 3 * s, y - 2 * s);
     }
@@ -1192,7 +1215,7 @@ function rdSroiThumb(ctx, lay, model, vcache) {
   if (model.phase !== 'RUN' || !model.S || model.S.length === 0) return;
   const s = lay.s;
   const bx = Math.round(gx(lay, 680));
-  const by = Math.round(gy(lay, 238));
+  const by = Math.round(gy(lay, 222));
   const bw = Math.round(80 * s);
   const bh = Math.max(8, Math.round((80 * s * lay.H) / lay.W));
   const sig = `${rdSig(model.S)}:${lay.W}x${lay.H}`;

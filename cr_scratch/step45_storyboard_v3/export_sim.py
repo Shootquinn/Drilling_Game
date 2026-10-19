@@ -12,14 +12,14 @@ import step45_reference_sim_v3 as r
 assert r.START_MODE == r.MODE_SURFACE, 'run with S45_START_MODE=surface (the shipped mode)'
 
 SEED_MAIN, SEED_PIPE, SEED_L1 = r.SEED_MAIN, r.SEED_PIPE, r.SEED_L1
-GOLD = json.load(open(os.path.join(HERE, '..', '..', 'game45', 'test', 'goldens_v39.json'), encoding='utf8'))
+GOLD = json.load(open(os.path.join(HERE, '..', '..', 'game45', 'test', 'goldens_v41.json'), encoding='utf8'))
 
 # =====================================================================================================================
 # GV4m (surface): STORYBOARD MID-RUN MOVES (panels 13 to 21). Round = r.surface_scenario(): GV4 world, one V3 portal, the policy clicks.
 #   attempt: an add hole 1 cell beside rig hole 1 at add_attempt_t (Vex P1 fires; the attempt is not drilled).
 #   add: the column Vex marks (the sim's advisor_spot) at add_t; must be silent.
 #   re-aim: reaim_pick at reaim_t toward r.REAIM_TARGET (the S_MID case of goldens_v39).
-GV4M = dict(add_attempt_t=74.0, add_attempt_offset_cells=1, add_t=75.0, reaim_t=140.0)
+GV4M = dict(add_attempt_t=74.0, add_attempt_offset_cells=1, add_t=75.0, reaim_t=100.0)
 # =====================================================================================================================
 CAP = r.DRILL_CAP
 TOL = 6e-4      # goldens carry end_s to 3 decimals

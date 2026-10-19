@@ -48,10 +48,10 @@ export function previewPlan(levelPublic, S, portals, clicks, mut = EMPTY, mode =
   let g = null;
   if (ghost && !mut.has('ghost_committed')) {
     const pr = net.probe(ghost.portal, ghost.D);
-    g = { segments: pr.kept.map((k, i) => segOut({ ...k, id: net.segs.length + i })), over_cap: pr.status === 'cap', dropped: net.droppedCandidates(ghost.portal, ghost.D) };
+    g = { segments: pr.kept.map((k, i) => segOut({ ...k, id: net.segs.length + i })), over_cap: pr.status === 'cap', status: pr.status, dropped: net.droppedCandidates(ghost.portal, ghost.D) };
     if (mut.has('ghost_reads_F') && level.F) g.over_cap = g.over_cap || keySet(level.F).size > (W * H) / 2;
   } else if (ghost) {
-    g = { segments: [], over_cap: false, dropped: [] };
+    g = { segments: [], over_cap: false, status: 'ok', dropped: [] };
   }
   return {
     status: 'ok', segments: net.segs.map(segOut), holes: rp.holes, budget: bg.budget, reserve: bg.reserve, reaimCap: bg.reaimCap, meters, ghost: g,

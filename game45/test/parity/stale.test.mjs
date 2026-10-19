@@ -7,7 +7,7 @@ import path from 'node:path';
 import { PATHS, ROOT, SPEC_VERSION_PREFIX, MIN, E9_GATES, shapeErrors, staleErrors, loadGoldens, readRaw, sha256File } from '../lib/goldens.mjs';
 import { withTmp } from '../lib/tmpfs.mjs';
 
-test('P-SHAPE goldens_v39.json shape: required keys, minimum counts, E9 21 gates, E11 6 levels + 3 test levels, G9/G11/G17/G23 reads', () => {
+test('P-SHAPE goldens_v41.json shape: required keys, minimum counts, E9 21 gates, E11 6 levels + 3 test levels, G9/G11/G17/G23 reads', () => {
   const raw = readRaw();
   assert.deepEqual(shapeErrors(raw), []);
   assert.equal(Object.keys(raw.E9).length, MIN.E9_gates);
@@ -88,9 +88,10 @@ const HIST = {
   v36: { file: PATHS.goldens36, sim: path.join(CR, 'step45_reference_sim_v36_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v36_frozen.py') },
   v37: { file: PATHS.goldens37, sim: path.join(CR, 'step45_reference_sim_v37_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v37_frozen.py') },
   v38: { file: PATHS.goldens38, sim: path.join(CR, 'step45_reference_sim_v38_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v38_frozen.py') },
+  v39: { file: PATHS.goldens39, sim: path.join(CR, 'step45_reference_sim_v39_frozen.py'), ex: path.join(CR, 'step45_07_export_goldens_v39_frozen.py') },
 };
 
-test('P-STALE-HIST goldens_v36, v37 and v38 match their frozen sim and exporter; v39 matches the live pair; crossed pairs are flagged', () => {
+test('P-STALE-HIST goldens_v36, v37, v38 and v39 match their frozen sim and exporter; v41 matches the live pair; crossed pairs are flagged', () => {
   for (const [v, h] of Object.entries(HIST)) {
     const raw = readRaw(h.file);
     assert.deepEqual(staleErrors(raw, { sim: h.sim, exporter: h.ex }).errors, [], `${v} against its frozen pair`);
@@ -102,8 +103,10 @@ test('P-STALE-HIST goldens_v36, v37 and v38 match their frozen sim and exporter;
   // known-bad: v37 and v38 goldens against the live (v39) sim; v39 goldens against the frozen v37 and v38 pairs
   assert.ok(staleErrors(readRaw(HIST.v37.file)).errors.length >= 1, 'v37 goldens accepted against the live sim');
   assert.ok(staleErrors(readRaw(HIST.v38.file)).errors.length >= 1, 'v38 goldens accepted against the live sim');
+  assert.ok(staleErrors(readRaw(HIST.v39.file)).errors.length >= 1, 'v39 goldens accepted against the live sim');
   assert.ok(staleErrors(r38, { sim: HIST.v37.sim, exporter: HIST.v37.ex }).errors.length >= 2, 'v39 goldens accepted against the frozen v37 pair');
-  assert.ok(staleErrors(r38, { sim: HIST.v38.sim, exporter: HIST.v38.ex }).errors.length >= 2, 'v39 goldens accepted against the frozen v38 pair');
+  assert.ok(staleErrors(r38, { sim: HIST.v38.sim, exporter: HIST.v38.ex }).errors.length >= 2, 'v41 goldens accepted against the frozen v38 pair');
+  assert.ok(staleErrors(r38, { sim: HIST.v39.sim, exporter: HIST.v39.ex }).errors.length >= 2, 'v41 goldens accepted against the frozen v39 pair');
   // adjacent: v36 goldens against the frozen v37 pair
   assert.ok(staleErrors(readRaw(HIST.v36.file), { sim: HIST.v37.sim, exporter: HIST.v37.ex }).errors.length >= 2, 'v36 goldens accepted against the v37 pair');
   // spec_version and start_mode are shape-checked
@@ -113,8 +116,9 @@ test('P-STALE-HIST goldens_v36, v37 and v38 match their frozen sim and exporter;
   assert.ok(shapeErrors(bad2).some((m) => /spec_version/.test(m)), 'spec_version 3.6.1 accepted');
 });
 
-test('P-ANCHOR goldens_v39 holds every goldens_v37 key unchanged (modulo _meta); the added keys are exactly S_*; the legacy keys equal goldens_v38', () => {
-  const r37 = readRaw(PATHS.goldens37), r38 = readRaw(), r38o = readRaw(PATHS.goldens38);
+test('P-ANCHOR goldens_v41 holds every goldens_v37 key unchanged (modulo _meta); the added keys are exactly S_*; the legacy keys equal goldens_v38 and goldens_v39', () => {
+  const r37 = readRaw(PATHS.goldens37), r38 = readRaw(), r38o = readRaw(PATHS.goldens38), r39 = readRaw(PATHS.goldens39);
+  for (const k of Object.keys(r37).filter((q) => q !== '_meta')) assert.equal(JSON.stringify(r39[k]), JSON.stringify(r38[k]), `v41.${k} differs from v39`);
   for (const k of Object.keys(r37).filter((q) => q !== '_meta')) assert.equal(JSON.stringify(r38o[k]), JSON.stringify(r38[k]), `v39.${k} differs from v38`);
   const sameKeys = Object.keys(r37).filter((k) => k !== '_meta');
   for (const k of sameKeys) assert.equal(JSON.stringify(r38[k]), JSON.stringify(r37[k]), `v38.${k} differs from v37`);

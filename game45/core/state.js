@@ -2,7 +2,7 @@
 // The core owns no timer: callers pass cumulative wall seconds from their own clock to advance(). An intent called in the wrong
 // phase is refused and changes nothing; the mutant switch accept_any_state removes those guards.
 // F lives only in this closure and in Round. state() carries F from END_REVEAL on; view() carries it in REVEAL, FADE, END_REVEAL, READOUT.
-import { EMPTY, CELL_M, DBRANCH_MIN_M, DBRANCH_MAX_M, DBRANCH_STEP_M, BRUSH_R, MODE_SURFACE, START_MODE, REAIM_LIMIT, ADD_LIMIT, MAX_RIG_HOLES, RIG_DEPTH_MIN } from './consts.js';
+import { EMPTY, CELL_M, DBRANCH_MIN_M, DBRANCH_MAX_M, DBRANCH_STEP_M, BRUSH_R, MODE_SURFACE, START_MODE, REAIM_LIMIT, ADD_LIMIT, MAX_RIG_HOLES, RIG_DEPTH_MIN, TICKS_PER_WALL_S, TICK_S } from './consts.js';
 import { comps } from './grid.js';
 import { Painter, donePainting } from './paint.js';
 import { defaultPortal, defaultPortalSurface, startOk } from './portals.js';
@@ -24,6 +24,12 @@ const GM_PEEK_REVEAL_S = 1.5;
 const GM_PEEK_FADE_S = 1.0;
 const GM_SHAKE_S = 0.4;
 const GM_PAINT_AREA = 20000;
+// Playback (spec 2d, v3.8.1): speeds 1, 2, 4, 8, 16. The pace scales wall time so a run at 16x lasts at least GM_MIN_16X_S real seconds:
+// ticks per wall second = TICKS_PER_WALL_S x speed x pace, pace = min(1, run ticks / (TICKS_PER_WALL_S x 16 x GM_MIN_16X_S)). Ticks, hashes and results do not depend on it.
+const GM_SPEEDS = [1, 2, 4, 8, 16];
+const GM_MIN_16X_S = 6.5;
+const GM_NUM_GROUP = /\B(?=(\d{3})+(?!\d))/g;
+const gmNum = (v) => String(Number(Number(v).toFixed(1))).replace(GM_NUM_GROUP, ',');
 
 function gmCosFade(el, dur) {
   return 0.5 * (1 + Math.cos(Math.PI * Math.min(1, Math.max(0, el / dur))));
@@ -59,6 +65,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   let runT0 = 0;
   let speed = 1;
   let paused = false;
+  let pace = 1;
   let sched = null;
   let finalT = null;
   let readoutData = null;
@@ -113,6 +120,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     clock = null;
     speed = 1;
     paused = false;
+    pace = 1;
     sched = null;
     finalT = null;
     readoutData = null;
@@ -132,7 +140,9 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     return set;
   }
 
-  // per-side status numbers and rig position for the RUN screen (metres)
+  // per-side status numbers and rig position for the RUN screen (metres). One definition of unspent everywhere (v3.8.1): cap minus drilled, per side.
+  // budgetM is the rig budget: the planned left drilled length, exactly (no rounding).
+  const capM = () => level.drill_cap_m;
   function runInfoOf(rv) {
     const sn = round.snapshot();
     let dl = 0;
@@ -144,9 +154,10 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
       dr += h.depth * h.drilledFrac;
       if (rigIdx === rv.holes.length - 1 && h.drilledFrac < 1) rigIdx = i;
     }
+    const budgetM = plan ? plan.net.length() * CELL_M : round.budget * CELL_M;
     return {
-      left: { drilledM: dl * CELL_M, budgetM: round.budget * CELL_M, reserveM: sn.resL * CELL_M, movesLeft: REAIM_LIMIT - sn.nre },
-      right: { drilledM: dr * CELL_M, budgetM: round.budget * CELL_M, reserveM: sn.resR * CELL_M, movesLeft: ADD_LIMIT - sn.nadd },
+      left: { drilledM: dl * CELL_M, budgetM, unspentM: capM() - dl * CELL_M, reserveM: sn.resL * CELL_M, movesLeft: REAIM_LIMIT - sn.nre },
+      right: { drilledM: dr * CELL_M, budgetM, unspentM: capM() - dr * CELL_M, reserveM: sn.resR * CELL_M, movesLeft: ADD_LIMIT - sn.nadd },
       rigCol: rigIdx >= 0 ? rv.holes[rigIdx].col : null,
       rigIdx,
     };
@@ -161,12 +172,33 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     if (M.has('s_inplace') && inplace && painter) inplace.splice(0, inplace.length, ...Array.from(painter.cells()));
   }
 
-  // rig budget in cells: half-up of the planned left length (the Round computes the same number from the same network)
-  const rigBudget = () => (plan ? budgets(plan.net, M).budget : 0);
+  // rig budget in cells: the planned left drilled length exactly (v3.8.1; no half-up). The auto Balrog plan and the Round keep their half-up integer
+  // budget; a hand plan whose integer total is at most this length is at most that budget too.
+  const rigBudget = () => (plan ? (M.has('budget_rounded') ? budgets(plan.net, M).budget : plan.net.length()) : 0);
 
   // the rig total exceeds the budget (v3.7.7): Start is refused, no edit is
   const rigIsOver = () => !!plan && plan.rigHoles.length > 0 && rigOver(plan.rigHoles, rigBudget(), M);
   const droppedText = (n) => n + ' ' + strings.clicks_dropped;
+  // Done painting after the region changed: "4 clicks dropped (portal 165 m) because the painted region changed"; several portals list their own counts
+  function droppedByRegion(before, after) {
+    const per = new Map();
+    for (const p of before) per.set(p, (per.get(p) || 0) + 1);
+    for (const p of after) per.set(p, (per.get(p) || 0) - 1);
+    const lost = [...per].filter(([, n]) => n > 0).sort((a, b) => a[0] - b[0]);
+    if (!lost.length) return '';
+    const total = lost.reduce((a, [, n]) => a + n, 0);
+    const names = lost.length === 1 ? `${strings.lbl_portal} ${gmNum(lost[0][0] * CELL_M)} m` : lost.map(([c, n]) => `${strings.lbl_portal} ${gmNum(c * CELL_M)} m: ${n}`).join(', ');
+    return `${droppedText(total)} (${names}) ${strings.dropped_region}`;
+  }
+
+  // the probe of the next generation of the selected portal as plain text: 'ok', or dead / cap / ceiling with the reason the player reads
+  function growthOf(st) {
+    if (st === 'ok') return { status: 'ok', reason: '' };
+    if (st === 'dead') return { status: 'dead', reason: strings.refuse_dead };
+    if (st === 'cap') return { status: 'cap', reason: capText() };
+    if (st === 'ceiling') return { status: 'ceiling', reason: strings.refuse_ceiling };
+    return { status: 'none', reason: strings.refuse_no_portal };
+  }
 
   function refreshPv() {
     if (!plan) { pv = null; return; }
@@ -220,9 +252,10 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     while (k > 0 && !round.done) { round.step(1); k -= 1; }
   }
 
+  const runWall = (now) => (now - runT0) * pace;
   function runAdvance(now) {
     if (paused || !round) return;
-    stepRound(clock.advance(now - runT0));
+    stepRound(clock.advance(runWall(now)));
     if (round.done) finishRun(now);
   }
 
@@ -354,7 +387,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     if (d.status === 'empty') return refuse('empty', strings.paint_empty);
     if (d.status === 'too_many') return refuse('too_many', strings.paint_too_many);
     const dissolved = P.S.size - d.keep.length;
-    const clicks0 = plan ? plan.clicks.length : 0;
+    const clicksBefore = plan ? plan.clicks.map((c) => c[0]) : [];
     let next;
     try {
       if (plan) {
@@ -376,8 +409,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     } else if (sel === null || !plan.portals.includes(sel)) sel = plan.portals.length ? plan.portals[0] : null;
     if (sel === null && selKind === 'portal') selKind = null;
     else if (sel !== null && selKind === null) selKind = 'portal';
-    const lost = clicks0 - plan.clicks.length;
-    message = [dissolved > 0 ? strings.paint_dissolved : '', lost > 0 ? droppedText(lost) : ''].filter((m) => m).join(' | ');
+    message = [dissolved > 0 ? strings.paint_dissolved : '', droppedByRegion(clicksBefore, plan.clicks.map((c) => c[0]))].filter((m) => m).join(' | ');
     phase = 'PLAN';
     ghostOn = false;
     refreshPv();
@@ -392,6 +424,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     sel = col;
     selKind = 'portal';
     ghostOn = true;
+    message = '';
     refreshPv();
     touch();
     return { status: 'ok' };
@@ -402,12 +435,15 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     const v = Math.max(DBRANCH_MIN_M, Math.min(DBRANCH_MAX_M, Math.round(m / DBRANCH_STEP_M) * DBRANCH_STEP_M));
     db = v;
     ghostOn = true;
+    message = '';
     refreshPv();
     touch();
     return { status: 'ok' };
   }
 
+  const capText = () => strings.refuse_cap.replace('{cap}', gmNum(level.drill_cap_m));
   function refusalText(st) {
+    if (st === 'cap') return capText();
     return strings[`refuse_${st}`] === undefined ? st : strings[`refuse_${st}`];
   }
 
@@ -550,10 +586,11 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     return r.status === 'ok' ? { status: 'ok', depth: r.depth } : { status: r.status };
   }
 
+  // the paint undo stack is empty on entering PAINT and cleared at Done painting (spec 4, Undo): by design, said once on return
   function backToPaint() {
     if (!guard('PLAN')) return illegal();
     phase = 'PAINT';
-    message = '';
+    message = strings.paint_undo_cleared;
     touch();
     return { status: 'ok' };
   }
@@ -568,6 +605,9 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     clock = createClock(M);
     speed = 1;
     paused = false;
+    const runTicks = Math.max(round.leftEnd(), round.rightEnd()) / TICK_S;
+    pace = M.has('run_pace_off') ? 1 : Math.min(1, runTicks / (TICKS_PER_WALL_S * GM_SPEEDS[GM_SPEEDS.length - 1] * GM_MIN_16X_S));
+    if (pace <= 0) pace = 1;
     runT0 = wall;
     phase = 'RUN';
     t0 = wall;
@@ -578,14 +618,14 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
 
   // ---- RUN ----
   function setSpeedImpl(sp) {
-    clock.setSpeed(wall - runT0, sp);
+    clock.setSpeed(runWall(wall), sp);
     speed = sp;
     paused = false;
   }
 
   function setSpeed(sp) {
     if (!guard('RUN') || !round) return illegal();
-    if (sp !== 1 && sp !== 4 && sp !== 16) return refuse('range');
+    if (!GM_SPEEDS.includes(sp)) return refuse('range');
     setSpeedImpl(sp);
     touch();
     return { status: 'ok' };
@@ -594,7 +634,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
   function pause(flag) {
     if (!guard('RUN') || !round) return illegal();
     const want = flag === undefined ? !paused : !!flag;
-    clock.setSpeed(wall - runT0, want ? 0 : speed);
+    clock.setSpeed(runWall(wall), want ? 0 : speed);
     paused = want;
     touch();
     return { status: 'ok' };
@@ -616,7 +656,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     c.ran = round.tick;
     c.credit = round.tick;
     c.speed = 0;
-    c.lastWall = wall - runT0;
+    c.lastWall = runWall(wall);
     clock = c;
     paused = true;
     if (round.done) finishRun(wall);
@@ -628,6 +668,15 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     if (!guard('READOUT')) return illegal();
     reset(wall);
     return { status: 'ok' };
+  }
+
+  // level select (v3.8.1): any of Levels 1 to 6 from the LEVEL_START card, in any order; the campaign restarts from the pick
+  function selectLevel(id, now) {
+    if (!guard('LEVEL_START')) return illegal();
+    if (!LEVEL_IDS.includes(id)) return refuse('range');
+    const p = prepareLevel(id, 0, { mut: M });
+    loadLevelImpl({ ...p.level, F: p.F }, now === undefined ? wall : now);
+    return { status: 'ok', level: id };
   }
 
   // NEXT (A3): free advance after READOUT to the next campaign level; the last level ends the campaign
@@ -716,7 +765,7 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
       doneEnabled();
       const b = { tick, phase, w: W(), h: H(), cellM: CELL_M, S: [], F: null, portals: [], selected: null, meter: null, segments: [], ghost: null, holes: [], tiers: { left: { cored: [], imaged: [], speckle: [] }, right: { cored: [], imaged: [], speckle: [] } }, pairs: [], brush: null, gens: null, lastPortal: null, ghostM: null, readout: null, meterLocked: false, clockH: null, clockStr: null };
       // surface-mode fields (additive; the trunk view keeps the pre-5a key set plus the three N4 / N6 keys)
-      if (surface) Object.assign(b, { capFull: false, ore: null, run: null, mode, dropped: [], sTopM: null, selKind: null, plan: null, budgetLine: null, campaign: { current: camp.current, ended: camp.ended, played: camp.played.slice() } });
+      if (surface) Object.assign(b, { capFull: false, capNote: '', growth: null, undoTarget: null, unspent: null, ore: null, run: null, mode, dropped: [], sTopM: null, selKind: null, plan: null, budgetLine: null, campaign: { current: camp.current, ended: camp.ended, played: camp.played.slice() } });
       if (phase === 'PAINT' || phase === 'REVEAL' || phase === 'FADE') b.S = painter ? cache.paintS : [];
       if (phase === 'PAINT') b.brush = { r: brush, atCap: !!painter && painter.S.size >= capCells() };
       if (phase === 'PLAN' && plan && pv) {
@@ -729,7 +778,15 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
         b.segments = pv.segments.map((s) => ({ id: s.id, portal: s.portal, gen: s.gen, cells: Array.from(s.cells), len: s.len, drilledFrac: 0, planned: true, line: segLine(s, endOf) }));
         b.holes = pv.holes.flat().map((h) => ({ col: h[0], depth: h[1], planned: true, drilledFrac: 0 }));
         if (surface && plan.rigHoles.length) { const oc = rigOverCells(plan.rigHoles, rigBudget()); b.holes = plan.rigHoles.map((h, i) => ({ col: h[0], depth: h[1], planned: true, drilledFrac: 0, order: i + 1, overCells: rigIsOver() ? oc[i] : 0 })); }
-        if (surface) b.capFull = !!(pv.ghost && pv.ghost.over_cap);
+        if (surface) {
+          b.capFull = !!(pv.ghost && pv.ghost.over_cap);
+          const gst = sel !== null && pv.ghost ? pv.ghost.status : null;
+          b.growth = growthOf(gst);
+          const totalOver = plan.net.length() * CELL_M > level.drill_cap_m + 1e-9;
+          b.capNote = totalOver || rigIsOver() ? strings.lbl_cap_full : gst === 'cap' ? (M.has('note_max_always') ? strings.lbl_cap_full : capText()) : '';
+          const lastClick = plan.clicks.length ? plan.clicks[plan.clicks.length - 1] : null;
+          b.undoTarget = lastClick ? { portal: lastClick[0], gen: plan.net.gens[lastClick[0]] } : null;
+        }
         if (pv.ghost && (ghostOn || !surface)) b.ghost = { segments: pv.ghost.segments.map((s) => ({ cells: Array.from(s.cells), len: s.len, line: segLine(s, endOf) })), over_cap: pv.ghost.over_cap };
         b.gens = { ...plan.net.gens };
         b.lastPortal = plan.clicks.length ? plan.clicks[plan.clicks.length - 1][0] : null;
@@ -748,9 +805,17 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
         b.pairs = rv.pairs;
         b.portals = plan ? plan.portals.slice() : [];
         if ((phase === 'RUN' || phase === 'END_REVEAL' || phase === 'READOUT') && plan) b.S = Array.from(plan.S);
-        if (phase === 'RUN' && surface) { b.ore = { left: oreSet('left', rv.tiers.left), right: oreSet('right', rv.tiers.right) }; b.run = runInfoOf(rv); }
+        if (phase === 'RUN' && surface) {
+          b.ore = { left: oreSet('left', rv.tiers.left), right: oreSet('right', rv.tiers.right) };
+          b.run = runInfoOf(rv);
+          b.unspent = { capM: capM(), left: { drilledM: b.run.left.drilledM, unspentM: b.run.left.unspentM }, right: { drilledM: b.run.right.drilledM, unspentM: b.run.right.unspentM } };
+        }
         if (phase !== 'RUN') b.tiers = finalT;
         if (phase !== 'RUN') b.readout = readoutData;
+        if (phase !== 'RUN' && surface && readoutData) {
+          const dm = (d) => Number(String(d.drilled).replace(/,/g, ''));
+          b.unspent = { capM: capM(), left: { drilledM: dm(readoutData.left), unspentM: capM() - dm(readoutData.left) }, right: { drilledM: dm(readoutData.right), unspentM: capM() - dm(readoutData.right) } };
+        }
         if (phase !== 'RUN') b.F = Farr;
         if (surface) {
           b.budgetLine = budgetLine(round.snapshot(), round.budget, M);
@@ -769,8 +834,8 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
         done: cache.doneOk,
         undo: !!painter && painter.undoDepth > 0,
         peek: peeksLeft > 0,
-        // surface mode: a click that finds no branch stays pressable (the refusal text and the X marks explain it); trunk mode keeps the ghost rule
-        canClick: !!(pv && pv.ghost && (surface || pv.ghost.segments.length > 0) && !pv.ghost.over_cap),
+        // surface mode (v3.8.1): Next generation and Grow to 12 are enabled only while the probe of the next generation is ok; growth.reason says why not. Trunk mode keeps the ghost rule
+        canClick: surface ? (M.has('probe_ignored') ? !!(pv && pv.ghost && !pv.ghost.over_cap) : !!(sel !== null && pv && pv.ghost && pv.ghost.status === 'ok')) : !!(pv && pv.ghost && pv.ghost.segments.length > 0 && !pv.ghost.over_cap),
         undoClick: !!plan && plan.clicks.length > 0,
         canStart: !!plan && startOk(plan.net.Cs, plan.S, plan.portals, plan.clicks.length, M, mode, rigIsOver()),
       };
@@ -844,5 +909,6 @@ export function createGame({ mut = EMPTY, mode = START_MODE, rigSpeedRatio } = {
     stepToTick,
     playAgain,
     nextLevel,
+    selectLevel,
   };
 }

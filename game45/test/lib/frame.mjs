@@ -45,14 +45,14 @@ export function expectedRects(vw, vh, W = 200, H = 100, sb = SB) {
 // key visibility per state (Designer rank 13): memory and paint states have no key
 export const KEY_MATRIX = Object.freeze({
   LEVEL_START: [], REVEAL: [], FADE: [], PAINT: [],
-  PLAN: ['key-planned', 'key-ghost', 'key-dropped', 'key-shadow', 'key-portal', 'key-hole'],
+  PLAN: ['key-planned', 'key-ghost', 'key-dropped', 'key-shadow', 'key-portal', 'key-stake', 'key-hole'],
   RUN: ['key-drilled', 'key-planned', 'key-run-intersected', 'key-run-imaged', 'key-run-unseen', 'key-run-barren'],
   END_REVEAL: ['key-intersected', 'key-imaged', 'key-unseen', 'key-outline'],
   READOUT: ['key-intersected', 'key-imaged', 'key-unseen', 'key-outline'],
 });
-export const ALL_KEYS = ['key-intersected', 'key-imaged', 'key-unseen', 'key-outline', 'key-planned', 'key-ghost', 'key-shadow', 'key-portal', 'key-hole', 'key-drilled', 'key-dropped', 'key-run-intersected', 'key-run-imaged', 'key-run-unseen', 'key-run-barren'];
-// key-hole sits on the right-panel row only, which carries data-key2 (the left row carries data-s45)
-export const keySel = (id) => (id === 'key-hole' ? `[data-key2="${id}"]` : sel(id));
+export const ALL_KEYS = ['key-intersected', 'key-imaged', 'key-unseen', 'key-outline', 'key-planned', 'key-ghost', 'key-shadow', 'key-portal', 'key-stake', 'key-hole', 'key-drilled', 'key-dropped', 'key-run-intersected', 'key-run-imaged', 'key-run-unseen', 'key-run-barren'];
+// key-hole and key-stake sit on the right-panel row only, which carries data-key2 (the left row carries data-s45)
+export const keySel = (id) => (id === 'key-hole' || id === 'key-stake' ? `[data-key2="${id}"]` : sel(id));
 export const WALK = ['LEVEL_START', 'REVEAL', 'FADE', 'PAINT', 'PLAN', 'RUN', 'END_REVEAL', 'READOUT'];
 
 export async function readRect(page, selector) {

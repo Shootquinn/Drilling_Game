@@ -85,20 +85,20 @@ test('P-REMOVE-CLICKS removal drops that portal\'s clicks and frees its length; 
 });
 
 test('P-REMOVE-DROP a removal that makes another portal\'s click refused reports "N clicks dropped" with the exact count; a removal that drops none reports nothing', async () => {
-  // portals 12 and 166, four clicks each at 50 m in alternating order: removing 12 changes the target set of 166 and its replay drops a click
+  // portals 12 and 120, eight clicks each at 50 m in alternating order: removing 12 changes the target set of 120 and its replay drops a click
   const W = await planWorld({ clicks: false });
   const g = W.g;
   for (const p of g.state().plan.portals) g.removePortal(p);
-  g.addPortal(12); g.addPortal(166);
+  g.addPortal(12); g.addPortal(120);
   g.setDBranch(50);
-  for (let k = 0; k < 4; k++) for (const p of [12, 166]) { g.selectPortal(p); g.nextGen(); }
+  for (let k = 0; k < 8; k++) for (const p of [12, 120]) { g.selectPortal(p); g.nextGen(); }
   const clicks0 = g.state().plan.clicks;
-  const others = clicks0.filter(([p]) => p === 166).length;
-  assert.ok(others >= 2, 'setup: portal 166 has clicks');
+  const others = clicks0.filter(([p]) => p === 120).length;
+  assert.ok(others >= 2, 'setup: portal 120 has clicks');
   assert.equal(g.removePortal(12).status, 'ok');
   const kept = g.state().plan.clicks.length;
   const dropped = others - kept;
-  assert.ok(dropped > 0, `setup: the removal drops a click of 166 (others ${others}, kept ${kept})`);
+  assert.ok(dropped > 0, `setup: the removal drops a click of 120 (others ${others}, kept ${kept})`);
   assert.equal(g.view().ui.message, `${dropped} clicks dropped`);
   // a removal with nothing else to drop: message empty
   const W2 = await planWorld();

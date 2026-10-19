@@ -1,4 +1,4 @@
-// S13 golden reader. Parses game45/test/goldens_v39.json once (v37 time keys + S_* surface keys; v39 re-derives the S_* keys for the straight root, spec 4c G3), checks shape (P-SHAPE) and staleness (P-STALE), converts cell lists,
+// S13 golden reader. Parses game45/test/goldens_v41.json once (v37 time keys + S_* surface keys; v39 re-derived the S_* keys for the straight root, v41 for the fixed 15 degree half-angle, spec 4c G1/G3), checks shape (P-SHAPE) and staleness (P-STALE), converts cell lists,
 // freezes the result. loadGoldens() throws when either check fails, so no parity test can read stale or truncated data.
 //   cell sets (F, S, cored, revealed, painter lists, G15 cells)  -> Set<number> keyed x * 100 + y  (read-only)
 //   ordered cell lists (segment cells, chain_cells)               -> frozen number[] in path order
@@ -10,7 +10,8 @@ import { fileURLToPath } from 'node:url';
 
 export const ROOT = fileURLToPath(new URL('../../../', import.meta.url));
 export const PATHS = {
-  goldens: path.join(ROOT, 'game45', 'test', 'goldens_v39.json'),
+  goldens: path.join(ROOT, 'game45', 'test', 'goldens_v41.json'),
+  goldens39: path.join(ROOT, 'game45', 'test', 'goldens_v39.json'),
   goldens38: path.join(ROOT, 'game45', 'test', 'goldens_v38.json'),
   goldens37: path.join(ROOT, 'game45', 'test', 'goldens_v37.json'),
   goldens36: path.join(ROOT, 'game45', 'test', 'goldens_v36.json'),
@@ -30,7 +31,7 @@ export const MIN = {
 };
 export const S_KEYS = ['S_GV1', 'S_GV1b', 'S_GV2', 'S_GV3', 'S_GV3b', 'S_GV4'];
 export const S_POLICY_WORLDS = ['GV2', 'GV3', 'GV4', 'L1', 'L2', 'L3', 'L4', 'L5', 'L6'];
-export const SPEC_VERSION_PREFIX = '3.7';
+export const SPEC_VERSION_PREFIX = '3.8';
 export const E9_GATES = ['G1', 'G2', 'G3', 'G4', 'G5', 'G6', 'G7', 'G8', 'G10', 'G12', 'G13', 'G14', 'G15', 'G16', 'G18', 'G19', 'G20', 'G21', 'G22', 'G24', 'G25'];
 export const GV_KEYS = ['GV1', 'GV1b', 'GV2', 'GV3', 'GV3b', 'GV4', 'GV4m'];
 

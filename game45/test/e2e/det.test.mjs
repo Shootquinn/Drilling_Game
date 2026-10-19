@@ -34,10 +34,10 @@ function schedule(kind, from, to) {
 
 async function drive(kind, mut = null) {
   const G = getGoldens();
-  const { D, world: w } = await toPlan(browser, G, 'GV4', { startMode: 'trunk', mut, pointerPortals: false });
+  const { D, world: w } = await toPlan(browser, G, 'GV4', { startMode: 'trunk', mut: [...(mut || []), 'run_pace_off'], pointerPortals: false });
   try {
     await clickStack(D, w.clicks);
-    await startRun(D);
+    await startRun(D, { legacy: true });
     const base = D.wall;
     const run = async (offsets) => {
       const times = offsets.map((o) => base + o);

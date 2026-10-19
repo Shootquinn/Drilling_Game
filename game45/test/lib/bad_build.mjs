@@ -6,20 +6,25 @@
 //      (and so every control) and the 3 px frame leave the storyboard frame (the G1 failure: layout not on the storyboard grid, 1 px frame).
 //   2. KEY_IDS phases emptied -> no planned, ghost, dropped, shadow, portal, hole, drilled or run key shows in PLAN or RUN.
 //   3. CSS forces the readout block and key (key-intersected, key-imaged, key-unseen) visible in every state (the G1 key behaviour: readout key from LEVEL_START).
+// The shipped build is minified (comments and spaces beside punctuation are gone), so the patterns tolerate any spacing.
 import fs from 'node:fs';
 import path from 'node:path';
 import { mkTmp } from './tmpfs.mjs';
 
+const SBG_RE = /WD:\s*1440,\s*HT:\s*790,\s*TITLE_H:\s*58,\s*SKY:\s*72,\s*SURF:\s*192,\s*XL:\s*30,\s*XR:\s*770,\s*PW:\s*640,\s*SP0:\s*670,\s*SP1:\s*770,\s*SP_Y0:\s*64,\s*SP_Y1:\s*774,\s*BOT:\s*548,\s*INFO_Y1:\s*775,\s*FRAME_PX:\s*3,/;
+const KEY_RE = /(\{\s*id:\s*'key-(?!core)[a-z-]+',\s*text:\s*'[a-z_]+',\s*swatch:\s*'[a-z]+',\s*phases:\s*)\[[^\]]*\]/g;
+
 function sub(html, from, to, label) {
-  if (!html.includes(from)) throw new Error(`bad_build: patch "${label}" did not match`);
-  return html.replace(from, to);
+  if (from instanceof RegExp ? !from.test(html) : !html.includes(from)) throw new Error(`bad_build: patch "${label}" did not match`);
+  return html.replace(from, () => to);
 }
 
 export function mutateBuild(html) {
   let h = html;
-  h = sub(h, 'WD: 1440, HT: 790, TITLE_H: 58, SKY: 72, SURF: 192, XL: 30, XR: 770, PW: 640, SP0: 670, SP1: 770, SP_Y0: 64, SP_Y1: 774, BOT: 548, INFO_Y1: 775, FRAME_PX: 3,',
-    'WD: 1440, HT: 790, TITLE_H: 30, SKY: 40, SURF: 150, XL: 30, XR: 770, PW: 560, SP0: 400, SP1: 500, SP_Y0: 64, SP_Y1: 774, BOT: 500, INFO_Y1: 775, FRAME_PX: 1,', 'SBG');
-  h = h.replace(/(\{ id: 'key-(?!core)[a-z-]+', text: '[a-z_]+', swatch: '[a-z]+', phases: )\[[^\]]*\]/g, "$1[]");
+  h = sub(h, SBG_RE, 'WD:1440,HT:790,TITLE_H:30,SKY:40,SURF:150,XL:30,XR:770,PW:560,SP0:400,SP1:500,SP_Y0:64,SP_Y1:774,BOT:500,INFO_Y1:775,FRAME_PX:1,', 'SBG');
+  if (!KEY_RE.test(h)) throw new Error('bad_build: patch "KEY_IDS" did not match');
+  KEY_RE.lastIndex = 0;
+  h = h.replace(KEY_RE, '$1[]');
   h = sub(h, '</head>', '<style>[data-s45^="readout-"],[data-s45="key-intersected"],[data-s45="key-imaged"],[data-s45="key-unseen"]{display:flex!important;visibility:visible!important;opacity:1!important}</style></head>', 'css');
   return h;
 }

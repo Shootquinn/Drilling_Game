@@ -128,6 +128,14 @@ test('B-PLACE portals and rig holes by mouse: ground and sky clicks, ghost, refu
     }
     rig = (await plan(D)).rig;
     assert.deepEqual(rig.map((h) => h[0]), [125, 185, 190]);
+    // v3.7.7: no edit is refused for length, so the plan may sit above the (exact) budget; take cells off the holes, last first, until Start can accept it
+    for (const col of [190, 185, 125]) {
+      while (spent() > budget && rig.find((h) => h[0] === col)[1] > 1) {
+        await click(D, x('right', col), R.y + 1 * cs);                   // selects the hole
+        await D.page.keyboard.press('-');
+        rig = (await plan(D)).rig;
+      }
+    }
     assert.ok(spent() <= budget, `total depth ${spent()} within the budget ${budget}`);
     const status = await D.text('rig-status');
     assert.match(status, /rig [\d,.]+ m of [\d,.]+ m/, `status line "${status}"`);
@@ -155,7 +163,7 @@ test('B-PLACE zero holes: the same page with no rig clicks runs the auto plan (S
       const mk = g.portals.find((q) => q.col === p);
       await D.tapXY(mk.x, mk.y);
       await D.slider(dm);
-      await D.click('next-gen');
+      await D.press('next-gen');                                    // the golden list carries clicks the probe refuses (the button is grey)
     }
     assert.deepEqual((await plan(D)).rig, []);
     await startRun(D);

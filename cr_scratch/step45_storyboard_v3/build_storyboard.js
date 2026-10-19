@@ -55,7 +55,7 @@ const keyRow = (x, y, items) => { let g = '', cx = x; for (const [sw, lab] of it
 // ---------------- checks: drawn vs sim ----------------
 const CHECKS = [];
 function check(name, ok) { if (!ok) throw new Error('drawn number disagrees with the sim: ' + name); CHECKS.push(name); }
-const GOLD = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'game45', 'test', 'goldens_v39.json'), 'utf8'));
+const GOLD = JSON.parse(fs.readFileSync(path.join(__dirname, '..', '..', 'game45', 'test', 'goldens_v41.json'), 'utf8'));
 check('clock text = sim clock_str on the exported samples', K.clock_samples.every(([t, s]) => clockTxt(t) === s));
 check('sim mode surface, TIME_COMP 2.5, R 3.4', K.START_MODE === 'surface' && K.TIME_COMP === 2.5 && K.RIG_SPEED_RATIO === 3.4);
 
@@ -346,31 +346,32 @@ function drillMeter(y, hgt, used, ghost = 0, o = {}) {
   g += T(SPC, y + hgt + 18, M(used + (o.red ? 0 : ghost)), 13, { anchor: 'middle', weight: 700, fill: o.red ? C.R : C.ink }) + T(SPC, y + hgt + 33, `of ${M(CAP)}`, 12, { anchor: 'middle', fill: C.sub });
   return g;
 }
-function spinePlayback(y, on = '1x') {
-  const b = (bx, by, l) => {
+function spinePlayback(y, on = '4x') {
+  // v3.8.1: pause, then 1x 2x 4x, then 8x 16x, then Skip (the page's control column)
+  const b = (bx, by, l, wd = 42) => {
     const isOn = l === on;
-    if (l === 'pause') return `<rect x="${bx}" y="${by}" width="42" height="30" rx="6" fill="${isOn ? C.ink : '#fff'}" stroke="${C.ink}" stroke-width="2"/><rect x="${bx + 14}" y="${by + 8}" width="5" height="14" fill="${isOn ? '#fff' : C.ink}"/><rect x="${bx + 23}" y="${by + 8}" width="5" height="14" fill="${isOn ? '#fff' : C.ink}"/>`;
-    return button(bx, by, 42, 30, l, { on: isOn });
+    if (l === 'pause') return `<rect x="${bx}" y="${by}" width="${wd}" height="24" rx="6" fill="${isOn ? C.ink : '#fff'}" stroke="${C.ink}" stroke-width="2"/><rect x="${bx + wd / 2 - 9}" y="${by + 5}" width="5" height="14" fill="${isOn ? '#fff' : C.ink}"/><rect x="${bx + wd / 2 + 2}" y="${by + 5}" width="5" height="14" fill="${isOn ? '#fff' : C.ink}"/>`;
+    return button(bx, by, wd, 24, l, { on: isOn });
   };
-  return T(SPC, y - 8, 'playback', 12, { anchor: 'middle', fill: C.sub, weight: 700 }) + b(SP0 + 7, y, 'pause') + b(SP0 + 51, y, '1x') + b(SP0 + 7, y + 36, '4x') + b(SP0 + 51, y + 36, '16x') +
-    T(SPC, y + 86, 'Skip', 12, { anchor: 'middle', fill: C.sub, weight: 700 }) + `<line x1="${SPC - 12}" y1="${y + 90}" x2="${SPC + 12}" y2="${y + 90}" stroke="${C.sub}" stroke-width="1.2"/>`;
+  return T(SPC, y - 12, 'playback', 12, { anchor: 'middle', fill: C.sub, weight: 700 }) + b(SP0 + 7, y, 'pause', 86) + b(SP0 + 7, y + 28, '1x', 28) + b(SP0 + 36, y + 28, '2x', 28) + b(SP0 + 65, y + 28, '4x', 28) + b(SP0 + 7, y + 56, '8x') + b(SP0 + 51, y + 56, '16x') +
+    T(SPC, y + 92, 'Skip', 12, { anchor: 'middle', fill: C.sub, weight: 700 }) + `<line x1="${SPC - 12}" y1="${y + 96}" x2="${SPC + 12}" y2="${y + 96}" stroke="${C.sub}" stroke-width="1.2"/>`;
 }
 function sroiThumb(y, Mk) {
   const x0 = SPC - 40;
   const u = 80 / W; let d = ''; for (let r = 0; r < H; r++) { let c = 0; while (c < W) { if (!Mk[c][r]) { c++; continue; } const a = c; while (c < W && Mk[c][r]) c++; d += `M${x0 + a * u},${y + r * u}h${(c - a) * u}v${u}h${-(c - a) * u}z`; } }
-  return `${T(SPC, y - 22, 'your SROI,', 12, { anchor: 'middle', fill: C.sub, weight: 700 })}${T(SPC, y - 8, 'painted once', 12, { anchor: 'middle', fill: C.sub, weight: 700 })}
+  return `${T(SPC, y - 8, 'your painting', 12, { anchor: 'middle', fill: C.sub, weight: 700 })}
   <rect x="${x0}" y="${y}" width="80" height="40" fill="${C.up}" stroke="${C.ink}" stroke-width="1.5"/><path d="${d}" fill="${C.sroiLine}"/>`;
 }
 const LOCKED_LEN = () => w.plan.p10.length;
 function spineRun(o = {}) {
-  return spinePlayback(96, o.speed || '4x') + sroiThumb(236, w.S) + drillMeter(340, 130, LOCKED_LEN(), 0, { locked: true }) + (o.extra || '');
+  return spinePlayback(94, o.speed || '4x') + sroiThumb(222, w.S) + drillMeter(340, 130, LOCKED_LEN(), 0, { locked: true }) + (o.extra || '');
 }
 function spinePaint(o) {
   let g = '';
   g += `<path d="M${SP0 - 46},150 L${SP1 + 46},150" stroke="${C.sroiLine}" stroke-width="3" fill="none" marker-start="url(#arrowT)" marker-end="url(#arrowT)"/>`;
   g += `<rect x="${SP0 + 4}" y="100" width="92" height="38" rx="5" fill="#ffffff" stroke="${C.sroiLine}" stroke-width="2"/>`;
   g += T(SPC, 116, 'MIRROR', 12, { anchor: 'middle', weight: 700, fill: C.sroiLine, ls: 1 });
-  g += T(SPC, 131, 'one SROI', 12, { anchor: 'middle', fill: C.sroiLine });
+  g += T(SPC, 131, 'your painting', 12, { anchor: 'middle', fill: C.sroiLine });
   const tools = ['BRUSH', 'ERASE', 'FILL', 'UNDO', 'CLEAR'];
   g += T(SPC, 204, 'paint tools', 12, { anchor: 'middle', fill: C.sub, weight: 700 });
   tools.forEach((t, i) => { g += button(SP0 + 9, 212 + i * 34, 82, 28, t, { on: t === o.tool, onFill: C.sroiLine, size: 12 }); });
@@ -471,6 +472,7 @@ const drilledL = (segs, fr) => segs.reduce((a, s, i) => a + s.len * fr[i], 0);
 const drilledR = d => d.reduce((a, v) => a + v, 0);
 check('straight root: the locked plan and the run draw exactly one generation-1 segment per portal (no first-click pair)', w.portals.every(p => segs0.filter(q => q.gen === 1 && q.sx === p && q.sy === 0).length === 1) && segs0.filter(q => q.gen === 1).length === w.portals.length);
 check('no trunk: every drawn segment is generation 1 or later, the meter starts at 0', segs0.every(s => s.gen > 0) && PL_.p09.length === 0 && PL_.p09.segs.length === 0 && K.START_MODE === 'surface');
+check('15 degree branching (spec 3.8.0): every drawn branch heading is half the parent heading +/- 15 (clamp 60), siblings of generation 2 sit 30 deg apart', segs0.filter(q => q.gen >= 2 && !q.reaim && !q.regrow).every(q => { const par = segs0.find(z => z.id === q.parent); const base = 0.5 * par.dir; const h = Math.min(60, Math.max(-60, q.dir)); return Math.abs(Math.abs(q.dir - base) - 15) < 1e-6 || Math.abs(h) === 60; }) && segs0.filter(q => q.gen === 2).every(q => Math.abs(Math.abs(q.dir) - 15) < 1e-6));
 
 // checks: the composed drawn state at the end equals the sim's score, base round and final round
 {
@@ -564,7 +566,7 @@ function planDraw(st, o = {}) {
     if (o.sLabel !== false) {   // S-top depth label (spec 4a): 5 m x the shallowest S row of the bodies the selected portal serves
       const sp = o.sel ?? st.portals[0], m = st.s_top_m[String(sp)], x = ctx.PL.px(sp + 0.5), yb = SURF + mc(m) * CS;
       ctx.b.push(`<line x1="${x}" y1="${SURF + 10}" x2="${x}" y2="${yb}" stroke="${C.sroiLine}" stroke-width="1.6" stroke-dasharray="3,3"/><line x1="${x - 6}" y1="${yb}" x2="${x + 6}" y2="${yb}" stroke="${C.sroiLine}" stroke-width="2"/>`);
-      ctx.b.push(T(x + 10, yb + 14, `S top ${fm(m)} m`, 12, { weight: 700, fill: C.sroiLine, halo: true }));
+      ctx.b.push(T(x + 10, yb + 14, `formation top ${fm(m)} m`, 12, { weight: 700, fill: C.sroiLine, halo: true }));
     }
     if (o.extra) o.extra(ctx);
   };
@@ -613,7 +615,7 @@ const add = (id, svg) => panels.push([id, svg]);
   b.push(T(40, 748, `${M(H)} section. ${TIMECAP}`, 13, { fill: C.sub, italic: true }));
   const gx = 760; let gy = 100;
   b.push(T(gx, gy, 'Eleven words', 20, { weight: 700 }));
-  [['formation', 'the hidden ore body'], ['SROI', 'Subsurface Region of Interest: the area you paint'], ['portal', 'where borebots enter the ground'], ['generation', 'one round of branching, one click'],
+  [['formation', 'the hidden ore body'], ['your painting', 'the area where you remember the formation'], ['portal', 'where borebots enter the ground'], ['generation', 'one round of branching, one click'],
    ['core', `a drilled sample; grades its ${M(1)} block`], ['radar', 'reveals ground near one line, and between two lines'], ['borebot', 'a small drilling robot (left side)'], ['rig', 'a surface drill rig (right side)'], ['dBranch', 'branch length, set by a slider before each click'], ['ghost', 'preview of the next generation, before the click'],
    ['speckle', 'scattered cells revealed by radar from one line']].forEach(([k, v], i) => {
     b.push(T(gx, gy + 28 + i * 21, k, 15, { weight: 700 })); b.push(T(gx + 108, gy + 28 + i * 21, v, 14, { fill: C.sub }));
@@ -680,7 +682,7 @@ add('06', splitPanel({
   n: '06', caption: 'Paint from memory: one stroke writes to both panels', phase: PH.A + '  PAINT', clock: '',
   L: { S: S_half, sroiOp: 0.34, guides: true }, R: { S: S_half, sroiOp: 0.34, guides: true }, hguides: true,
   spine: () => spinePaint({ tool: 'BRUSH', r: 2, used: count(S_half), startDim: true }),
-  statusL: 'you paint your Subsurface Region of Interest (SROI) here', statusR: 'the same cells appear here at once (mirror)',
+  statusL: 'you paint the area where you remember the formation here', statusR: 'the same cells appear here at once (mirror)',
   draw: ctx => { ctx.b.push(brushRing(ctx.PL, 23, 13, K.BRUSH_M[2], false)); ctx.b.push(brushRing(ctx.PR, 23, 13, K.BRUSH_M[2], true)); ctx.b.push(tag(ctx.PR.px(gx(23)) + 34, ctx.PR.py(gy(13)) + 34, `mirror cursor, brush r ${Mm(K.BRUSH_M[2])}`, C.ink).svg); },
 }));
 const S7 = union(S_band, S_lensRing);
@@ -722,7 +724,7 @@ add('09', splitPanel({
     keyRow(XL, BOT + 112, [[`<rect x="0" y="2" width="22" height="6" fill="${C.sroi}"/>`, 'shadow band (a hint over painted columns; refuses nothing)'], [`<g transform="translate(11,16)">${headframe(0, 0)}</g>`, 'portal']]) + placeholderSlot(XL, BOT + 130, PW - 10, 94),
   botR: line(XR + 10, BOT + 58, `Message pattern: "Removed n small speck(s)."  Here n = ${nSpeck}.`, 15, { fill: C.ink }) +
     line(XR + 10, BOT + 78, `Click the right panel to place a rig hole at any time; the budget is the network length`, 14) + line(XR + 10, BOT + 96, `and only blocks Start. None placed: Balrog plans the rig, ghosted.`, 14) +
-    keyRow(XR + 10, BOT + 126, [[`<g transform="translate(11,18)">${firstHoleMark(0, 0)}</g>`, 'first hole (at the portal)'], ...keyHoles.slice(1)]) + placeholderSlot(XR + 10, BOT + 142, PW - 10, 82),
+    keyRow(XR + 10, BOT + 126, [[`<g transform="translate(11,18)">${firstHoleMark(0, 0)}</g>`, 'rig hole'], ...keyHoles.slice(1)]) + placeholderSlot(XR + 10, BOT + 142, PW - 10, 82),
 }));
 
 // ===== 09a: portal drop on a free column =====
@@ -1120,7 +1122,7 @@ add('21', splitPanel({
   ], 95, [0, 1.5, 6.5, 8.5, 47.5, planEnd]);
   marks.forEach(([n, t], i) => { b.push(`<path d="M${sx2(t)},${255 + 58} l-6,10 h12 z" fill="${C.ink}"/>`); b.push(T(sx2(t), 255 + 84 + (i % 2) * 14, n, 12, { anchor: 'middle', weight: 700 })); });
   b.push(T(x0 - 10, 255 + 84, 'panel', 12, { anchor: 'end', fill: C.sub }));
-  // RUN, elapsed hours at R 3.4 (TIME_COMP 2.5 real h per game s). Every end time is the sim's, equal to goldens_v39.
+  // RUN, elapsed hours at R 3.4 (TIME_COMP 2.5 real h per game s). Every end time is the sim's, equal to goldens_v41.
   const rows = [
     ['Level 1 worked round (S_GV1)', SB.l1.endL, SB.l1.endR],
     ['This round, Level 4 (panels 10-21, with both moves)', w.L1.end, w.R1.end],
@@ -1216,13 +1218,13 @@ add('26', splitPanel({
 }));
 
 const GT = 6e-4;
-check('timing: GV4 base finish = goldens_v39 S_P.GV4', Math.abs(w.L0.end - GOLD.S_P.GV4.left.end_s) < GT && Math.abs(w.R0.end - GOLD.S_P.GV4.right.end_s) < GT);
-check('timing: left finish with the re-aim = goldens_v39 S_MID', Math.abs(w.L1.end - GOLD.S_MID.result.endL) < GT);
-check('timing: pipe finish = goldens_v39 S_GV2', Math.abs(P.L0.end - GOLD.S_GV2.left.end_s) < GT && Math.abs(P.R0.end - GOLD.S_GV2.right.end_s) < GT);
-check('timing: L1 worked round = goldens_v39 S_GV1', Math.abs(SB.l1.endL - GOLD.S_GV1.left.end_s) < GT && Math.abs(SB.l1.endR - GOLD.S_GV1.right.end_s) < GT);
-check('re-aim = goldens_v39 S_MID.reaim', ra.seg === GOLD.S_MID.reaim.seg && Math.abs(ra.cost - GOLD.S_MID.reaim.cost) < 1e-5 && Math.abs(ra.wantedCost - GOLD.S_MID.reaim.wantedCost) < 1e-5);
-check('locked plan clicks = goldens_v39 S_MID.clicks', JSON.stringify(st10.clicks) === JSON.stringify(GOLD.S_MID.clicks));
-check('budget, reserve, re-aim cap = goldens_v39 S_P.GV4', budget === GOLD.S_P.GV4.budget && reserve === GOLD.S_P.GV4.reserve && w.reaim_cap === GOLD.S_P.GV4.reaim_cap);
+check('timing: GV4 base finish = goldens_v41 S_P.GV4', Math.abs(w.L0.end - GOLD.S_P.GV4.left.end_s) < GT && Math.abs(w.R0.end - GOLD.S_P.GV4.right.end_s) < GT);
+check('timing: left finish with the re-aim = goldens_v41 S_MID', Math.abs(w.L1.end - GOLD.S_MID.result.endL) < GT);
+check('timing: pipe finish = goldens_v41 S_GV2', Math.abs(P.L0.end - GOLD.S_GV2.left.end_s) < GT && Math.abs(P.R0.end - GOLD.S_GV2.right.end_s) < GT);
+check('timing: L1 worked round = goldens_v41 S_GV1', Math.abs(SB.l1.endL - GOLD.S_GV1.left.end_s) < GT && Math.abs(SB.l1.endR - GOLD.S_GV1.right.end_s) < GT);
+check('re-aim = goldens_v41 S_MID.reaim', ra.seg === GOLD.S_MID.reaim.seg && Math.abs(ra.cost - GOLD.S_MID.reaim.cost) < 1e-5 && Math.abs(ra.wantedCost - GOLD.S_MID.reaim.wantedCost) < 1e-5);
+check('locked plan clicks = goldens_v41 S_MID.clicks', JSON.stringify(st10.clicks) === JSON.stringify(GOLD.S_MID.clicks));
+check('budget, reserve, re-aim cap = goldens_v41 S_P.GV4', budget === GOLD.S_P.GV4.budget && reserve === GOLD.S_P.GV4.reserve && w.reaim_cap === GOLD.S_P.GV4.reaim_cap);
 check('no panel text says level clock', panels.every(p => !/level clock/i.test(p[1].replace('no level clock on screen', ''))));
 check('no panel text says press play', panels.every(p => !/press\s*play/i.test(p[1])));
 check('no panel text says a trunk joins or counts', panels.every(p => !/trunks? (drill|joins|count)/i.test(p[1])));

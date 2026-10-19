@@ -10,8 +10,9 @@ import assert from 'node:assert/strict';
 import { planWorld, finish } from '../lib/rigworld.mjs';
 import { getCore } from '../lib/mut.mjs';
 
-// the budget is the golden record's: half-up of the planned left length (cells) after the S_GV4 accepted clicks
-const budgetOf = (W) => W.G.S_GV4.budget;
+// the integer budget of a hand plan: the planned left length (cells) after the S_GV4 accepted clicks, exact (v3.8.1: no half-up), so an integer total is within it when at most its floor
+// (goldens_v41 S_GV4 length 166.5: floor 166; the Balrog auto plan and the Round keep the half-up 167)
+const budgetOf = (W) => Math.floor(W.G.S_GV4.length_cells);
 
 // ---- invariant checker (judge) ----
 // (v3.7.7: the budget is not a list invariant any more; `overBudget` is the Start-gate judge)
@@ -43,7 +44,7 @@ test('R-ZERO zero holes: the run is the auto plan, equal to the golden S_GV4 rec
   const v = W.g.view();
   assert.equal(v.plan.auto, true);
   assert.equal(v.plan.count, 0);
-  assert.equal(v.plan.budget, budgetOf(W));
+  assert.equal(v.plan.budget, W.G.S_GV4.length_cells);
   assert.deepEqual(v.holes.map((h) => [h.col, h.depth]), W.G.S_GV4.holes.flat().map((h) => [h[0], h[1]]));
   const st = finish(W);
   assert.deepEqual([st.readout.left.total, st.readout.right.total], Array.from(W.G.S_GV4.totals));
@@ -87,17 +88,17 @@ test('R-ORDER drill order = placement order: the schedule lists the holes as pla
 test('R-TOTAL over budget is allowed: every add, move and depth edit returns ok at any total; the over state shows; Start is refused rig_over with the cap text; reducing depth clears it; the old refusal and the missing gate are caught', async () => {
   const W = await planWorld();
   const g = W.g;
-  const B = budgetOf(W);
-  assert.equal(add(W, 100, 60).status, 'ok');
-  assert.equal(add(W, 20, B - 60).status, 'ok');
+  const B = budgetOf(W), Bx = W.G.S_GV4.length_cells;   // Bx: the exact plan budget that overCells is measured from
+  assert.equal(add(W, 100, 100).status, 'ok');
+  assert.equal(add(W, 20, B - 100).status, 'ok');
   assert.equal(g.view().plan.over, false, 'spent == budget is not over');
   assert.equal(g.view().flags.canStart, true);
   const r = add(W, 30, 50);
   assert.equal(r.status, 'ok', 'over-budget add');
   assert.equal(g.view().plan.spent, B + 50);
   assert.equal(g.view().plan.over, true);
-  assert.equal(g.view().plan.overCells, 50);
-  assert.equal(g.view().plan.overM, 250);
+  assert.equal(g.view().plan.overCells, B + 50 - Bx);
+  assert.equal(g.view().plan.overM, 5 * (B + 50 - Bx));
   assert.equal(add(W, 40).status, 'ok', 'default-depth add with the budget spent');
   assert.equal(g.state().plan.rig.length, 4, 'the list keeps every hole');
   assert.equal(g.view().flags.canStart, false, 'flags.canStart is false while over');
@@ -111,10 +112,10 @@ test('R-TOTAL over budget is allowed: every add, move and depth edit returns ok 
   // bring it under: remove the extras, push 60 one cell over, then back to the budget
   g.removeRigHole(31); g.removeRigHole(40);
   assert.equal(g.view().plan.spent, B);
-  assert.equal(g.setRigHoleDepth(20, B - 59).status, 'ok');
+  assert.equal(g.setRigHoleDepth(20, B - 99).status, 'ok');
   assert.equal(g.view().plan.over, true);
   assert.equal(g.start().status, 'rig_over');
-  assert.equal(g.setRigHoleDepth(20, B - 60).status, 'ok');
+  assert.equal(g.setRigHoleDepth(20, B - 100).status, 'ok');
   assert.equal(g.view().plan.over, false);
   assert.equal(g.view().flags.canStart, true);
   assert.equal(g.start().status, 'ok');
@@ -126,7 +127,7 @@ test('R-TOTAL over budget is allowed: every add, move and depth edit returns ok 
   assert.equal(W0.g.view().plan.overCells, 5);
   // known-bad 1: the v3.7.6 refusal returns
   const Wm = await planWorld({ muts: ['budget_refuses_placement'] });
-  add(Wm, 100, 60); add(Wm, 20, B - 60);
+  add(Wm, 100, 100); add(Wm, 20, B - 100);
   assert.equal(add(Wm, 30, 50).status, 'rig_budget', 'budget_refuses_placement refused nothing');
   // known-bad 2: no Start gate
   const Ws = await planWorld({ muts: ['start_allows_over'] });
@@ -140,24 +141,30 @@ test('R-TOTAL over budget is allowed: every add, move and depth edit returns ok 
 test('R-GATE-EXACT the boundary: total == budget starts, total == budget + 1 is refused (kills < for <=); over_bound_lt is caught', async () => {
   const W = await planWorld();
   const B = budgetOf(W);
-  add(W, 100, 60); add(W, 20, B - 60);
+  add(W, 100, 100); add(W, 20, B - 100);
   assert.equal(W.g.view().plan.spent, B);
   assert.equal(W.g.view().plan.over, false);
   assert.equal(W.g.start().status, 'ok', 'spent == budget');
   const W1 = await planWorld();
-  add(W1, 100, 60); add(W1, 20, B - 59);
+  add(W1, 100, 100); add(W1, 20, B - 99);
   assert.equal(W1.g.view().plan.spent, B + 1);
   assert.equal(W1.g.view().plan.over, true);
-  assert.equal(W1.g.view().plan.overCells, 1);
+  assert.equal(W1.g.view().plan.overCells, B + 1 - W1.G.S_GV4.length_cells);
   assert.equal(W1.g.start().status, 'rig_over', 'spent == budget + 1');
-  const Wm = await planWorld({ muts: ['over_bound_lt'] });
-  add(Wm, 100, 60); add(Wm, 20, B - 60);
+  // the strict-versus-inclusive bound needs an integer budget: the first two S_GV4 clicks give exactly 30
+  const prefix = async (muts) => { const Wq = await planWorld({ muts, clicks: false }); for (const [p, D] of Wq.world.clicks.slice(0, 2)) { Wq.g.selectPortal(p); Wq.g.setDBranch(D); Wq.g.nextGen(); } return Wq; };
+  const Wz = await prefix([]);
+  add(Wz, 100, 20); add(Wz, 20, 10);
+  assert.equal(Wz.g.view().plan.budget, 30);
+  assert.equal(Wz.g.view().plan.over, false, 'integer budget, spent == budget');
+  const Wm = await prefix(['over_bound_lt']);
+  add(Wm, 100, 20); add(Wm, 20, 10);
   assert.equal(Wm.g.view().plan.over, true, 'over_bound_lt calls spent == budget over: the real-core assertion above (over false at the boundary) fails on it');
 });
 
 test('R-OVERCELLS holes[i].overCells = max(0, min(depth, cumulative - budget)) in placement order and sums to overCells; the status line state is data-driven by over', async () => {
   const W = await planWorld();
-  const B = budgetOf(W);
+  const B = W.G.S_GV4.length_cells;   // overCells is measured from the exact budget
   add(W, 20, 100); add(W, 60, 100); add(W, 120, 100); add(W, 150, 30);
   const v = W.g.view().plan;
   const want = refOver(planRig(W), B);
@@ -286,7 +293,7 @@ test('R-ROUND a Round built on a hand plan above the budget throws; at the budge
   const W = await planWorld();
   const C = W.C;
   const w = W.world;
-  const B = budgetOf(W);
+  const B = W.G.S_GV4.budget;   // the Round keeps the half-up integer budget
   const mk = (Cx, rig) => new Cx.Round(Cx.publicLevel(w.level), Int32Array.from(w.F), Int32Array.from(w.S), [...w.portals], w.clicks.map((c) => [...c]), w.level.seed, rig);
   assert.doesNotThrow(() => mk(C, [[[20, 100], [60, B - 100]]]));
   assert.throws(() => mk(C, [[[20, 100], [60, B - 99]]]), /budget/i);

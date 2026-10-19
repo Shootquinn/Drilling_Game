@@ -517,7 +517,7 @@ if START == SU:
     SG['S_GV3'], _ = record_s('S_GV3', Fp_, Sp_, [pps], [(pps, float(D)) for D in sim.PIPE24_M], sim.DRILL_CAP, sim.SEED_PIPE)
     SG['S_GV3b'], _ = record_s('S_GV3b', Fp_, Sp_, [pps], [(pps, float(D)) for D in sim.PIPE24_M], 2 * sim.DRILL_CAP, sim.SEED_PIPE)
     SG['S_GV4'], _ = record_s('S_GV4', Fm, Sm, dp, cm, sim.DRILL_CAP, sim.SEED_MAIN)         # two free portals (the legacy default columns), the spec click list
-    # the nine policy worlds (final.out part A, shipped thetaOf), one V3 portal each
+    # the nine policy worlds (final.out part A; v3.8.0: fixed theta 15), one V3 portal each
     S_P = {}
     for w in sim.surface_worlds('v3'):
         net_, att_ = sim.run_policy_world(w); acc = [(p, float(D)) for p in att_ for D, st in att_[p] if st == 'ok']
@@ -534,17 +534,17 @@ if START == SU:
         q = sim.reaim(net_, float(t), i, (20.0, 20.0), rcap_)
         if q is not None and q['clamped']:
             first_ok = dict(t=t, seg=i, cost=round(q['cost'], 6), wantedCost=round(q['wantedCost'], 6), cap=rcap_, new=[seg_json(k) for k in q['new']]); break
-    R_ = mk_(); add_ = R_.add_hole(75.0, 80); i_re = sim.reaim_pick(R_.net, 140.0, segs=R_.layout); re_ = R_.reaim(140.0, i_re, sim.REAIM_TARGET); rs_ = R_.result()
+    R_ = mk_(); add_ = R_.add_hole(75.0, 80, 20); i_re = sim.reaim_pick(R_.net, 100.0, segs=R_.layout); re_ = R_.reaim(100.0, i_re, sim.REAIM_TARGET); rs_ = R_.result()
     mid = dict(world='GV4', portal=w_['portal'], policy=list(w_['policy']), clicks=[[p, D] for p, D in clicks_],
-               reaim_case=dict(first_clamped_success=first_ok, first_clamped=list(ok_), first_refusal_target_150_60=list(ref_)),
-               add=dict(t=75.0, col=80, status=add_['status'], depth=add_.get('depth'), triggers=add_.get('triggers')),
-               reaim=dict(t=140.0, seg=i_re, target=list(sim.REAIM_TARGET), status=re_['status'], cost=round(re_['ra']['cost'], 6), wantedCost=round(re_['ra']['wantedCost'], 6), clamped=bool(re_['ra']['clamped'])),
+               reaim_case=dict(first_clamped_success=first_ok, first_clamped=list(ok_), first_refusal=list(ref_), refusal_target=list(sim.SURF_REFUSE)),
+               add=dict(t=75.0, col=80, req_depth=20, status=add_['status'], depth=add_.get('depth'), triggers=add_.get('triggers')),
+               reaim=dict(t=100.0, seg=i_re, target=list(sim.REAIM_TARGET), status=re_['status'], cost=round(re_['ra']['cost'], 6), wantedCost=round(re_['ra']['wantedCost'], 6), clamped=bool(re_['ra']['clamped'])),
                reserves=dict(initial=R_.reserve0, left=round(R_.resL, 6), right=R_.resR), segs=[seg_json_s(q) for q in R_.layout], holes=conv(R_.holes),
                result=dict(L=list(rs_['L']), R=list(rs_['R']), pairsL=rs_['pairsL'], pairsR=rs_['pairsR'], endL=round(rs_['endL'], 6), endR=round(rs_['endR'], 6),
                            drilledL=round(rs_['drilledL'], 6), drilledR=rs_['drilledR']))
     def seq_s(mut=()):
         R1 = mk_(mut); o = []
-        for t_, tg_ in zip((100.0, 130.0, 150.0), ((190.0, 95.0), (10.0, 50.0), (100.0, 10.0))):
+        for t_, tg_ in zip((95.0, 105.0, 115.0), ((190.0, 95.0), (10.0, 50.0), (100.0, 10.0))):
             i1 = sim.reaim_pick(R1.net, t_, comp=0, segs=R1.layout); r1_ = R1.reaim(t_, i1, tg_); o.append(dict(t=t_, seg=i1, target=list(tg_), status=r1_['status'], res_left=round(R1.resL, 6)))
         return o
     mid['three_reaims'] = seq_s(); mid['three_reaims_cap_vs_initial'] = seq_s(('cap_vs_initial',))
@@ -569,9 +569,11 @@ if START == SU:
         return dict(results=res, segs=[seg_json_s(q) for q in n.segs], length=n.length())
     def ceil_(mut=()):
         n = nn(SWC_, mut, 10 ** 9); return [n.next_gen(100, 20.0) for _ in range(25)]
-    n2_ = nn(SWA_); [n2_.next_gen(100, 20.0) for _ in range(3)]
-    ray_cases = [[list(e), h, D, n2_.ray_ok(100, e, h, D)] for e, h, D in (((101.7889, 7.5777), 39.848, 4.0), ((101.7889, 7.5777), -13.283, 4.0), ((101.7889, 7.5777), -13.5, 4.0),
-                                                                          ((101.7889, 7.5777), 38.848, 4.0), ((101.7889, 7.5777), 38.0, 4.0), ((110.0, 3.0), 0.0, 4.0), ((111.0, 3.0), 0.0, 4.0), ((109.0, 3.0), 0.0, 4.0))]
+    SW49_ = sim.rect(96, 103, 20, 39)                       # G49 (v3.8.0): 8 wide, so the outward grandchildren leave the margin at 15 deg
+    n2_ = nn(SWA_); n49_ = nn(SW49_); [n49_.next_gen(100, 20.0) for _ in range(3)]
+    EO_ = (102.56600990987044, 11.559221435201419)
+    ray_cases = [[list(e), h, D, (n49_ if w == 'sw49' else n2_).ray_ok(100, e, h, D), w] for w, e, h, D in (('sw49', EO_, 22.5, 4.0), ('sw49', EO_, 21.5, 4.0), ('sw49', EO_, 15.0, 4.0), ('sw49', EO_, 14.5, 4.0),
+                                                                                                       ('sw49', EO_, 7.5, 4.0), ('swa', (110.0, 3.0), 0.0, 4.0), ('swa', (111.0, 3.0), 0.0, 4.0), ('swa', (109.0, 3.0), 0.0, 4.0))]
     def seglen_(S_, d, D, mut=()):
         n = nn(S_, mut); ok, st_ = n.mask(); cells, elen, endpt, tr = sim.sample(100, 0.0, d, D, ok, 0.0, "carry"); return [elen, bool(tr), [sim.rh(endpt[0]), sim.rh(endpt[1])]]
     dot_ = {(50, 50)}; offs_ = [(0, 10), (6, 8), (7, 7), (1, 10), (0, 11), (8, 8), (10, 10)]
@@ -584,9 +586,9 @@ if START == SU:
         swa_click1=clk(SWA_, [20.0]), swa_click2=clk(SWA_, [20.0, 20.0]), swa_click3=clk(SWA_, [20.0, 20.0, 20.0]), swa_click1_trunk=dict(nsegs=3, note="trunk mode, same input: 3 segments, seg 0 length 20.0, meter 140.0 m"),
         swa_bad=dict(trunk_resurrect=clk(SWA_, [20.0], ('trunk_resurrect',)), root_dir_nonzero=clk(SWA_, [20.0], ('root_dir_nonzero',)), mask_always=clk(SWA_, [20.0], ('mask_always',)),
                      ray_off=clk(SWA_, [20.0, 20.0, 20.0], ('ray_off',)), root_forks=clk(SWA_, [20.0], ('root_forks',)), ray_back=clk(SWA_, [20.0], ('ray_back',)), ray_short=clk(SWA_, [20.0], ('ray_short',))),
-        stay_mask=dict(swa=seglen_(SWA_, 26.565051177, 4.0), swd=seglen_(SWD_, 20.0, 20.0), swd5=seglen_(SWD5_, 20.0, 20.0), mask_never_swd=seglen_(SWD_, 20.0, 20.0, ('mask_never',)),
-                       mask_always_swd=seglen_(SWD_, 20.0, 20.0, ('mask_always',)), swd_click=clk(SWD_, [20.0, 100.0])),
-        ray_cases=ray_cases, ray_vs_S=[[[110.0, 3.0], 0.0, nn(SWA_, ('ray_vs_S',)).ray_ok(100, (110.0, 3.0), 0.0, 4.0)], [[109.0, 3.0], 0.0, nn(SWA_, ('ray_vs_S',)).ray_ok(100, (109.0, 3.0), 0.0, 4.0)]],
+        stay_mask=dict(swa=seglen_(SWA_, 15.0, 4.0), swd=seglen_(SWD_, 15.0, 20.0), swd5=seglen_(SWD5_, 15.0, 20.0), mask_never_swd=seglen_(SWD_, 15.0, 20.0, ('mask_never',)),
+                       mask_always_swd=seglen_(SWD_, 15.0, 20.0, ('mask_always',)), swd_click=clk(SWD_, [20.0, 100.0])),
+        ray_cases=ray_cases, ray49_gen3=sorted(round(q['dir'], 3) for q in n49_.segs if q['gen'] == 3), ray49_ray_off=len([q for q in clk(SW49_, [20.0, 20.0, 20.0], ('ray_off',))['segs'] if q['gen'] == 3]), ray_vs_S=[[[110.0, 3.0], 0.0, nn(SWA_, ('ray_vs_S',)).ray_ok(100, (110.0, 3.0), 0.0, 4.0)], [[109.0, 3.0], 0.0, nn(SWA_, ('ray_vs_S',)).ray_ok(100, (109.0, 3.0), 0.0, 4.0)]],
         cap=dict(cap4=clk(SWA_, [20.0], (), 4)['results'], cap3=clk(SWA_, [20.0], (), 3)['results'], cap3_skip_ob=clk(SWA_, [20.0], ('cap_skip_ob',), 3)['results']),
         ceiling_world=dict(S='rect(75,124,20,99)', portal=100, click_m=20.0, results=ceil_(), ob_gen_free=ceil_(('ob_gen_free',))),
         attribution=dict(S2k=dict(comp=[q['comp'] for q in nq_.segs], comp_lengths=nq_.comp_lengths()), comp_first=dict(comp=[q['comp'] for q in nf_.segs], comp_lengths=nf_.comp_lengths())),
@@ -603,12 +605,12 @@ if START == SU:
     SG['S_cover'] = {k: dict(col=sim.cover_col(S_), cover_m=sim.cover_m(S_), shipped=sh_, ok=sim.cover_ok(S_, sh_), cover_m_col_120=(5.0 * min(y for x, y in S_ if x == 120) if k == 'L3' else None))
                      for k, (S_, sh_) in covw.items()}
     SG['S_anchor'] = {k: list(v) for k, v in sim.ANCHOR.items()}
-    SG['S_consts'] = dict(start_mode=SU, ray_step=sim.RAY_STEP, ray_tolerance=0, cover_cap_m=sim.COVER_CAP_M, radar_range=sim.RADAR_RANGE, ceiling=sim.NUMBRANCH_MAX, tip_sep_frac=sim.TIP_SEP_FRAC)
+    SG['S_consts'] = dict(start_mode=SU, ray_step=sim.RAY_STEP, ray_tolerance=0, cover_cap_m=sim.COVER_CAP_M, radar_range=sim.RADAR_RANGE, ceiling=sim.NUMBRANCH_MAX, tip_sep_frac=sim.TIP_SEP_FRAC, theta_fixed=sim.THETA_FIXED, tip_sep_floor=sim.TIP_SEP_FLOOR, dir_clamp=sim.DIR_CLAMP)
     G.update(SG)
 
 with open(os.path.join(HERE, "step45_reference_sim_v3.py"), "rb") as f: sh = hashlib.sha256(f.read()).hexdigest()
 with open(__file__, "rb") as f: exh = hashlib.sha256(f.read()).hexdigest()
-G['_meta'] = dict(sim_file="step45_reference_sim_v3.py", sim_sha256=sh, exporter_sha256=exh, spec_version="3.7.6", mutated=MUT, cell_m=sim.CELL_M, r0_cells=sim.R0_FULL,
+G['_meta'] = dict(sim_file="step45_reference_sim_v3.py", sim_sha256=sh, exporter_sha256=exh, spec_version="3.8.0", mutated=MUT, cell_m=sim.CELL_M, r0_cells=sim.R0_FULL,
                   export_flag=True, counts={k: len(G[k]) for k in ('E3', 'E3b', 'E8', 'E9', 'E10', 'E11')})
 if START == SU: G['_meta']['start_mode'] = SU
 with open(OUT, "w") as f: json.dump(G, f, separators=(',', ':'))

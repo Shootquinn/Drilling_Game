@@ -17,8 +17,10 @@ export const PORTAL_MIN_SEP = Math.trunc(cellsOf(25.0));
 export const MAX_RIG_HOLES = 12;
 export const RIG_DEPTH_MIN = 1;
 export const RIG_DEFAULT_DEPTH = 10;
+// Legacy (trunk mode) bounding-box angle bounds; surface mode (shipped, spec 4c v3.8.0) uses the fixed half-angle THETA: 30 deg between siblings
 export const THETA_MIN = 20.0;
 export const THETA_MAX = 70.0;
+export const THETA = 15.0;
 export const DIR_CLAMP = 60.0;
 export const TIP_SEP_FRAC = 0.9;
 export const TIP_SEP_FLOOR = 1.0;
@@ -70,7 +72,7 @@ export const DEG = Math.PI / 180;
 
 export const consts = Object.freeze({
   CELL_M, W_GRID, H_GRID, DRILL_CAP, R0_FULL, REAIM_LIMIT, ADD_LIMIT, MAX_PORTALS, PORTAL_MIN_SEP, STRAY_MIN_AREA, BRUSH_R, TICK_S, SPEED_L,
-  NUMBRANCH_MAX, NUMBRANCH_DEFAULT, RESERVE_FRAC, REAIM_FRAC, RADAR_RANGE, ADD_MIN_RESERVE, F_FLOOR,
+  NUMBRANCH_MAX, NUMBRANCH_DEFAULT, RESERVE_FRAC, REAIM_FRAC, RADAR_RANGE, ADD_MIN_RESERVE, F_FLOOR, THETA, DIR_CLAMP, TIP_SEP_FRAC, TIP_SEP_FLOOR,
 });
 export const COVER_CAP_M_DEFAULT = 150.0;
 export const RIG_SPEED_RATIO_DEFAULT = 3.4;

@@ -26,8 +26,9 @@ export const rectK = (c0, c1, r0, r1) => {
   return Int32Array.from(o).sort((a, b) => a - b);
 };
 export const unionK = (...as) => Int32Array.from(new Set(as.flatMap((a) => Array.from(a)))).sort((a, b) => a - b);
-export const SWA = rectK(90, 109, 20, 39);               // 100 m cover, theta = atan(20 / 40) = 26.565 deg
-export const SWD = rectK(100, 103, 6, 29);               // 4 wide: theta clamps to 20
+export const SWA = rectK(90, 109, 20, 39);               // 100 m cover; theta is 15 deg for every S (v3.8.0)
+export const SWD = rectK(100, 103, 6, 29);               // 4 wide
+export const SW49 = rectK(96, 103, 20, 39);              // G49: 8 wide, the outward grandchildren leave the 1-cell margin at 15 deg
 export const SWD5 = rectK(100, 104, 6, 29);
 export const S2C = unionK(rectK(20, 39, 20, 39), rectK(160, 179, 20, 39));
 export const S2M = unionK(rectK(20, 39, 20, 39), rectK(150, 179, 20, 39));
@@ -35,7 +36,7 @@ export const S2K = unionK(rectK(70, 89, 20, 39), rectK(110, 139, 20, 39), rectK(
 export const SWC = rectK(75, 124, 20, 99);               // O4 ceiling world
 export const S2T = unionK(rectK(20, 39, 20, 39), rectK(60, 79, 20, 39));
 export const SAB = unionK(rectK(20, 39, 20, 39), rectK(41, 60, 20, 39));
-export const THETA_A = 26.565051177;
+export const THETA_A = 15.0;
 
 export const netOf = (C, S, ps = [100], cap = 400) => new C.Network(S, ps, cap, W, H);
 export function clickNet(C, S, Ds, { ps = [100], cap = 400, p = ps[0] } = {}) {

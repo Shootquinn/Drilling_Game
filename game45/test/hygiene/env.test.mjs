@@ -1,4 +1,4 @@
-// H-ENV: game45/ holds no node_modules, image, FCStd/FCBak, frame directory, package.json, or file over 3 MB (allowed: test/goldens_v36.json, goldens_v37.json, goldens_v38.json, goldens_v39.json, dist/play.html).
+// H-ENV: game45/ holds no node_modules, image, FCStd/FCBak, frame directory, package.json, or file over 3 MB (allowed: test/goldens_v36.json, goldens_v37.json, goldens_v38.json, goldens_v39.json, goldens_v41.json, dist/play.html).
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -35,9 +35,9 @@ test('H-ENV real game45/ has no offenders; synthetic clean tree has none; synthe
   console.log(`# H-ENV report-only: web_game/tests/node_modules ${fs.existsSync(wg) ? 'PRESENT' : 'absent'}`);
 });
 
-// E-H4: the allow-list is exact (v36 to v39). Zero control: real tree; known-bad: planted v40, missing v37; allow-list missing v39 turns a 3.1 MB v39 red; adjacent: v39 at 2,999,999 B stays quiet without a list entry.
-test('E-H4 golden file allow-list is exactly v36, v37, v38, v39', () => {
-  assert.deepEqual(GOLDENS_LIST, ['goldens_v36.json', 'goldens_v37.json', 'goldens_v38.json', 'goldens_v39.json']);
+// E-H4: the allow-list is exact (v36 to v39, v41; v40 is reserved). Zero control: real tree; known-bad: planted v40, missing v37; allow-list missing v39 turns a 3.1 MB v39 red; adjacent: v39 at 2,999,999 B stays quiet without a list entry.
+test('E-H4 golden file allow-list is exactly v36, v37, v38, v39, v41', () => {
+  assert.deepEqual(GOLDENS_LIST, ['goldens_v36.json', 'goldens_v37.json', 'goldens_v38.json', 'goldens_v39.json', 'goldens_v41.json']);
   assert.deepEqual(goldensOffenders(GAME45), []);
   const full = mkTmp('s45-eh4-full-');
   try {
@@ -48,7 +48,7 @@ test('E-H4 golden file allow-list is exactly v36, v37, v38, v39', () => {
   } finally { full.cleanup(); }
   const miss = mkTmp('s45-eh4-miss-');
   try {
-    miss.file('test/goldens_v36.json', '{}'); miss.file('test/goldens_v38.json', '{}'); miss.file('test/goldens_v39.json', '{}');
+    miss.file('test/goldens_v36.json', '{}'); miss.file('test/goldens_v38.json', '{}'); miss.file('test/goldens_v39.json', '{}'); miss.file('test/goldens_v41.json', '{}');
     assert.deepEqual(goldensOffenders(miss.dir).map((o) => o.path), ['test/goldens_v37.json']);
   } finally { miss.cleanup(); }
   const size = mkTmp('s45-eh4-size-');

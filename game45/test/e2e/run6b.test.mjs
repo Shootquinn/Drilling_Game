@@ -95,7 +95,7 @@ test('B-FLOW ghost on demand: none at PLAN entry, START disabled with hint; slid
   } finally { await D.close(); }
 });
 
-test('B-TEXT readout budget line "spent N m | unspent reserve M m"; RUN status lines', async () => {
+test('B-TEXT (v3.8.1) readout unspent line "unspent N m of 2,000 m" = cap minus drilled on both sides; RUN status lines use the same wording and have no re-aims or adds counters', async () => {
   const G = getGoldens();
   const { D, world } = await toPlan(browser, G, 'GV4', { startMode: 'surface', rec: G.S_GV4, pointerPortals: true });
   try {
@@ -103,20 +103,21 @@ test('B-TEXT readout budget line "spent N m | unspent reserve M m"; RUN status l
     await startRun(D);
     await D.page.evaluate((k) => globalThis.__s45.stepToTick(k), 600);
     const L = norm(await D.text('run-status-left')), R = norm(await D.text('run-status-right'));
-    assert.match(L, /^drilled [\d,.]+ m \| budget [\d,.]+ m \| unspent reserve [\d,.]+ m \| re-aims left \d+$/, L);
-    assert.match(R, /^drilled [\d,.]+ m \| budget [\d,.]+ m \| unspent reserve [\d,.]+ m \| adds left \d+$|adds left \d+$/, R);
-    assert.doesNotMatch('drilled 1 m | budget 2 m', /re-aims left/);      // known-bad shape for the left pattern
+    assert.match(L, /^drilled [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/, L);
+    assert.match(R, /^drilled [\d,.]+ m \| budget [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/, R);
+    assert.doesNotMatch(L + R, /re-aims|adds left|reserve/);
+    assert.doesNotMatch('drilled 1 m | budget 2 m | unspent reserve 3 m | adds left 6', /^drilled [\d,.]+ m \| budget [\d,.]+ m \| unspent [\d,.]+ m of 2,000 m$/);      // known-bad shape
     await finishRun(D);
-    const bl = await D.page.evaluate(() => ['left', 'right'].map((sd) => { const e = document.querySelector(`[data-s45="readout-${sd}"] [data-k="budget"]`); return e ? e.textContent : null; }));
-    const cap = (await D.state()).plan?.meter?.cap ?? null;
+    const rows = await D.page.evaluate(() => ['left', 'right'].map((sd) => { const q = (k) => { const e = document.querySelector(`[data-s45="readout-${sd}"] [data-k="${k}"]`); return e ? e.textContent : null; }; return { budget: q('budget'), drilled: q('drilled') }; }));
+    const num = (x) => Number(String(x).replace(/,/g, ''));
     const spentM = G.S_GV4.length_cells * G._meta.cell_m, fmtM = (v) => v.toLocaleString('en-US');
-    assert.equal(norm(bl[0] ?? ''), `spent ${fmtM(spentM)} m | unspent reserve ${fmtM(G.E11.test_levels.main.drill_cap_m - spentM)} m`, `left budget line ${JSON.stringify(bl[0])}`);   // S_GV4: meter 565 of 2,000 m
-    for (const t of bl) {
-      const mm = /spent ([\d,.]+) m \| unspent reserve ([\d,.]+) m/.exec(norm(t ?? ''));
-      assert.ok(mm, `budget line: ${JSON.stringify(t)}`);
-      const num = (x) => Number(x.replace(/,/g, ''));
-      assert.ok(num(mm[1]) >= 0 && num(mm[2]) >= 0);
-      if (cap) assert.ok(Math.abs(num(mm[1]) + num(mm[2]) - cap) < 0.11, `spent + unspent != cap ${cap}: ${t}`);
+    assert.equal(norm(rows[0].budget ?? ''), `unspent ${fmtM(G.E11.test_levels.main.drill_cap_m - spentM)} m of ${fmtM(G.E11.test_levels.main.drill_cap_m)} m`, `left unspent line ${JSON.stringify(rows[0].budget)}`);   // S_GV4: meter 565 of 2,000 m
+    for (const r of rows) {
+      const mm = /^unspent ([\d,.]+) m of ([\d,.]+) m$/.exec(norm(r.budget ?? ''));
+      assert.ok(mm, `unspent line: ${JSON.stringify(r.budget)}`);
+      const dm = /([\d,.]+) m$/.exec(norm(r.drilled ?? ''));
+      assert.ok(dm, `drilled line: ${JSON.stringify(r.drilled)}`);
+      assert.ok(Math.abs(num(dm[1]) + num(mm[1]) - num(mm[2])) < 0.11, `drilled + unspent != cap: ${r.drilled} ${r.budget}`);
     }
   } finally { await D.close(); }
 });

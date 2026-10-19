@@ -44,10 +44,10 @@ test('S-GV4 surface: S_GV4 through the UI (free portals 60 and 146, 8 clicks, 5 
 const times = (fps, from, to) => { const out = []; for (let i = Math.floor(from * fps) + 1; i / fps < to - 1e-9; i++) if (i / fps > from + 1e-9) out.push(i / fps); out.push(to); return out; };
 async function driveHash(kind, rec, mut = null, startMode = 'surface') {
   const G = getGoldens();
-  const { D, world: w } = await toPlan(browser, G, 'GV4', { startMode, rec, mut, pointerPortals: startMode === 'surface' });
+  const { D, world: w } = await toPlan(browser, G, 'GV4', { startMode, rec, mut: [...(mut || []), 'run_pace_off'], pointerPortals: startMode === 'surface' });
   try {
     await clickStack(D, w.clicks);
-    await startRun(D);
+    await startRun(D, { legacy: true });
     const base = D.wall;
     const run = async (ts) => { const abs = ts.map((o) => base + o); await D.page.evaluate((a) => { for (const t of a) { window.__T = t; globalThis.__s45.frame(t); } }, abs); D.wall = abs[abs.length - 1]; };
     await run(times(kind, 0, 9.6));
@@ -116,11 +116,13 @@ test('S-PIX surface: render model at tick 0 equals S_GV4 segments (no gen-0 trun
     const m0 = await D.model();
     assert.equal(m0.segments.length, g.segs.length);
     for (let i = 0; i < g.segs.length; i++) assert.deepEqual(Array.from(m0.segments[i].cells), Array.from(g.segs[i].cells), `segment ${i} cells`);
-    const late = Math.floor(g.left.end_s * 10) - 5;   // S_GV4 left side ends at tick 980 (98.0 s), right at 66.529 s: tick 975 is past the right end and before the left
+    // the first tick at which the rig side has finished (its golden end time), or the run end when that is the later side: every hole is drilled by then
+    const runEnd = Math.ceil(Math.max(g.left.end_s, g.right.end_s) * 10);
+    const late = Math.min(Math.ceil(g.right.end_s * 10) + 1, runEnd);
     const stepped = await D.page.evaluate((k) => globalThis.__s45.stepToTick(k), late);
     assert.equal(stepped, late);
     const m1 = await D.model();
-    assert.ok(m1.holes.every((h) => h.drilledFrac === 1), 'rig holes drilled by tick 975 (S_GV4 right end 66.529 s: finished long before)');
+    assert.ok(m1.holes.every((h) => h.drilledFrac === 1), `rig holes drilled by tick ${late} (S_GV4 right end ${g.right.end_s} s)`);
     assert.deepEqual(m1.holes.map((h) => [h.col, h.depth]).sort((a, b) => a[0] - b[0]), g.holes.flat().map((h) => [h[0], h[1]]).sort((a, b) => a[0] - b[0]));
   } finally { await D.close(); }
 });
